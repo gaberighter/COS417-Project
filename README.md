@@ -3,4 +3,4 @@
 ## Todo:
 - [ ] Requirements Document
 - [ ] Talk to John Moon
-- [ ] Talk to David Darden
+- [x] Talk to David Darden
