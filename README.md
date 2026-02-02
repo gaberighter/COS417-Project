@@ -1,6 +1,7 @@
 # COS417-Project:
 
 ## Todo:
-- [ ] Requirements Document
 - [ ] Talk to John Moon
+- [ ] Project Overview
+- [ ] Requirements Document
 - [x] Talk to David Darden
