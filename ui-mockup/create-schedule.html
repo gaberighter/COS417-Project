@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cov Classes - Create Schedule</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        header {
+            background-color: #4a4a4a;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+        header a {
+            color: white;
+            text-decoration: none;
+        }
+        header nav {
+            display: flex;
+            gap: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .page-header h2 {
+            margin: 0;
+        }
+        .back-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .back-btn:hover {
+            background-color: #5a6268;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-overlay.hidden {
+            display: none;
+        }
+        .modal {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            width: 400px;
+            max-width: 90%;
+        }
+        .modal h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        .modal-form-group {
+            margin-bottom: 15px;
+        }
+        .modal-form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .modal-form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .modal-btn-primary {
+            background-color: #28a745;
+            color: white;
+        }
+        .modal-btn-primary:hover {
+            background-color: #218838;
+        }
+        .modal-btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .modal-btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        /* Schedule Viewer Styles */
+        .schedule-viewer {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            display: none;
+        }
+        .schedule-viewer.active {
+            display: block;
+        }
+        .viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .viewer-header h3 {
+            margin: 0;
+        }
+        .viewer-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .save-btn {
+            padding: 8px 16px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .save-btn:hover {
+            background-color: #218838;
+        }
+        .export-btn {
+            padding: 8px 16px;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .export-btn:hover {
+            background-color: #138496;
+        }
+        .new-btn {
+            padding: 8px 16px;
+            background-color: #ffc107;
+            color: #212529;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .new-btn:hover {
+            background-color: #e0a800;
+        }
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .schedule-table th,
+        .schedule-table td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        .schedule-table th {
+            background-color: #4a4a4a;
+            color: white;
+            font-weight: 600;
+        }
+        .schedule-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .schedule-table tr:hover {
+            background-color: #e9ecef;
+        }
+        .schedule-table td[contenteditable="true"] {
+            cursor: text;
+        }
+        .schedule-table td[contenteditable="true"]:focus {
+            background-color: #fff3cd;
+            outline: 2px solid #ffc107;
+        }
+        .edit-hint {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .generation-info {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Cov Classes</h1>
+        <nav>
+            <a href="dashboard.html">Switch to Faculty</a>
+            <a href="login.html">Logout</a>
+        </nav>
+    </header>
+    
+    <!-- Modal for semester selection -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h3>Create New Schedule</h3>
+            <form id="createForm" onsubmit="generateSchedule(event)">
+                <div class="modal-form-group">
+                    <label for="semester">Semester</label>
+                    <select id="semester" required>
+                        <option value="">Select semester...</option>
+                        <option value="fall">Fall</option>
+                        <option value="spring">Spring</option>
+                        <option value="summer">Summer</option>
+                    </select>
+                </div>
+                <div class="modal-form-group">
+                    <label for="year">Year</label>
+                    <select id="year" required>
+                        <option value="">Select year...</option>
+                        <option value="2026" selected>2026</option>
+                        <option value="2027">2027</option>
+                        <option value="2028">2028</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <a href="admin-dashboard.html" class="modal-btn modal-btn-secondary">Cancel</a>
+                    <button type="submit" class="modal-btn modal-btn-primary">Generate Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <h2>Create New Schedule</h2>
+            <a href="admin-dashboard.html" class="back-btn">← Back to Dashboard</a>
+        </div>
+
+        <div class="schedule-viewer" id="scheduleViewer">
+            <div class="viewer-header">
+                <h3 id="scheduleName">Generated Schedule</h3>
+                <div class="viewer-actions">
+                    <button class="new-btn" onclick="showModal()">Create Another</button>
+                    <button class="save-btn" onclick="saveSchedule()">Save Schedule</button>
+                    <button class="export-btn" onclick="exportSchedule()">Export CSV</button>
+                </div>
+            </div>
+            <div class="generation-info" id="generationInfo">
+                Schedule generated based on faculty preferences using optimization algorithm.
+            </div>
+            <p class="edit-hint">Click on any cell to edit before saving. The schedule was optimized based on faculty preferences and room availability.</p>
+            <table class="schedule-table">
+                <thead>
+                    <tr>
+                        <th>Class ID</th>
+                        <th>Class Name</th>
+                        <th>Instructor</th>
+                        <th>Room</th>
+                        <th>Time</th>
+                        <th>Days</th>
+                        <th>Capacity</th>
+                    </tr>
+                </thead>
+                <tbody id="scheduleBody">
+                    <!-- Schedule data will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Dummy data templates for different semesters
+        const semesterData = {
+            fall: {
+                classes: [
+                    { classId: "COS101", className: "Intro to Computer Science", instructor: "Dr. Sarah Johnson", room: "Room 201", time: "10:00 AM - 11:00 AM", days: "MWF", capacity: 45 },
+                    { classId: "COS320", className: "Data Structures", instructor: "Dr. Michael Chen", room: "Computer Lab 2", time: "9:00 AM - 10:00 AM", days: "MWF", capacity: 25 },
+                    { classId: "COS417", className: "Software Engineering", instructor: "Dr. Sarah Johnson", room: "Computer Lab 1", time: "1:00 PM - 2:30 PM", days: "TTh", capacity: 30 },
+                    { classId: "COS450", className: "Machine Learning", instructor: "Dr. Michael Chen", room: "Room 102", time: "10:00 AM - 11:30 AM", days: "TTh", capacity: 20 },
+                    { classId: "MAT101", className: "Calculus I", instructor: "Dr. James Wilson", room: "Room 201", time: "1:00 PM - 2:00 PM", days: "MWF", capacity: 50 },
+                    { classId: "MAT201", className: "Calculus II", instructor: "Dr. Emily Rodriguez", room: "Room 101", time: "11:00 AM - 12:00 PM", days: "MWF", capacity: 35 },
+                    { classId: "MAT305", className: "Linear Algebra", instructor: "Dr. Emily Rodriguez", room: "Room 102", time: "8:00 AM - 9:30 AM", days: "TTh", capacity: 25 },
+                    { classId: "PHY101", className: "Physics I", instructor: "Dr. Amanda Peters", room: "Room 202", time: "8:00 AM - 9:00 AM", days: "MWF", capacity: 40 },
+                    { classId: "PHY210", className: "Physics II", instructor: "Dr. Amanda Peters", room: "Room 101", time: "3:00 PM - 4:30 PM", days: "TTh", capacity: 30 },
+                    { classId: "COS225", className: "Computer Organization", instructor: "Dr. Michael Chen", room: "Computer Lab 1", time: "2:00 PM - 3:00 PM", days: "MWF", capacity: 28 }
+                ]
+            },
+            spring: {
+                classes: [
+                    { classId: "COS102", className: "Programming Fundamentals", instructor: "Dr. Sarah Johnson", room: "Computer Lab 1", time: "9:00 AM - 10:00 AM", days: "MWF", capacity: 40 },
+                    { classId: "COS321", className: "Algorithms", instructor: "Dr. Michael Chen", room: "Room 102", time: "10:00 AM - 11:30 AM", days: "TTh", capacity: 25 },
+                    { classId: "COS418", className: "Advanced Software Engineering", instructor: "Dr. Sarah Johnson", room: "Computer Lab 1", time: "2:00 PM - 3:00 PM", days: "MWF", capacity: 25 },
+                    { classId: "COS460", className: "Deep Learning", instructor: "Dr. Michael Chen", room: "Computer Lab 2", time: "1:00 PM - 2:30 PM", days: "TTh", capacity: 20 },
+                    { classId: "MAT102", className: "Calculus II", instructor: "Dr. James Wilson", room: "Room 201", time: "11:00 AM - 12:00 PM", days: "MWF", capacity: 45 },
+                    { classId: "MAT202", className: "Calculus III", instructor: "Dr. Emily Rodriguez", room: "Room 101", time: "10:00 AM - 11:30 AM", days: "TTh", capacity: 35 },
+                    { classId: "MAT306", className: "Differential Equations", instructor: "Dr. James Wilson", room: "Room 102", time: "8:00 AM - 9:00 AM", days: "MWF", capacity: 30 },
+                    { classId: "PHY102", className: "Physics II", instructor: "Dr. Amanda Peters", room: "Room 202", time: "9:00 AM - 10:00 AM", days: "MWF", capacity: 40 },
+                    { classId: "PHY211", className: "Modern Physics", instructor: "Dr. Amanda Peters", room: "Room 101", time: "1:00 PM - 2:30 PM", days: "TTh", capacity: 25 }
+                ]
+            },
+            summer: {
+                classes: [
+                    { classId: "COS101", className: "Intro to Computer Science", instructor: "Dr. Sarah Johnson", room: "Room 201", time: "9:00 AM - 11:00 AM", days: "MTWTh", capacity: 30 },
+                    { classId: "COS320", className: "Data Structures", instructor: "Dr. Michael Chen", room: "Computer Lab 2", time: "11:00 AM - 1:00 PM", days: "MTWTh", capacity: 20 },
+                    { classId: "MAT101", className: "Calculus I", instructor: "Dr. James Wilson", room: "Room 101", time: "9:00 AM - 11:00 AM", days: "MTWTh", capacity: 35 },
+                    { classId: "MAT201", className: "Calculus II", instructor: "Dr. Emily Rodriguez", room: "Room 102", time: "1:00 PM - 3:00 PM", days: "MTWTh", capacity: 30 },
+                    { classId: "PHY101", className: "Physics I", instructor: "Dr. Amanda Peters", room: "Room 202", time: "11:00 AM - 1:00 PM", days: "MTWTh", capacity: 25 }
+                ]
+            }
+        };
+
+        let currentSchedule = null;
+
+        function showModal() {
+            document.getElementById('modalOverlay').classList.remove('hidden');
+            document.getElementById('scheduleViewer').classList.remove('active');
+        }
+
+        function hideModal() {
+            document.getElementById('modalOverlay').classList.add('hidden');
+        }
+
+        function generateSchedule(event) {
+            event.preventDefault();
+            
+            const semester = document.getElementById('semester').value;
+            const year = document.getElementById('year').value;
+            
+            if (!semester || !year) {
+                alert('Please select both semester and year.');
+                return;
+            }
+
+            const semesterName = semester.charAt(0).toUpperCase() + semester.slice(1);
+            const scheduleName = `${semesterName} ${year} Schedule`;
+            
+            currentSchedule = {
+                name: scheduleName,
+                semester: semester,
+                year: year,
+                classes: JSON.parse(JSON.stringify(semesterData[semester].classes))
+            };
+            
+            document.getElementById('scheduleName').textContent = scheduleName;
+            document.getElementById('generationInfo').textContent = 
+                `Schedule for ${semesterName} ${year} generated based on faculty preferences. ` +
+                `${currentSchedule.classes.length} classes scheduled with optimized room and time assignments.`;
+            
+            renderSchedule();
+            hideModal();
+            document.getElementById('scheduleViewer').classList.add('active');
+        }
+
+        function renderSchedule() {
+            const tbody = document.getElementById('scheduleBody');
+            tbody.innerHTML = '';
+            
+            currentSchedule.classes.forEach((cls, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td contenteditable="true" data-field="classId">${cls.classId}</td>
+                    <td contenteditable="true" data-field="className">${cls.className}</td>
+                    <td contenteditable="true" data-field="instructor">${cls.instructor}</td>
+                    <td contenteditable="true" data-field="room">${cls.room}</td>
+                    <td contenteditable="true" data-field="time">${cls.time}</td>
+                    <td contenteditable="true" data-field="days">${cls.days}</td>
+                    <td contenteditable="true" data-field="capacity">${cls.capacity}</td>
+                `;
+                row.dataset.index = index;
+                tbody.appendChild(row);
+            });
+        }
+
+        function saveSchedule() {
+            if (!currentSchedule) return;
+            
+            const rows = document.querySelectorAll('#scheduleBody tr');
+            const updatedClasses = [];
+            
+            rows.forEach(row => {
+                updatedClasses.push({
+                    classId: row.querySelector('[data-field="classId"]').textContent,
+                    className: row.querySelector('[data-field="className"]').textContent,
+                    instructor: row.querySelector('[data-field="instructor"]').textContent,
+                    room: row.querySelector('[data-field="room"]').textContent,
+                    time: row.querySelector('[data-field="time"]').textContent,
+                    days: row.querySelector('[data-field="days"]').textContent,
+                    capacity: parseInt(row.querySelector('[data-field="capacity"]').textContent) || 0
+                });
+            });
+            
+            currentSchedule.classes = updatedClasses;
+            
+            // Store schedule in sessionStorage for view-schedule page to access
+            const scheduleId = `${currentSchedule.semester}${currentSchedule.year}`;
+            sessionStorage.setItem('newSchedule', JSON.stringify({
+                id: scheduleId,
+                data: currentSchedule
+            }));
+            
+            // Redirect to view schedule page
+            window.location.href = `view-schedule.html?schedule=${scheduleId}`;
+        }
+
+        function exportSchedule() {
+            if (!currentSchedule) return;
+            
+            // Update classes from table before export
+            const rows = document.querySelectorAll('#scheduleBody tr');
+            const headers = ['Class ID', 'Class Name', 'Instructor', 'Room', 'Time', 'Days', 'Capacity'];
+            const csvRows = [headers.join(',')];
+            
+            rows.forEach(row => {
+                const rowData = [
+                    `"${row.querySelector('[data-field="classId"]').textContent}"`,
+                    `"${row.querySelector('[data-field="className"]').textContent}"`,
+                    `"${row.querySelector('[data-field="instructor"]').textContent}"`,
+                    `"${row.querySelector('[data-field="room"]').textContent}"`,
+                    `"${row.querySelector('[data-field="time"]').textContent}"`,
+                    `"${row.querySelector('[data-field="days"]').textContent}"`,
+                    row.querySelector('[data-field="capacity"]').textContent
+                ];
+                csvRows.push(rowData.join(','));
+            });
+            
+            const csv = csvRows.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentSchedule.semester}${currentSchedule.year}-schedule.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

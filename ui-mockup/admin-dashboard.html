@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cov Classes - Admin Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        header {
+            background-color: #4a4a4a;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+        header a {
+            color: white;
+            text-decoration: none;
+        }
+        header nav {
+            display: flex;
+            gap: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        h2 {
+            margin-bottom: 30px;
+        }
+        .action-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .action-card {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .action-card h3 {
+            margin: 0 0 5px 0;
+        }
+        .action-card p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .action-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4a4a4a;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .action-btn:hover {
+            background-color: #333;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Cov Classes</h1>
+        <nav>
+            <a href="dashboard.html">Switch to Faculty</a>
+            <a href="login.html">Logout</a>
+        </nav>
+    </header>
+    
+    <div class="container">
+        <h2>Admin Dashboard</h2>
+        
+        <div class="action-cards">
+            <div class="action-card">
+                <div>
+                    <h3>View Faculty Preferences</h3>
+                    <p>Review submitted class preferences from faculty members</p>
+                </div>
+                <a href="faculty-preferences.html" class="action-btn">View Preferences</a>
+            </div>
+            
+            <div class="action-card">
+                <div>
+                    <h3>View Existing Schedule</h3>
+                    <p>Browse and review currently published class schedules</p>
+                </div>
+                <a href="view-schedule.html" class="action-btn">View Schedule</a>
+            </div>
+            
+            <div class="action-card">
+                <div>
+                    <h3>Create New Schedule</h3>
+                    <p>Generate a new class schedule based on faculty preferences</p>
+                </div>
+                <a href="create-schedule.html" class="action-btn">Create Schedule</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

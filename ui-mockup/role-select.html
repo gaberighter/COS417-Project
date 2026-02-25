@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cov Classes - Select Role</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .role-container {
+            text-align: center;
+            padding: 40px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        h1 {
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .role-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        .role-btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: #4a4a4a;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .role-btn:hover {
+            background-color: #333;
+        }
+        .logout-link {
+            margin-top: 30px;
+        }
+        .logout-link a {
+            color: #666;
+            text-decoration: none;
+        }
+        .logout-link a:hover {
+            text-decoration: underline;
+        }
+        .disclaimer {
+            margin-top: 25px;
+            padding: 10px 15px;
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="role-container">
+        <h1>Cov Classes</h1>
+        <p>Select your dashboard</p>
+        <div class="role-buttons">
+            <a href="dashboard.html" class="role-btn">Faculty Dashboard</a>
+            <a href="admin-dashboard.html" class="role-btn">Admin Dashboard</a>
+        </div>
+        <div class="disclaimer">
+            Note: In the final product, this selection will be done automatically based on your account role.
+        </div>
+        <div class="logout-link">
+            <a href="login.html">Logout</a>
+        </div>
+    </div>
+</body>
+</html>

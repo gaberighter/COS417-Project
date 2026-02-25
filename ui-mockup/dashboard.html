@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cov Classes - Faculty Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        header {
+            background-color: #4a4a4a;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+        header a {
+            color: white;
+            text-decoration: none;
+        }
+        header nav {
+            display: flex;
+            gap: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        h2 {
+            margin-bottom: 20px;
+        }
+        .class-entry {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .class-entry h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        .form-group {
+            flex: 1;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #333;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .remove-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .remove-btn:hover {
+            background-color: #c82333;
+        }
+        .add-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .add-btn:hover {
+            background-color: #218838;
+        }
+        .submit-btn {
+            background-color: #4a4a4a;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .submit-btn:hover {
+            background-color: #333;
+        }
+        .previous-submissions {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .previous-submissions h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .submission-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .submission-item:last-child {
+            margin-bottom: 0;
+        }
+        .submission-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .submission-semester {
+            font-weight: bold;
+        }
+        .submission-meta {
+            font-size: 12px;
+            color: #666;
+        }
+        .autofill-btn {
+            padding: 6px 12px;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .autofill-btn:hover {
+            background-color: #138496;
+        }
+        .disclaimer {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: #856404;
+        }
+        .semester-select {
+            margin-bottom: 20px;
+        }
+        .semester-select label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .semester-select select {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Cov Classes</h1>
+        <nav>
+            <a href="admin-dashboard.html">Switch to Admin</a>
+            <a href="login.html">Logout</a>
+        </nav>
+    </header>
+    
+    <div class="container">
+        <h2>Faculty Dashboard - Class Preference Form</h2>
+        
+        <div class="disclaimer">
+            Note: In the final product, you will only be able to submit one form per semester. You will be able to edit your submission until the submission deadline.
+        </div>
+
+        <div class="previous-submissions">
+            <h3>Previous Submissions</h3>
+            <div class="submission-item">
+                <div class="submission-info">
+                    <span class="submission-semester">Fall 2025</span>
+                    <span class="submission-meta">Submitted: Feb 15, 2025 • 2 classes</span>
+                </div>
+                <button class="autofill-btn" onclick="autofillFromSubmission('fall2025')">Autofill</button>
+            </div>
+            <div class="submission-item">
+                <div class="submission-info">
+                    <span class="submission-semester">Spring 2025</span>
+                    <span class="submission-meta">Submitted: Nov 10, 2024 • 2 classes</span>
+                </div>
+                <button class="autofill-btn" onclick="autofillFromSubmission('spring2025')">Autofill</button>
+            </div>
+            <div class="submission-item">
+                <div class="submission-info">
+                    <span class="submission-semester">Fall 2024</span>
+                    <span class="submission-meta">Submitted: Feb 12, 2024 • 3 classes</span>
+                </div>
+                <button class="autofill-btn" onclick="autofillFromSubmission('fall2024')">Autofill</button>
+            </div>
+        </div>
+
+        <div class="semester-select">
+            <label for="targetSemester">Submitting for Semester:</label>
+            <select id="targetSemester">
+                <option value="fall2026" selected>Fall 2026</option>
+                <option value="spring2027">Spring 2027</option>
+            </select>
+        </div>
+        
+        <form id="preferenceForm">
+            <div id="classEntries">
+                <div class="class-entry" data-index="1">
+                    <h3>
+                        <span>Class 1</span>
+                        <button type="button" class="remove-btn" onclick="removeClass(this)">Remove</button>
+                    </h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Class ID</label>
+                            <input type="text" name="classId_1" placeholder="e.g., COS417">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Capacity</label>
+                            <input type="number" name="maxCapacity_1" placeholder="e.g., 30">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Room Preference</label>
+                            <select name="roomPreference_1">
+                                <option value="">Select a room...</option>
+                                <option value="room101">Room 101</option>
+                                <option value="room102">Room 102</option>
+                                <option value="room201">Room 201</option>
+                                <option value="room202">Room 202</option>
+                                <option value="lab1">Computer Lab 1</option>
+                                <option value="lab2">Computer Lab 2</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Time Preference</label>
+                            <select name="timePreference_1">
+                                <option value="">Select a time...</option>
+                                <option value="mwf_8">MWF 8:00 AM - 9:00 AM</option>
+                                <option value="mwf_9">MWF 9:00 AM - 10:00 AM</option>
+                                <option value="mwf_10">MWF 10:00 AM - 11:00 AM</option>
+                                <option value="mwf_11">MWF 11:00 AM - 12:00 PM</option>
+                                <option value="mwf_1">MWF 1:00 PM - 2:00 PM</option>
+                                <option value="mwf_2">MWF 2:00 PM - 3:00 PM</option>
+                                <option value="tth_8">TTh 8:00 AM - 9:30 AM</option>
+                                <option value="tth_10">TTh 10:00 AM - 11:30 AM</option>
+                                <option value="tth_1">TTh 1:00 PM - 2:30 PM</option>
+                                <option value="tth_3">TTh 3:00 PM - 4:30 PM</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="button" class="add-btn" onclick="addClass()">+ Add Another Class</button>
+            <br><br>
+            <button type="submit" class="submit-btn">Submit Preferences</button>
+        </form>
+    </div>
+
+    <script>
+        let classCount = 1;
+
+        // Dummy previous submission data
+        const previousSubmissions = {
+            fall2025: {
+                classes: [
+                    { classId: 'COS417', maxCapacity: 30, roomPreference: 'lab1', timePreference: 'mwf_10' },
+                    { classId: 'COS101', maxCapacity: 45, roomPreference: 'room201', timePreference: 'tth_1' }
+                ]
+            },
+            spring2025: {
+                classes: [
+                    { classId: 'COS418', maxCapacity: 25, roomPreference: 'lab1', timePreference: 'mwf_2' },
+                    { classId: 'COS102', maxCapacity: 40, roomPreference: 'room201', timePreference: 'tth_10' }
+                ]
+            },
+            fall2024: {
+                classes: [
+                    { classId: 'COS320', maxCapacity: 25, roomPreference: 'lab2', timePreference: 'mwf_9' },
+                    { classId: 'COS417', maxCapacity: 30, roomPreference: 'lab1', timePreference: 'mwf_10' },
+                    { classId: 'COS101', maxCapacity: 45, roomPreference: 'room201', timePreference: 'tth_1' }
+                ]
+            }
+        };
+
+        function autofillFromSubmission(submissionId) {
+            const submission = previousSubmissions[submissionId];
+            if (!submission) return;
+
+            // Clear existing entries
+            document.getElementById('classEntries').innerHTML = '';
+            classCount = 0;
+
+            // Add entries from the previous submission
+            submission.classes.forEach((cls, index) => {
+                classCount++;
+                const container = document.getElementById('classEntries');
+                const newEntry = document.createElement('div');
+                newEntry.className = 'class-entry';
+                newEntry.dataset.index = classCount;
+                newEntry.innerHTML = `
+                    <h3>
+                        <span>Class ${classCount}</span>
+                        <button type="button" class="remove-btn" onclick="removeClass(this)">Remove</button>
+                    </h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Class ID</label>
+                            <input type="text" name="classId_${classCount}" placeholder="e.g., COS417" value="${cls.classId}">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Capacity</label>
+                            <input type="number" name="maxCapacity_${classCount}" placeholder="e.g., 30" value="${cls.maxCapacity}">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Room Preference</label>
+                            <select name="roomPreference_${classCount}">
+                                <option value="">Select a room...</option>
+                                <option value="room101" ${cls.roomPreference === 'room101' ? 'selected' : ''}>Room 101</option>
+                                <option value="room102" ${cls.roomPreference === 'room102' ? 'selected' : ''}>Room 102</option>
+                                <option value="room201" ${cls.roomPreference === 'room201' ? 'selected' : ''}>Room 201</option>
+                                <option value="room202" ${cls.roomPreference === 'room202' ? 'selected' : ''}>Room 202</option>
+                                <option value="lab1" ${cls.roomPreference === 'lab1' ? 'selected' : ''}>Computer Lab 1</option>
+                                <option value="lab2" ${cls.roomPreference === 'lab2' ? 'selected' : ''}>Computer Lab 2</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Time Preference</label>
+                            <select name="timePreference_${classCount}">
+                                <option value="">Select a time...</option>
+                                <option value="mwf_8" ${cls.timePreference === 'mwf_8' ? 'selected' : ''}>MWF 8:00 AM - 9:00 AM</option>
+                                <option value="mwf_9" ${cls.timePreference === 'mwf_9' ? 'selected' : ''}>MWF 9:00 AM - 10:00 AM</option>
+                                <option value="mwf_10" ${cls.timePreference === 'mwf_10' ? 'selected' : ''}>MWF 10:00 AM - 11:00 AM</option>
+                                <option value="mwf_11" ${cls.timePreference === 'mwf_11' ? 'selected' : ''}>MWF 11:00 AM - 12:00 PM</option>
+                                <option value="mwf_1" ${cls.timePreference === 'mwf_1' ? 'selected' : ''}>MWF 1:00 PM - 2:00 PM</option>
+                                <option value="mwf_2" ${cls.timePreference === 'mwf_2' ? 'selected' : ''}>MWF 2:00 PM - 3:00 PM</option>
+                                <option value="tth_8" ${cls.timePreference === 'tth_8' ? 'selected' : ''}>TTh 8:00 AM - 9:30 AM</option>
+                                <option value="tth_10" ${cls.timePreference === 'tth_10' ? 'selected' : ''}>TTh 10:00 AM - 11:30 AM</option>
+                                <option value="tth_1" ${cls.timePreference === 'tth_1' ? 'selected' : ''}>TTh 1:00 PM - 2:30 PM</option>
+                                <option value="tth_3" ${cls.timePreference === 'tth_3' ? 'selected' : ''}>TTh 3:00 PM - 4:30 PM</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(newEntry);
+            });
+
+            alert('Form autofilled from previous submission. Review and modify as needed.');
+        }
+
+        function addClass() {
+            classCount++;
+            const container = document.getElementById('classEntries');
+            const newEntry = document.createElement('div');
+            newEntry.className = 'class-entry';
+            newEntry.dataset.index = classCount;
+            newEntry.innerHTML = `
+                <h3>
+                    <span>Class ${classCount}</span>
+                    <button type="button" class="remove-btn" onclick="removeClass(this)">Remove</button>
+                </h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Class ID</label>
+                        <input type="text" name="classId_${classCount}" placeholder="e.g., COS417">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Capacity</label>
+                        <input type="number" name="maxCapacity_${classCount}" placeholder="e.g., 30">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Room Preference</label>
+                        <select name="roomPreference_${classCount}">
+                            <option value="">Select a room...</option>
+                            <option value="room101">Room 101</option>
+                            <option value="room102">Room 102</option>
+                            <option value="room201">Room 201</option>
+                            <option value="room202">Room 202</option>
+                            <option value="lab1">Computer Lab 1</option>
+                            <option value="lab2">Computer Lab 2</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Time Preference</label>
+                        <select name="timePreference_${classCount}">
+                            <option value="">Select a time...</option>
+                            <option value="mwf_8">MWF 8:00 AM - 9:00 AM</option>
+                            <option value="mwf_9">MWF 9:00 AM - 10:00 AM</option>
+                            <option value="mwf_10">MWF 10:00 AM - 11:00 AM</option>
+                            <option value="mwf_11">MWF 11:00 AM - 12:00 PM</option>
+                            <option value="mwf_1">MWF 1:00 PM - 2:00 PM</option>
+                            <option value="mwf_2">MWF 2:00 PM - 3:00 PM</option>
+                            <option value="tth_8">TTh 8:00 AM - 9:30 AM</option>
+                            <option value="tth_10">TTh 10:00 AM - 11:30 AM</option>
+                            <option value="tth_1">TTh 1:00 PM - 2:30 PM</option>
+                            <option value="tth_3">TTh 3:00 PM - 4:30 PM</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+            container.appendChild(newEntry);
+        }
+
+        function removeClass(button) {
+            const entries = document.querySelectorAll('.class-entry');
+            if (entries.length > 1) {
+                button.closest('.class-entry').remove();
+                renumberClasses();
+            } else {
+                alert('You must have at least one class entry.');
+            }
+        }
+
+        function renumberClasses() {
+            const entries = document.querySelectorAll('.class-entry');
+            entries.forEach((entry, index) => {
+                entry.querySelector('h3 span').textContent = `Class ${index + 1}`;
+            });
+        }
+
+        document.getElementById('preferenceForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Preferences submitted successfully!');
+        });
+    </script>
+</body>
+</html>
