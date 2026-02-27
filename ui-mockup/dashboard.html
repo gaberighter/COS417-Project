@@ -67,12 +67,30 @@
             color: #333;
         }
         .form-group input,
-        .form-group select {
+        .form-group select,
+        .form-group textarea {
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .checkbox-item input {
+            width: auto;
         }
         .remove-btn {
             background-color: #dc3545;
@@ -180,6 +198,48 @@
             border-radius: 4px;
             font-size: 14px;
         }
+        .csv-upload {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .csv-upload h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .csv-upload-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .csv-upload input[type="file"] {
+            flex: 1;
+        }
+        .upload-btn {
+            padding: 8px 16px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .upload-btn:hover {
+            background-color: #5a6268;
+        }
+        .csv-format-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+        .csv-format-info code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -230,6 +290,20 @@
                 <option value="spring2027">Spring 2027</option>
             </select>
         </div>
+
+        <div class="csv-upload">
+            <h3>Upload Preferences from CSV</h3>
+            <p class="disclaimer" style="margin-top: 0;">Note: In the final product, CSV upload will only be available to administrators.</p>
+            <div class="csv-upload-row">
+                <input type="file" id="csvFile" accept=".csv">
+                <button type="button" class="upload-btn" onclick="uploadCSV()">Upload & Fill Form</button>
+            </div>
+            <p class="csv-format-info">
+                Expected CSV format: <code>deptCode,courseNum,sectionNum,instructorName,instructorId,expectedEnrollment,maxCapacity,days,times,roomType,roomTypeOther,minCapacity,requiredEquipment</code><br>
+                Days: MWF, TR, MW, M, T, W, R | Times: early_morning, late_morning, early_afternoon, late_afternoon, evening (comma-separated in quotes)<br>
+                Room Type: classroom, computer_lab, other | Example row: <code>CS,101,001,Dr. Smith,JS001,25,30,MWF,"early_morning,late_morning",classroom,,30,Projector</code>
+            </p>
+        </div>
         
         <form id="preferenceForm">
             <div id="classEntries">
@@ -238,44 +312,97 @@
                         <span>Class 1</span>
                         <button type="button" class="remove-btn" onclick="removeClass(this)">Remove</button>
                     </h3>
+                    
+                    <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Course Identification</h4>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Class ID</label>
-                            <input type="text" name="classId_1" placeholder="e.g., COS417">
+                            <label>Department Code</label>
+                            <input type="text" name="deptCode_1" placeholder="e.g., CS, MATH, ENG">
                         </div>
                         <div class="form-group">
-                            <label>Max Capacity</label>
-                            <input type="number" name="maxCapacity_1" placeholder="e.g., 30">
+                            <label>Course Number</label>
+                            <input type="text" name="courseNum_1" placeholder="e.g., 101, 201">
+                        </div>
+                        <div class="form-group">
+                            <label>Section Number</label>
+                            <input type="text" name="sectionNum_1" placeholder="e.g., 001, 002">
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Instructor Information</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Primary Instructor Name</label>
+                            <input type="text" name="instructorName_1" placeholder="e.g., Dr. John Smith">
+                        </div>
+                        <div class="form-group">
+                            <label>Instructor ID</label>
+                            <input type="text" name="instructorId_1" placeholder="e.g., JS001">
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Enrollment Information</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Expected Enrollment</label>
+                            <input type="number" name="expectedEnrollment_1" placeholder="e.g., 25" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Maximum Capacity</label>
+                            <input type="number" name="maxCapacity_1" placeholder="e.g., 30" min="1">
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Time Preferences</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Preferred Days</label>
+                            <select name="days_1">
+                                <option value="">Select days...</option>
+                                <option value="MWF">MWF (Monday, Wednesday, Friday)</option>
+                                <option value="TR">TR (Tuesday, Thursday)</option>
+                                <option value="MW">MW (Monday, Wednesday)</option>
+                                <option value="M">M (Monday only)</option>
+                                <option value="T">T (Tuesday only)</option>
+                                <option value="W">W (Wednesday only)</option>
+                                <option value="R">R (Thursday only)</option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Room Preference</label>
-                            <select name="roomPreference_1">
-                                <option value="">Select a room...</option>
-                                <option value="room101">Room 101</option>
-                                <option value="room102">Room 102</option>
-                                <option value="room201">Room 201</option>
-                                <option value="room202">Room 202</option>
-                                <option value="lab1">Computer Lab 1</option>
-                                <option value="lab2">Computer Lab 2</option>
+                            <label>Preferred Time Blocks</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item"><input type="checkbox" name="times_1" value="early_morning"> Early Morning (8-10 AM)</label>
+                                <label class="checkbox-item"><input type="checkbox" name="times_1" value="late_morning"> Late Morning (10 AM-12 PM)</label>
+                                <label class="checkbox-item"><input type="checkbox" name="times_1" value="early_afternoon"> Early Afternoon (12-2 PM)</label>
+                                <label class="checkbox-item"><input type="checkbox" name="times_1" value="late_afternoon"> Late Afternoon (2-4 PM)</label>
+                                <label class="checkbox-item"><input type="checkbox" name="times_1" value="evening"> Evening (4-6 PM)</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Room Requirements</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Room Type</label>
+                            <select name="roomType_1" onchange="toggleOtherInput(this, 1)">
+                                <option value="">Select room type...</option>
+                                <option value="classroom">Standard Classroom</option>
+                                <option value="computer_lab">Computer Lab</option>
+                                <option value="other">Other</option>
                             </select>
+                            <input type="text" name="roomTypeOther_1" class="other-input" placeholder="Please specify room type..." style="display: none; margin-top: 8px;">
                         </div>
                         <div class="form-group">
-                            <label>Time Preference</label>
-                            <select name="timePreference_1">
-                                <option value="">Select a time...</option>
-                                <option value="mwf_8">MWF 8:00 AM - 9:00 AM</option>
-                                <option value="mwf_9">MWF 9:00 AM - 10:00 AM</option>
-                                <option value="mwf_10">MWF 10:00 AM - 11:00 AM</option>
-                                <option value="mwf_11">MWF 11:00 AM - 12:00 PM</option>
-                                <option value="mwf_1">MWF 1:00 PM - 2:00 PM</option>
-                                <option value="mwf_2">MWF 2:00 PM - 3:00 PM</option>
-                                <option value="tth_8">TTh 8:00 AM - 9:30 AM</option>
-                                <option value="tth_10">TTh 10:00 AM - 11:30 AM</option>
-                                <option value="tth_1">TTh 1:00 PM - 2:30 PM</option>
-                                <option value="tth_3">TTh 3:00 PM - 4:30 PM</option>
-                            </select>
+                            <label>Minimum Room Capacity</label>
+                            <input type="number" name="minCapacity_1" placeholder="e.g., 30" min="1">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Required Equipment/Features</label>
+                            <textarea name="requiredEquipment_1" placeholder="e.g., projector, whiteboard, wheelchair accessibility, video conferencing equipment, specialized software..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -294,24 +421,34 @@
         const previousSubmissions = {
             fall2025: {
                 classes: [
-                    { classId: 'COS417', maxCapacity: 30, roomPreference: 'lab1', timePreference: 'mwf_10' },
-                    { classId: 'COS101', maxCapacity: 45, roomPreference: 'room201', timePreference: 'tth_1' }
+                    { deptCode: 'CS', courseNum: '101', sectionNum: '001', instructorName: 'Dr. John Smith', instructorId: 'JS001', expectedEnrollment: 25, maxCapacity: 30, days: 'MWF', times: ['late_morning'], roomType: 'computer_lab', roomTypeOther: '', minCapacity: 30, requiredEquipment: 'Projector, specialized software installed' },
+                    { deptCode: 'CS', courseNum: '201', sectionNum: '001', instructorName: 'Dr. John Smith', instructorId: 'JS001', expectedEnrollment: 20, maxCapacity: 25, days: 'TR', times: ['early_afternoon'], roomType: 'classroom', roomTypeOther: '', minCapacity: 25, requiredEquipment: 'Whiteboard, wheelchair accessible' }
                 ]
             },
             spring2025: {
                 classes: [
-                    { classId: 'COS418', maxCapacity: 25, roomPreference: 'lab1', timePreference: 'mwf_2' },
-                    { classId: 'COS102', maxCapacity: 40, roomPreference: 'room201', timePreference: 'tth_10' }
+                    { deptCode: 'MATH', courseNum: '301', sectionNum: '001', instructorName: 'Dr. Jane Doe', instructorId: 'JD002', expectedEnrollment: 50, maxCapacity: 60, days: 'MWF', times: ['early_morning', 'late_morning'], roomType: 'other', roomTypeOther: 'Lecture Hall', minCapacity: 60, requiredEquipment: 'Microphone, video recording capability' },
+                    { deptCode: 'MATH', courseNum: '302', sectionNum: '001', instructorName: 'Dr. Jane Doe', instructorId: 'JD002', expectedEnrollment: 15, maxCapacity: 20, days: 'TR', times: ['late_afternoon'], roomType: 'other', roomTypeOther: 'Seminar Room', minCapacity: 20, requiredEquipment: 'Round table seating, video conferencing' }
                 ]
             },
             fall2024: {
                 classes: [
-                    { classId: 'COS320', maxCapacity: 25, roomPreference: 'lab2', timePreference: 'mwf_9' },
-                    { classId: 'COS417', maxCapacity: 30, roomPreference: 'lab1', timePreference: 'mwf_10' },
-                    { classId: 'COS101', maxCapacity: 45, roomPreference: 'room201', timePreference: 'tth_1' }
+                    { deptCode: 'ENG', courseNum: '101', sectionNum: '001', instructorName: 'Prof. Bob Wilson', instructorId: 'BW003', expectedEnrollment: 22, maxCapacity: 25, days: 'MW', times: ['early_morning'], roomType: 'computer_lab', roomTypeOther: '', minCapacity: 25, requiredEquipment: 'Dual monitors, 25 workstations' },
+                    { deptCode: 'ENG', courseNum: '102', sectionNum: '002', instructorName: 'Prof. Bob Wilson', instructorId: 'BW003', expectedEnrollment: 28, maxCapacity: 30, days: 'TR', times: ['late_morning'], roomType: 'classroom', roomTypeOther: '', minCapacity: 30, requiredEquipment: 'Smart board, document camera' },
+                    { deptCode: 'ENG', courseNum: '201', sectionNum: '001', instructorName: 'Prof. Bob Wilson', instructorId: 'BW003', expectedEnrollment: 18, maxCapacity: 20, days: 'W', times: ['early_afternoon'], roomType: 'other', roomTypeOther: 'Studio/Workshop', minCapacity: 20, requiredEquipment: 'Open floor plan, movable furniture' }
                 ]
             }
         };
+
+        function toggleOtherInput(selectElement, classNum) {
+            const otherInput = document.querySelector(`input[name="roomTypeOther_${classNum}"]`);
+            if (selectElement.value === 'other') {
+                otherInput.style.display = 'block';
+            } else {
+                otherInput.style.display = 'none';
+                otherInput.value = '';
+            }
+        }
 
         function autofillFromSubmission(submissionId) {
             const submission = previousSubmissions[submissionId];
@@ -333,44 +470,97 @@
                         <span>Class ${classCount}</span>
                         <button type="button" class="remove-btn" onclick="removeClass(this)">Remove</button>
                     </h3>
+                    
+                    <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Course Identification</h4>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Class ID</label>
-                            <input type="text" name="classId_${classCount}" placeholder="e.g., COS417" value="${cls.classId}">
+                            <label>Department Code</label>
+                            <input type="text" name="deptCode_${classCount}" placeholder="e.g., CS, MATH, ENG" value="${cls.deptCode || ''}">
                         </div>
                         <div class="form-group">
-                            <label>Max Capacity</label>
-                            <input type="number" name="maxCapacity_${classCount}" placeholder="e.g., 30" value="${cls.maxCapacity}">
+                            <label>Course Number</label>
+                            <input type="text" name="courseNum_${classCount}" placeholder="e.g., 101, 201" value="${cls.courseNum || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Section Number</label>
+                            <input type="text" name="sectionNum_${classCount}" placeholder="e.g., 001, 002" value="${cls.sectionNum || ''}">
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Instructor Information</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Primary Instructor Name</label>
+                            <input type="text" name="instructorName_${classCount}" placeholder="e.g., Dr. John Smith" value="${cls.instructorName || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Instructor ID</label>
+                            <input type="text" name="instructorId_${classCount}" placeholder="e.g., JS001" value="${cls.instructorId || ''}">
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Enrollment Information</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Expected Enrollment</label>
+                            <input type="number" name="expectedEnrollment_${classCount}" placeholder="e.g., 25" min="1" value="${cls.expectedEnrollment || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Maximum Capacity</label>
+                            <input type="number" name="maxCapacity_${classCount}" placeholder="e.g., 30" min="1" value="${cls.maxCapacity || ''}">
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Time Preferences</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Preferred Days</label>
+                            <select name="days_${classCount}">
+                                <option value="">Select days...</option>
+                                <option value="MWF" ${cls.days === 'MWF' ? 'selected' : ''}>MWF (Monday, Wednesday, Friday)</option>
+                                <option value="TR" ${cls.days === 'TR' ? 'selected' : ''}>TR (Tuesday, Thursday)</option>
+                                <option value="MW" ${cls.days === 'MW' ? 'selected' : ''}>MW (Monday, Wednesday)</option>
+                                <option value="M" ${cls.days === 'M' ? 'selected' : ''}>M (Monday only)</option>
+                                <option value="T" ${cls.days === 'T' ? 'selected' : ''}>T (Tuesday only)</option>
+                                <option value="W" ${cls.days === 'W' ? 'selected' : ''}>W (Wednesday only)</option>
+                                <option value="R" ${cls.days === 'R' ? 'selected' : ''}>R (Thursday only)</option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Room Preference</label>
-                            <select name="roomPreference_${classCount}">
-                                <option value="">Select a room...</option>
-                                <option value="room101" ${cls.roomPreference === 'room101' ? 'selected' : ''}>Room 101</option>
-                                <option value="room102" ${cls.roomPreference === 'room102' ? 'selected' : ''}>Room 102</option>
-                                <option value="room201" ${cls.roomPreference === 'room201' ? 'selected' : ''}>Room 201</option>
-                                <option value="room202" ${cls.roomPreference === 'room202' ? 'selected' : ''}>Room 202</option>
-                                <option value="lab1" ${cls.roomPreference === 'lab1' ? 'selected' : ''}>Computer Lab 1</option>
-                                <option value="lab2" ${cls.roomPreference === 'lab2' ? 'selected' : ''}>Computer Lab 2</option>
+                            <label>Preferred Time Blocks</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="early_morning" ${cls.times.includes('early_morning') ? 'checked' : ''}> Early Morning (8-10 AM)</label>
+                                <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="late_morning" ${cls.times.includes('late_morning') ? 'checked' : ''}> Late Morning (10 AM-12 PM)</label>
+                                <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="early_afternoon" ${cls.times.includes('early_afternoon') ? 'checked' : ''}> Early Afternoon (12-2 PM)</label>
+                                <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="late_afternoon" ${cls.times.includes('late_afternoon') ? 'checked' : ''}> Late Afternoon (2-4 PM)</label>
+                                <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="evening" ${cls.times.includes('evening') ? 'checked' : ''}> Evening (4-6 PM)</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Room Requirements</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Room Type</label>
+                            <select name="roomType_${classCount}" onchange="toggleOtherInput(this, ${classCount})">
+                                <option value="">Select room type...</option>
+                                <option value="classroom" ${cls.roomType === 'classroom' ? 'selected' : ''}>Standard Classroom</option>
+                                <option value="computer_lab" ${cls.roomType === 'computer_lab' ? 'selected' : ''}>Computer Lab</option>
+                                <option value="other" ${cls.roomType === 'other' ? 'selected' : ''}>Other</option>
                             </select>
+                            <input type="text" name="roomTypeOther_${classCount}" class="other-input" placeholder="Please specify room type..." style="display: ${cls.roomType === 'other' ? 'block' : 'none'}; margin-top: 8px;" value="${cls.roomTypeOther || ''}">
                         </div>
                         <div class="form-group">
-                            <label>Time Preference</label>
-                            <select name="timePreference_${classCount}">
-                                <option value="">Select a time...</option>
-                                <option value="mwf_8" ${cls.timePreference === 'mwf_8' ? 'selected' : ''}>MWF 8:00 AM - 9:00 AM</option>
-                                <option value="mwf_9" ${cls.timePreference === 'mwf_9' ? 'selected' : ''}>MWF 9:00 AM - 10:00 AM</option>
-                                <option value="mwf_10" ${cls.timePreference === 'mwf_10' ? 'selected' : ''}>MWF 10:00 AM - 11:00 AM</option>
-                                <option value="mwf_11" ${cls.timePreference === 'mwf_11' ? 'selected' : ''}>MWF 11:00 AM - 12:00 PM</option>
-                                <option value="mwf_1" ${cls.timePreference === 'mwf_1' ? 'selected' : ''}>MWF 1:00 PM - 2:00 PM</option>
-                                <option value="mwf_2" ${cls.timePreference === 'mwf_2' ? 'selected' : ''}>MWF 2:00 PM - 3:00 PM</option>
-                                <option value="tth_8" ${cls.timePreference === 'tth_8' ? 'selected' : ''}>TTh 8:00 AM - 9:30 AM</option>
-                                <option value="tth_10" ${cls.timePreference === 'tth_10' ? 'selected' : ''}>TTh 10:00 AM - 11:30 AM</option>
-                                <option value="tth_1" ${cls.timePreference === 'tth_1' ? 'selected' : ''}>TTh 1:00 PM - 2:30 PM</option>
-                                <option value="tth_3" ${cls.timePreference === 'tth_3' ? 'selected' : ''}>TTh 3:00 PM - 4:30 PM</option>
-                            </select>
+                            <label>Minimum Room Capacity</label>
+                            <input type="number" name="minCapacity_${classCount}" placeholder="e.g., 30" min="1" value="${cls.minCapacity || ''}">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Required Equipment/Features</label>
+                            <textarea name="requiredEquipment_${classCount}" placeholder="e.g., projector, whiteboard, wheelchair accessibility, video conferencing equipment, specialized software...">${cls.requiredEquipment || ''}</textarea>
                         </div>
                     </div>
                 `;
@@ -391,44 +581,97 @@
                     <span>Class ${classCount}</span>
                     <button type="button" class="remove-btn" onclick="removeClass(this)">Remove</button>
                 </h3>
+                
+                <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Course Identification</h4>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Class ID</label>
-                        <input type="text" name="classId_${classCount}" placeholder="e.g., COS417">
+                        <label>Department Code</label>
+                        <input type="text" name="deptCode_${classCount}" placeholder="e.g., CS, MATH, ENG">
                     </div>
                     <div class="form-group">
-                        <label>Max Capacity</label>
-                        <input type="number" name="maxCapacity_${classCount}" placeholder="e.g., 30">
+                        <label>Course Number</label>
+                        <input type="text" name="courseNum_${classCount}" placeholder="e.g., 101, 201">
+                    </div>
+                    <div class="form-group">
+                        <label>Section Number</label>
+                        <input type="text" name="sectionNum_${classCount}" placeholder="e.g., 001, 002">
+                    </div>
+                </div>
+                
+                <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Instructor Information</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Primary Instructor Name</label>
+                        <input type="text" name="instructorName_${classCount}" placeholder="e.g., Dr. John Smith">
+                    </div>
+                    <div class="form-group">
+                        <label>Instructor ID</label>
+                        <input type="text" name="instructorId_${classCount}" placeholder="e.g., JS001">
+                    </div>
+                </div>
+                
+                <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Enrollment Information</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Expected Enrollment</label>
+                        <input type="number" name="expectedEnrollment_${classCount}" placeholder="e.g., 25" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Maximum Capacity</label>
+                        <input type="number" name="maxCapacity_${classCount}" placeholder="e.g., 30" min="1">
+                    </div>
+                </div>
+                
+                <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Time Preferences</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Preferred Days</label>
+                        <select name="days_${classCount}">
+                            <option value="">Select days...</option>
+                            <option value="MWF">MWF (Monday, Wednesday, Friday)</option>
+                            <option value="TR">TR (Tuesday, Thursday)</option>
+                            <option value="MW">MW (Monday, Wednesday)</option>
+                            <option value="M">M (Monday only)</option>
+                            <option value="T">T (Tuesday only)</option>
+                            <option value="W">W (Wednesday only)</option>
+                            <option value="R">R (Thursday only)</option>
+                        </select>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Room Preference</label>
-                        <select name="roomPreference_${classCount}">
-                            <option value="">Select a room...</option>
-                            <option value="room101">Room 101</option>
-                            <option value="room102">Room 102</option>
-                            <option value="room201">Room 201</option>
-                            <option value="room202">Room 202</option>
-                            <option value="lab1">Computer Lab 1</option>
-                            <option value="lab2">Computer Lab 2</option>
+                        <label>Preferred Time Blocks</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="early_morning"> Early Morning (8-10 AM)</label>
+                            <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="late_morning"> Late Morning (10 AM-12 PM)</label>
+                            <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="early_afternoon"> Early Afternoon (12-2 PM)</label>
+                            <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="late_afternoon"> Late Afternoon (2-4 PM)</label>
+                            <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="evening"> Evening (4-6 PM)</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Room Requirements</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Room Type</label>
+                        <select name="roomType_${classCount}" onchange="toggleOtherInput(this, ${classCount})">
+                            <option value="">Select room type...</option>
+                            <option value="classroom">Standard Classroom</option>
+                            <option value="computer_lab">Computer Lab</option>
+                            <option value="other">Other</option>
                         </select>
+                        <input type="text" name="roomTypeOther_${classCount}" class="other-input" placeholder="Please specify room type..." style="display: none; margin-top: 8px;">
                     </div>
                     <div class="form-group">
-                        <label>Time Preference</label>
-                        <select name="timePreference_${classCount}">
-                            <option value="">Select a time...</option>
-                            <option value="mwf_8">MWF 8:00 AM - 9:00 AM</option>
-                            <option value="mwf_9">MWF 9:00 AM - 10:00 AM</option>
-                            <option value="mwf_10">MWF 10:00 AM - 11:00 AM</option>
-                            <option value="mwf_11">MWF 11:00 AM - 12:00 PM</option>
-                            <option value="mwf_1">MWF 1:00 PM - 2:00 PM</option>
-                            <option value="mwf_2">MWF 2:00 PM - 3:00 PM</option>
-                            <option value="tth_8">TTh 8:00 AM - 9:30 AM</option>
-                            <option value="tth_10">TTh 10:00 AM - 11:30 AM</option>
-                            <option value="tth_1">TTh 1:00 PM - 2:30 PM</option>
-                            <option value="tth_3">TTh 3:00 PM - 4:30 PM</option>
-                        </select>
+                        <label>Minimum Room Capacity</label>
+                        <input type="number" name="minCapacity_${classCount}" placeholder="e.g., 30" min="1">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Required Equipment/Features</label>
+                        <textarea name="requiredEquipment_${classCount}" placeholder="e.g., projector, whiteboard, wheelchair accessibility, video conferencing equipment, specialized software..."></textarea>
                     </div>
                 </div>
             `;
@@ -456,6 +699,218 @@
             e.preventDefault();
             alert('Preferences submitted successfully!');
         });
+
+        function uploadCSV() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a CSV file first.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const classes = parseCSV(content);
+                
+                if (classes.length === 0) {
+                    alert('No valid class entries found in the CSV file.');
+                    return;
+                }
+
+                // Clear existing entries and populate from CSV
+                document.getElementById('classEntries').innerHTML = '';
+                classCount = 0;
+
+                classes.forEach((cls) => {
+                    classCount++;
+                    const container = document.getElementById('classEntries');
+                    const newEntry = document.createElement('div');
+                    newEntry.className = 'class-entry';
+                    newEntry.dataset.index = classCount;
+                    newEntry.innerHTML = `
+                        <h3>
+                            <span>Class ${classCount}</span>
+                            <button type="button" class="remove-btn" onclick="removeClass(this)">Remove</button>
+                        </h3>
+                        
+                        <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Course Identification</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Department Code</label>
+                                <input type="text" name="deptCode_${classCount}" placeholder="e.g., CS, MATH, ENG" value="${cls.deptCode || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Course Number</label>
+                                <input type="text" name="courseNum_${classCount}" placeholder="e.g., 101, 201" value="${cls.courseNum || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Section Number</label>
+                                <input type="text" name="sectionNum_${classCount}" placeholder="e.g., 001, 002" value="${cls.sectionNum || ''}">
+                            </div>
+                        </div>
+                        
+                        <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Instructor Information</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Primary Instructor Name</label>
+                                <input type="text" name="instructorName_${classCount}" placeholder="e.g., Dr. John Smith" value="${cls.instructorName || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Instructor ID</label>
+                                <input type="text" name="instructorId_${classCount}" placeholder="e.g., JS001" value="${cls.instructorId || ''}">
+                            </div>
+                        </div>
+                        
+                        <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Enrollment Information</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Expected Enrollment</label>
+                                <input type="number" name="expectedEnrollment_${classCount}" placeholder="e.g., 25" min="1" value="${cls.expectedEnrollment || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Maximum Capacity</label>
+                                <input type="number" name="maxCapacity_${classCount}" placeholder="e.g., 30" min="1" value="${cls.maxCapacity || ''}">
+                            </div>
+                        </div>
+                        
+                        <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Time Preferences</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Preferred Days</label>
+                                <select name="days_${classCount}">
+                                    <option value="">Select days...</option>
+                                    <option value="MWF" ${cls.days === 'MWF' ? 'selected' : ''}>MWF (Monday, Wednesday, Friday)</option>
+                                    <option value="TR" ${cls.days === 'TR' ? 'selected' : ''}>TR (Tuesday, Thursday)</option>
+                                    <option value="MW" ${cls.days === 'MW' ? 'selected' : ''}>MW (Monday, Wednesday)</option>
+                                    <option value="M" ${cls.days === 'M' ? 'selected' : ''}>M (Monday only)</option>
+                                    <option value="T" ${cls.days === 'T' ? 'selected' : ''}>T (Tuesday only)</option>
+                                    <option value="W" ${cls.days === 'W' ? 'selected' : ''}>W (Wednesday only)</option>
+                                    <option value="R" ${cls.days === 'R' ? 'selected' : ''}>R (Thursday only)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Preferred Time Blocks</label>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="early_morning" ${cls.times.includes('early_morning') ? 'checked' : ''}> Early Morning (8-10 AM)</label>
+                                    <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="late_morning" ${cls.times.includes('late_morning') ? 'checked' : ''}> Late Morning (10 AM-12 PM)</label>
+                                    <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="early_afternoon" ${cls.times.includes('early_afternoon') ? 'checked' : ''}> Early Afternoon (12-2 PM)</label>
+                                    <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="late_afternoon" ${cls.times.includes('late_afternoon') ? 'checked' : ''}> Late Afternoon (2-4 PM)</label>
+                                    <label class="checkbox-item"><input type="checkbox" name="times_${classCount}" value="evening" ${cls.times.includes('evening') ? 'checked' : ''}> Evening (4-6 PM)</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h4 style="margin: 15px 0 10px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Room Requirements</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Room Type</label>
+                                <select name="roomType_${classCount}" onchange="toggleOtherInput(this, ${classCount})">
+                                    <option value="">Select room type...</option>
+                                    <option value="classroom" ${cls.roomType === 'classroom' ? 'selected' : ''}>Standard Classroom</option>
+                                    <option value="computer_lab" ${cls.roomType === 'computer_lab' ? 'selected' : ''}>Computer Lab</option>
+                                    <option value="other" ${cls.roomType === 'other' ? 'selected' : ''}>Other</option>
+                                </select>
+                                <input type="text" name="roomTypeOther_${classCount}" class="other-input" placeholder="Please specify room type..." style="display: ${cls.roomType === 'other' ? 'block' : 'none'}; margin-top: 8px;" value="${cls.roomTypeOther || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Minimum Room Capacity</label>
+                                <input type="number" name="minCapacity_${classCount}" placeholder="e.g., 30" min="1" value="${cls.minCapacity || ''}">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Required Equipment/Features</label>
+                                <textarea name="requiredEquipment_${classCount}" placeholder="e.g., projector, whiteboard, wheelchair accessibility, video conferencing equipment, specialized software...">${cls.requiredEquipment || ''}</textarea>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(newEntry);
+                });
+
+                alert(`Successfully loaded ${classes.length} class(es) from CSV. Review and modify as needed.`);
+                fileInput.value = ''; // Clear the file input
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(content) {
+            const lines = content.trim().split('\n');
+            const classes = [];
+            
+            // Skip header row if present
+            let startIndex = 0;
+            const firstLine = lines[0].toLowerCase();
+            if (firstLine.includes('deptcode') || firstLine.includes('days') || firstLine.includes('instructor')) {
+                startIndex = 1;
+            }
+
+            for (let i = startIndex; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                // Parse CSV line handling quoted fields
+                const fields = parseCSVLine(line);
+                // Expected: deptCode,courseNum,sectionNum,instructorName,instructorId,expectedEnrollment,maxCapacity,days,times,roomType,roomTypeOther,minCapacity,requiredEquipment
+                if (fields.length >= 8) {
+                    const deptCode = fields[0] ? fields[0].trim().toUpperCase() : '';
+                    const courseNum = fields[1] ? fields[1].trim() : '';
+                    const sectionNum = fields[2] ? fields[2].trim() : '';
+                    const instructorName = fields[3] ? fields[3].trim() : '';
+                    const instructorId = fields[4] ? fields[4].trim() : '';
+                    const expectedEnrollment = fields[5] ? fields[5].trim() : '';
+                    const maxCapacity = fields[6] ? fields[6].trim() : '';
+                    const days = fields[7] ? fields[7].trim().toUpperCase() : '';
+                    const timesStr = fields[8] ? fields[8].trim() : '';
+                    const times = timesStr ? timesStr.split(',').map(t => t.trim()) : [];
+                    const roomType = fields[9] ? fields[9].trim().toLowerCase() : '';
+                    const roomTypeOther = fields[10] ? fields[10].trim() : '';
+                    const minCapacity = fields[11] ? fields[11].trim() : '';
+                    const requiredEquipment = fields[12] ? fields[12].trim() : '';
+
+                    classes.push({
+                        deptCode: deptCode,
+                        courseNum: courseNum,
+                        sectionNum: sectionNum,
+                        instructorName: instructorName,
+                        instructorId: instructorId,
+                        expectedEnrollment: expectedEnrollment,
+                        maxCapacity: maxCapacity,
+                        days: days,
+                        times: times,
+                        roomType: roomType,
+                        roomTypeOther: roomTypeOther,
+                        minCapacity: minCapacity,
+                        requiredEquipment: requiredEquipment
+                    });
+                }
+            }
+            return classes;
+        }
+
+        function parseCSVLine(line) {
+            const fields = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    fields.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            fields.push(current); // Add the last field
+            return fields;
+        }
     </script>
 </body>
 </html>
