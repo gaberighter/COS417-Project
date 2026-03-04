@@ -290,6 +290,244 @@
         .changed-row {
             background-color: #fff3cd !important;
         }
+        .view-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 0;
+        }
+        .view-tab {
+            padding: 12px 24px;
+            background-color: #e9ecef;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin-right: -1px;
+        }
+        .view-tab:hover {
+            background-color: #dee2e6;
+        }
+        .view-tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+            z-index: 1;
+            position: relative;
+        }
+        .tab-content {
+            display: none;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 0 8px 8px 8px;
+            padding: 20px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .preferences-filter {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .preferences-filter select {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .department-section {
+            margin-bottom: 20px;
+        }
+        .department-section h4 {
+            background-color: #4a4a4a;
+            color: white;
+            padding: 10px 15px;
+            margin: 0;
+            border-radius: 8px 8px 0 0;
+        }
+        .faculty-card {
+            border: 1px solid #ddd;
+            border-top: none;
+            padding: 15px;
+        }
+        .faculty-card:last-child {
+            border-radius: 0 0 8px 8px;
+        }
+        .faculty-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .edit-pref-btn {
+            padding: 4px 10px;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .edit-pref-btn:hover {
+            background-color: #138496;
+        }
+        .preferences-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .preferences-table th,
+        .preferences-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .preferences-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .preferences-table tr:last-child td {
+            border-bottom: none;
+        }
+        .no-preferences {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+        }
+        .pref-edit-modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .pref-edit-modal.show {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .pref-modal-content {
+            background-color: white;
+            border-radius: 8px;
+            padding: 25px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .pref-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .pref-modal-header h3 {
+            margin: 0;
+        }
+        .pref-close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        .pref-form-group {
+            margin-bottom: 15px;
+        }
+        .pref-form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .pref-form-group input,
+        .pref-form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .pref-form-row {
+            display: flex;
+            gap: 15px;
+        }
+        .pref-form-row .pref-form-group {
+            flex: 1;
+        }
+        .pref-save-btn {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .pref-save-btn:hover {
+            background-color: #218838;
+        }
+        /* Conflict Styles */
+        .conflicts-panel {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+        }
+        .conflicts-panel.no-conflicts {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .conflicts-panel h4 {
+            margin: 0 0 10px 0;
+            color: #721c24;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .conflicts-panel.no-conflicts h4 {
+            color: #155724;
+        }
+        .conflict-icon {
+            font-size: 18px;
+        }
+        .conflict-list {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .conflict-list li {
+            margin-bottom: 5px;
+            color: #721c24;
+        }
+        .conflict-row {
+            background-color: #f8d7da !important;
+        }
+        .conflict-row:hover {
+            background-color: #f1b0b7 !important;
+        }
+        .conflict-badge {
+            display: inline-block;
+            background-color: #dc3545;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+        .conflict-type-room {
+            background-color: #dc3545;
+        }
+        .conflict-type-instructor {
+            background-color: #fd7e14;
+        }
     </style>
 </head>
 <body>
@@ -335,31 +573,65 @@
         </div>
 
         <div class="schedule-viewer" id="scheduleViewer">
-            <div class="viewer-header">
-                <h3 id="scheduleName">Schedule</h3>
-                <div class="viewer-actions">
-                    <button class="rerun-btn" onclick="rerunAlgorithm()">Rerun Algorithm</button>
-                    <button class="save-btn" onclick="saveSchedule()">Save Changes</button>
-                    <button class="export-btn" onclick="exportSchedule()">Export CSV</button>
+            <div class="view-tabs">
+                <div class="view-tab active" onclick="switchTab('schedule')">Schedule</div>
+                <div class="view-tab" onclick="switchTab('preferences')">Faculty Preferences</div>
+            </div>
+            
+            <!-- Schedule Tab Content -->
+            <div class="tab-content active" id="scheduleTab">
+                <div class="viewer-header">
+                    <h3 id="scheduleName">Schedule</h3>
+                    <div class="viewer-actions">
+                        <button class="rerun-btn" onclick="rerunAlgorithm()">Rerun Algorithm</button>
+                        <button class="save-btn" onclick="saveSchedule()">Save Changes</button>
+                        <button class="export-btn" onclick="exportSchedule()">Export CSV</button>
+                    </div>
+                </div>
+                <p class="edit-hint">Click on any cell to edit. Changes are saved when you click "Save Changes".</p>
+                
+                <!-- Conflicts Panel -->
+                <div class="conflicts-panel no-conflicts" id="conflictsPanel">
+                    <h4><span class="conflict-icon">✓</span> <span id="conflictTitle">No Conflicts Detected</span></h4>
+                    <ul class="conflict-list" id="conflictList" style="display: none;"></ul>
+                </div>
+                
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th>Class ID</th>
+                            <th>Class Name</th>
+                            <th>Instructor</th>
+                            <th>Room</th>
+                            <th>Time</th>
+                            <th>Days</th>
+                            <th>Capacity</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleBody">
+                        <!-- Schedule data will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Faculty Preferences Tab Content -->
+            <div class="tab-content" id="preferencesTab">
+                <div class="viewer-header">
+                    <h3 id="preferencesTitle">Faculty Preferences</h3>
+                </div>
+                <div class="preferences-filter">
+                    <label>Department:</label>
+                    <select id="prefDeptFilter" onchange="filterPreferences()">
+                        <option value="all">All Departments</option>
+                        <option value="cs">Computer Science</option>
+                        <option value="math">Mathematics</option>
+                        <option value="physics">Physics</option>
+                    </select>
+                </div>
+                <div id="preferencesContainer">
+                    <!-- Preferences will be loaded here -->
                 </div>
             </div>
-            <p class="edit-hint">Click on any cell to edit. Changes are saved when you click "Save Changes".</p>
-            <table class="schedule-table">
-                <thead>
-                    <tr>
-                        <th>Class ID</th>
-                        <th>Class Name</th>
-                        <th>Instructor</th>
-                        <th>Room</th>
-                        <th>Time</th>
-                        <th>Days</th>
-                        <th>Capacity</th>
-                    </tr>
-                </thead>
-                <tbody id="scheduleBody">
-                    <!-- Schedule data will be inserted here -->
-                </tbody>
-            </table>
         </div>
 
         <!-- Preview Modal -->
@@ -390,6 +662,42 @@
                 </div>
             </div>
         </div>
+
+        <!-- Edit Preference Modal -->
+        <div class="pref-edit-modal" id="prefEditModal">
+            <div class="pref-modal-content">
+                <div class="pref-modal-header">
+                    <h3 id="prefModalTitle">Edit Preference</h3>
+                    <button class="pref-close-btn" onclick="closePrefModal()">&times;</button>
+                </div>
+                <form id="prefEditForm" onsubmit="savePrefEdit(event)">
+                    <input type="hidden" id="editPrefSemester">
+                    <input type="hidden" id="editPrefDept">
+                    <input type="hidden" id="editPrefFacultyIndex">
+                    <input type="hidden" id="editPrefClassIndex">
+                    
+                    <div class="pref-form-group">
+                        <label>Class ID</label>
+                        <input type="text" id="editClassId" required>
+                    </div>
+                    <div class="pref-form-row">
+                        <div class="pref-form-group">
+                            <label>Max Capacity</label>
+                            <input type="number" id="editMaxCapacity" min="1" required>
+                        </div>
+                        <div class="pref-form-group">
+                            <label>Room Preference</label>
+                            <input type="text" id="editRoomPref">
+                        </div>
+                    </div>
+                    <div class="pref-form-group">
+                        <label>Time Preference</label>
+                        <input type="text" id="editTimePref" placeholder="e.g., MWF 10:00 AM - 11:00 AM">
+                    </div>
+                    <button type="submit" class="pref-save-btn">Save Changes</button>
+                </form>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -402,9 +710,9 @@
                     { classId: "COS320", className: "Data Structures", instructor: "Dr. Michael Chen", room: "Computer Lab 2", time: "9:00 AM - 10:00 AM", days: "MWF", capacity: 25 },
                     { classId: "COS417", className: "Software Engineering", instructor: "Dr. Sarah Johnson", room: "Computer Lab 1", time: "1:00 PM - 2:30 PM", days: "TTh", capacity: 30 },
                     { classId: "COS450", className: "Machine Learning", instructor: "Dr. Michael Chen", room: "Room 102", time: "10:00 AM - 11:30 AM", days: "TTh", capacity: 20 },
-                    { classId: "MAT101", className: "Calculus I", instructor: "Dr. James Wilson", room: "Room 201", time: "1:00 PM - 2:00 PM", days: "MWF", capacity: 50 },
+                    { classId: "MAT101", className: "Calculus I", instructor: "Dr. James Wilson", room: "Room 201", time: "10:30 AM - 11:30 AM", days: "MWF", capacity: 50 },
                     { classId: "MAT201", className: "Calculus II", instructor: "Dr. Emily Rodriguez", room: "Room 101", time: "11:00 AM - 12:00 PM", days: "MWF", capacity: 35 },
-                    { classId: "MAT305", className: "Linear Algebra", instructor: "Dr. Emily Rodriguez", room: "Room 102", time: "8:00 AM - 9:30 AM", days: "TTh", capacity: 25 },
+                    { classId: "MAT305", className: "Linear Algebra", instructor: "Dr. Emily Rodriguez", room: "Room 102", time: "10:00 AM - 11:30 AM", days: "TTh", capacity: 25 },
                     { classId: "PHY101", className: "Physics I", instructor: "Dr. Amanda Peters", room: "Room 202", time: "8:00 AM - 9:00 AM", days: "MWF", capacity: 40 },
                     { classId: "PHY210", className: "Physics II", instructor: "Dr. Amanda Peters", room: "Room 101", time: "3:00 PM - 4:30 PM", days: "TTh", capacity: 30 }
                 ]
@@ -429,6 +737,156 @@
                     { classId: "MAT301", className: "Differential Equations", instructor: "Dr. Emily Rodriguez", room: "Room 102", time: "8:00 AM - 9:30 AM", days: "TTh", capacity: 30 },
                     { classId: "PHY101", className: "Physics I", instructor: "Dr. Amanda Peters", room: "Room 202", time: "11:00 AM - 12:00 PM", days: "MWF", capacity: 40 }
                 ]
+            }
+        };
+
+        // Faculty preferences data by semester
+        const facultyPreferences = {
+            fall2026: {
+                cs: {
+                    name: "Computer Science",
+                    faculty: [
+                        {
+                            name: "Dr. Sarah Johnson",
+                            classes: [
+                                { classId: "COS417", maxCapacity: 30, roomPref: "Computer Lab 1", timePref: "MWF 10:00 AM - 11:00 AM" },
+                                { classId: "COS101", maxCapacity: 45, roomPref: "Room 201", timePref: "TTh 1:00 PM - 2:30 PM" }
+                            ]
+                        },
+                        {
+                            name: "Dr. Michael Chen",
+                            classes: [
+                                { classId: "COS320", maxCapacity: 25, roomPref: "Computer Lab 2", timePref: "MWF 9:00 AM - 10:00 AM" },
+                                { classId: "COS450", maxCapacity: 20, roomPref: "Room 102", timePref: "TTh 10:00 AM - 11:30 AM" }
+                            ]
+                        }
+                    ]
+                },
+                math: {
+                    name: "Mathematics",
+                    faculty: [
+                        {
+                            name: "Dr. Emily Rodriguez",
+                            classes: [
+                                { classId: "MAT201", maxCapacity: 35, roomPref: "Room 101", timePref: "MWF 11:00 AM - 12:00 PM" },
+                                { classId: "MAT305", maxCapacity: 25, roomPref: "Room 102", timePref: "TTh 8:00 AM - 9:30 AM" }
+                            ]
+                        },
+                        {
+                            name: "Dr. James Wilson",
+                            classes: [
+                                { classId: "MAT101", maxCapacity: 50, roomPref: "Room 201", timePref: "MWF 1:00 PM - 2:00 PM" }
+                            ]
+                        }
+                    ]
+                },
+                physics: {
+                    name: "Physics",
+                    faculty: [
+                        {
+                            name: "Dr. Amanda Peters",
+                            classes: [
+                                { classId: "PHY101", maxCapacity: 40, roomPref: "Room 202", timePref: "MWF 8:00 AM - 9:00 AM" },
+                                { classId: "PHY210", maxCapacity: 30, roomPref: "Room 101", timePref: "TTh 3:00 PM - 4:30 PM" }
+                            ]
+                        }
+                    ]
+                }
+            },
+            spring2026: {
+                cs: {
+                    name: "Computer Science",
+                    faculty: [
+                        {
+                            name: "Dr. Sarah Johnson",
+                            classes: [
+                                { classId: "COS102", maxCapacity: 40, roomPref: "Computer Lab 1", timePref: "MWF 9:00 AM - 10:00 AM" },
+                                { classId: "COS418", maxCapacity: 25, roomPref: "Computer Lab 1", timePref: "MWF 2:00 PM - 3:00 PM" }
+                            ]
+                        },
+                        {
+                            name: "Dr. Michael Chen",
+                            classes: [
+                                { classId: "COS321", maxCapacity: 25, roomPref: "Room 102", timePref: "TTh 10:00 AM - 11:30 AM" }
+                            ]
+                        }
+                    ]
+                },
+                math: {
+                    name: "Mathematics",
+                    faculty: [
+                        {
+                            name: "Dr. Emily Rodriguez",
+                            classes: [
+                                { classId: "MAT202", maxCapacity: 35, roomPref: "Room 101", timePref: "TTh 10:00 AM - 11:30 AM" }
+                            ]
+                        },
+                        {
+                            name: "Dr. James Wilson",
+                            classes: [
+                                { classId: "MAT102", maxCapacity: 45, roomPref: "Room 201", timePref: "MWF 11:00 AM - 12:00 PM" }
+                            ]
+                        }
+                    ]
+                },
+                physics: {
+                    name: "Physics",
+                    faculty: [
+                        {
+                            name: "Dr. Amanda Peters",
+                            classes: [
+                                { classId: "PHY102", maxCapacity: 20, roomPref: "Room 202", timePref: "TTh 1:00 PM - 2:30 PM" }
+                            ]
+                        }
+                    ]
+                }
+            },
+            fall2025: {
+                cs: {
+                    name: "Computer Science",
+                    faculty: [
+                        {
+                            name: "Dr. Sarah Johnson",
+                            classes: [
+                                { classId: "COS101", maxCapacity: 40, roomPref: "Room 201", timePref: "MWF 9:00 AM - 10:00 AM" }
+                            ]
+                        },
+                        {
+                            name: "Dr. Michael Chen",
+                            classes: [
+                                { classId: "COS315", maxCapacity: 25, roomPref: "Computer Lab 2", timePref: "TTh 1:00 PM - 2:30 PM" }
+                            ]
+                        }
+                    ]
+                },
+                math: {
+                    name: "Mathematics",
+                    faculty: [
+                        {
+                            name: "Dr. Emily Rodriguez",
+                            classes: [
+                                { classId: "MAT301", maxCapacity: 30, roomPref: "Room 102", timePref: "TTh 8:00 AM - 9:30 AM" }
+                            ]
+                        },
+                        {
+                            name: "Dr. James Wilson",
+                            classes: [
+                                { classId: "MAT101", maxCapacity: 50, roomPref: "Room 101", timePref: "MWF 10:00 AM - 11:00 AM" }
+                            ]
+                        }
+                    ]
+                },
+                physics: {
+                    name: "Physics",
+                    faculty: [
+                        {
+                            name: "Dr. Amanda Peters",
+                            classes: [
+                                { classId: "PHY101", maxCapacity: 40, roomPref: "Room 202", timePref: "MWF 11:00 AM - 12:00 PM" }
+                            ]
+                        }
+                    ]
+                }
             }
         };
 
@@ -527,13 +985,30 @@
             
             document.getElementById('scheduleName').textContent = schedule.name;
             
+            // Detect conflicts
+            const conflicts = detectConflicts(schedule.classes);
+            displayConflicts(conflicts);
+            
             const tbody = document.getElementById('scheduleBody');
             tbody.innerHTML = '';
             
             schedule.classes.forEach((cls, index) => {
                 const row = document.createElement('tr');
+                const hasConflict = conflicts.conflictingRows.has(index);
+                if (hasConflict) {
+                    row.className = 'conflict-row';
+                }
+                
+                const conflictBadges = conflicts.rowConflictTypes[index] || [];
+                let badgeHtml = '';
+                conflictBadges.forEach(type => {
+                    const label = type === 'room' ? 'ROOM' : 'INSTRUCTOR';
+                    const cssClass = type === 'room' ? 'conflict-type-room' : 'conflict-type-instructor';
+                    badgeHtml += `<span class="conflict-badge ${cssClass}">${label}</span>`;
+                });
+                
                 row.innerHTML = `
-                    <td contenteditable="true" data-field="classId">${cls.classId}</td>
+                    <td contenteditable="true" data-field="classId">${cls.classId}${badgeHtml}</td>
                     <td contenteditable="true" data-field="className">${cls.className}</td>
                     <td contenteditable="true" data-field="instructor">${cls.instructor}</td>
                     <td contenteditable="true" data-field="room">${cls.room}</td>
@@ -546,6 +1021,123 @@
             });
             
             document.getElementById('scheduleViewer').classList.add('active');
+        }
+
+        // Detect scheduling conflicts
+        function detectConflicts(classes) {
+            const conflicts = [];
+            const conflictingRows = new Set();
+            const rowConflictTypes = {};
+            
+            // Helper to check if time slots overlap
+            function timesOverlap(time1, time2) {
+                const parseTime = (timeStr) => {
+                    const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+                    if (!match) return 0;
+                    let hours = parseInt(match[1]);
+                    const minutes = parseInt(match[2]);
+                    const period = match[3].toUpperCase();
+                    if (period === 'PM' && hours !== 12) hours += 12;
+                    if (period === 'AM' && hours === 12) hours = 0;
+                    return hours * 60 + minutes;
+                };
+                
+                const [start1, end1] = time1.split(' - ').map(parseTime);
+                const [start2, end2] = time2.split(' - ').map(parseTime);
+                
+                return start1 < end2 && start2 < end1;
+            }
+            
+            // Helper to check if days overlap
+            function daysOverlap(days1, days2) {
+                const expandDays = (d) => {
+                    const mapping = { 'M': 'M', 'T': 'T', 'W': 'W', 'Th': 'Th', 'F': 'F', 'R': 'Th' };
+                    let expanded = [];
+                    if (d.includes('MWF')) expanded = ['M', 'W', 'F'];
+                    else if (d.includes('TTh') || d.includes('TR')) expanded = ['T', 'Th'];
+                    else if (d.includes('MW')) expanded = ['M', 'W'];
+                    else {
+                        if (d.includes('M')) expanded.push('M');
+                        if (d.includes('T') && !d.includes('Th')) expanded.push('T');
+                        if (d.includes('W')) expanded.push('W');
+                        if (d.includes('Th') || d.includes('R')) expanded.push('Th');
+                        if (d.includes('F')) expanded.push('F');
+                    }
+                    return expanded;
+                };
+                
+                const d1 = expandDays(days1);
+                const d2 = expandDays(days2);
+                return d1.some(day => d2.includes(day));
+            }
+            
+            // Helper to add conflict type to row
+            function addRowConflict(rowIndex, type) {
+                if (!rowConflictTypes[rowIndex]) rowConflictTypes[rowIndex] = [];
+                if (!rowConflictTypes[rowIndex].includes(type)) {
+                    rowConflictTypes[rowIndex].push(type);
+                }
+            }
+            
+            // Check each pair of classes for conflicts
+            for (let i = 0; i < classes.length; i++) {
+                for (let j = i + 1; j < classes.length; j++) {
+                    const c1 = classes[i];
+                    const c2 = classes[j];
+                    
+                    // Check if times and days overlap
+                    if (timesOverlap(c1.time, c2.time) && daysOverlap(c1.days, c2.days)) {
+                        // Room conflict
+                        if (c1.room === c2.room) {
+                            conflicts.push({
+                                type: 'room',
+                                message: `Room conflict: ${c1.classId} and ${c2.classId} are both in ${c1.room} on ${c1.days}/${c2.days} at overlapping times (${c1.time} / ${c2.time})`
+                            });
+                            conflictingRows.add(i);
+                            conflictingRows.add(j);
+                            addRowConflict(i, 'room');
+                            addRowConflict(j, 'room');
+                        }
+                        
+                        // Instructor conflict
+                        if (c1.instructor === c2.instructor) {
+                            conflicts.push({
+                                type: 'instructor',
+                                message: `Instructor conflict: ${c1.instructor} is teaching ${c1.classId} and ${c2.classId} at overlapping times (${c1.time} / ${c2.time}) on ${c1.days}/${c2.days}`
+                            });
+                            conflictingRows.add(i);
+                            conflictingRows.add(j);
+                            addRowConflict(i, 'instructor');
+                            addRowConflict(j, 'instructor');
+                        }
+                    }
+                }
+            }
+            
+            return { conflicts, conflictingRows, rowConflictTypes };
+        }
+
+        // Display conflicts in the panel
+        function displayConflicts(conflictData) {
+            const panel = document.getElementById('conflictsPanel');
+            const title = document.getElementById('conflictTitle');
+            const list = document.getElementById('conflictList');
+            
+            if (conflictData.conflicts.length === 0) {
+                panel.classList.add('no-conflicts');
+                panel.classList.remove('conflicts-panel');
+                panel.classList.add('conflicts-panel');
+                title.textContent = 'No Conflicts Detected';
+                document.querySelector('#conflictsPanel .conflict-icon').textContent = '✓';
+                list.style.display = 'none';
+                list.innerHTML = '';
+            } else {
+                panel.classList.remove('no-conflicts');
+                title.textContent = `${conflictData.conflicts.length} Conflict${conflictData.conflicts.length > 1 ? 's' : ''} Detected`;
+                document.querySelector('#conflictsPanel .conflict-icon').textContent = '⚠';
+                list.style.display = 'block';
+                list.innerHTML = conflictData.conflicts.map(c => `<li>${c.message}</li>`).join('');
+            }
         }
 
         function saveSchedule() {
@@ -645,6 +1237,146 @@
 
         // Run on page load
         checkForNewSchedule();
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.view-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (tabName === 'schedule') {
+                document.querySelector('.view-tab:first-child').classList.add('active');
+                document.getElementById('scheduleTab').classList.add('active');
+            } else {
+                document.querySelector('.view-tab:last-child').classList.add('active');
+                document.getElementById('preferencesTab').classList.add('active');
+                loadPreferences();
+            }
+        }
+
+        // Load faculty preferences for current semester
+        function loadPreferences() {
+            if (!currentSchedule) return;
+            
+            const semesterPrefs = facultyPreferences[currentSchedule];
+            const container = document.getElementById('preferencesContainer');
+            
+            if (!semesterPrefs) {
+                container.innerHTML = '<div class="no-preferences">No faculty preferences found for this semester.</div>';
+                return;
+            }
+            
+            document.getElementById('preferencesTitle').textContent = `Faculty Preferences - ${schedules[currentSchedule].name}`;
+            filterPreferences();
+        }
+
+        // Filter preferences by department
+        function filterPreferences() {
+            if (!currentSchedule) return;
+            
+            const deptFilter = document.getElementById('prefDeptFilter').value;
+            const semesterPrefs = facultyPreferences[currentSchedule];
+            const container = document.getElementById('preferencesContainer');
+            
+            if (!semesterPrefs) {
+                container.innerHTML = '<div class="no-preferences">No faculty preferences found for this semester.</div>';
+                return;
+            }
+            
+            let html = '';
+            const departments = deptFilter === 'all' ? Object.keys(semesterPrefs) : [deptFilter];
+            
+            departments.forEach(deptKey => {
+                const dept = semesterPrefs[deptKey];
+                if (!dept) return;
+                
+                html += `<div class="department-section">
+                    <h4>${dept.name}</h4>`;
+                
+                dept.faculty.forEach((faculty, facultyIndex) => {
+                    html += `<div class="faculty-card">
+                        <div class="faculty-name">
+                            <span>${faculty.name}</span>
+                        </div>
+                        <table class="preferences-table">
+                            <thead>
+                                <tr>
+                                    <th>Class ID</th>
+                                    <th>Max Capacity</th>
+                                    <th>Room Preference</th>
+                                    <th>Time Preference</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    
+                    faculty.classes.forEach((cls, classIndex) => {
+                        html += `<tr>
+                            <td>${cls.classId}</td>
+                            <td>${cls.maxCapacity}</td>
+                            <td>${cls.roomPref}</td>
+                            <td>${cls.timePref}</td>
+                            <td><button class="edit-pref-btn" onclick="editPreference('${currentSchedule}', '${deptKey}', ${facultyIndex}, ${classIndex})">Edit</button></td>
+                        </tr>`;
+                    });
+                    
+                    html += `</tbody></table></div>`;
+                });
+                
+                html += '</div>';
+            });
+            
+            container.innerHTML = html || '<div class="no-preferences">No preferences found for selected filter.</div>';
+        }
+
+        // Edit preference modal
+        function editPreference(semester, dept, facultyIndex, classIndex) {
+            const pref = facultyPreferences[semester][dept].faculty[facultyIndex].classes[classIndex];
+            
+            document.getElementById('editPrefSemester').value = semester;
+            document.getElementById('editPrefDept').value = dept;
+            document.getElementById('editPrefFacultyIndex').value = facultyIndex;
+            document.getElementById('editPrefClassIndex').value = classIndex;
+            
+            document.getElementById('editClassId').value = pref.classId;
+            document.getElementById('editMaxCapacity').value = pref.maxCapacity;
+            document.getElementById('editRoomPref').value = pref.roomPref;
+            document.getElementById('editTimePref').value = pref.timePref;
+            
+            document.getElementById('prefModalTitle').textContent = `Edit ${pref.classId} Preference`;
+            document.getElementById('prefEditModal').classList.add('show');
+        }
+
+        function closePrefModal() {
+            document.getElementById('prefEditModal').classList.remove('show');
+        }
+
+        function savePrefEdit(event) {
+            event.preventDefault();
+            
+            const semester = document.getElementById('editPrefSemester').value;
+            const dept = document.getElementById('editPrefDept').value;
+            const facultyIndex = parseInt(document.getElementById('editPrefFacultyIndex').value);
+            const classIndex = parseInt(document.getElementById('editPrefClassIndex').value);
+            
+            facultyPreferences[semester][dept].faculty[facultyIndex].classes[classIndex] = {
+                classId: document.getElementById('editClassId').value,
+                maxCapacity: parseInt(document.getElementById('editMaxCapacity').value),
+                roomPref: document.getElementById('editRoomPref').value,
+                timePref: document.getElementById('editTimePref').value
+            };
+            
+            closePrefModal();
+            filterPreferences();
+            alert('Preference updated successfully!');
+        }
+
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('prefEditModal');
+            if (event.target === modal) {
+                closePrefModal();
+            }
+        });
     </script>
 </body>
 </html>

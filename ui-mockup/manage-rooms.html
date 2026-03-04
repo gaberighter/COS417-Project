@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cov Classes - Manage Rooms</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        header {
+            background-color: #4a4a4a;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+        header a {
+            color: white;
+            text-decoration: none;
+        }
+        header nav {
+            display: flex;
+            gap: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        h2 {
+            margin-bottom: 20px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .filter-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .filter-group label {
+            font-size: 14px;
+        }
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .add-btn {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .add-btn:hover {
+            background-color: #218838;
+        }
+        .rooms-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .rooms-table th,
+        .rooms-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .rooms-table th {
+            background-color: #f8f8f8;
+            font-weight: 600;
+        }
+        .rooms-table tr:last-child td {
+            border-bottom: none;
+        }
+        .rooms-table tr:hover {
+            background-color: #f9f9f9;
+        }
+        .equipment-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .equipment-tag {
+            background-color: #e9ecef;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .action-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+        .edit-btn {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .edit-btn:hover {
+            background-color: #138496;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-header h3 {
+            margin: 0;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        .close-btn:hover {
+            color: #333;
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            flex: 1;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+        }
+        .checkbox-item input {
+            width: auto;
+        }
+        .section-label {
+            font-weight: 600;
+            margin: 20px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+        .save-btn {
+            padding: 10px 24px;
+            background-color: #4a4a4a;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .save-btn:hover {
+            background-color: #333;
+        }
+        .status-available {
+            color: #28a745;
+        }
+        .status-unavailable {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Cov Classes</h1>
+        <nav>
+            <a href="dashboard.html">Switch to Faculty</a>
+            <a href="login.html">Logout</a>
+        </nav>
+    </header>
+    
+    <div class="container">
+        <a href="admin-dashboard.html" class="back-link">← Back to Admin Dashboard</a>
+        <h2>Manage Room Data</h2>
+        
+        <div class="controls">
+            <div class="filter-group">
+                <label>Building:</label>
+                <select id="buildingFilter" onchange="filterRooms()">
+                    <option value="">All Buildings</option>
+                    <option value="Science Hall">Science Hall</option>
+                    <option value="Liberal Arts">Liberal Arts</option>
+                    <option value="Engineering">Engineering</option>
+                    <option value="Business Center">Business Center</option>
+                </select>
+                <label>Room Type:</label>
+                <select id="typeFilter" onchange="filterRooms()">
+                    <option value="">All Types</option>
+                    <option value="classroom">Standard Classroom</option>
+                    <option value="computer_lab">Computer Lab</option>
+                    <option value="lecture_hall">Lecture Hall</option>
+                    <option value="seminar">Seminar Room</option>
+                    <option value="studio">Studio</option>
+                </select>
+                <label>Department:</label>
+                <select id="deptFilter" onchange="filterRooms()">
+                    <option value="">All Departments</option>
+                    <option value="cs">Computer Science</option>
+                    <option value="math">Mathematics</option>
+                    <option value="physics">Physics</option>
+                    <option value="engineering">Engineering</option>
+                    <option value="business">Business</option>
+                    <option value="liberal_arts">Liberal Arts</option>
+                    <option value="sciences">General Sciences</option>
+                </select>
+            </div>
+            <button class="add-btn" onclick="openAddModal()">+ Add New Room</button>
+        </div>
+        
+        <table class="rooms-table">
+            <thead>
+                <tr>
+                    <th>Building</th>
+                    <th>Room</th>
+                    <th>Type</th>
+                    <th>Capacity</th>
+                    <th>Department</th>
+                    <th>Equipment</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="roomsTableBody">
+                <!-- Populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Add/Edit Room Modal -->
+    <div id="roomModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add New Room</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="roomForm" onsubmit="saveRoom(event)">
+                <input type="hidden" id="roomId" value="">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Building *</label>
+                        <select id="building" required>
+                            <option value="">Select building...</option>
+                            <option value="Science Hall">Science Hall</option>
+                            <option value="Liberal Arts">Liberal Arts</option>
+                            <option value="Engineering">Engineering</option>
+                            <option value="Business Center">Business Center</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Room Number *</label>
+                        <input type="text" id="roomNumber" placeholder="e.g., 101, A205" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Room Type *</label>
+                        <select id="roomType" required>
+                            <option value="">Select type...</option>
+                            <option value="classroom">Standard Classroom</option>
+                            <option value="computer_lab">Computer Lab</option>
+                            <option value="lecture_hall">Lecture Hall</option>
+                            <option value="seminar">Seminar Room</option>
+                            <option value="studio">Studio</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Capacity *</label>
+                        <input type="number" id="capacity" placeholder="e.g., 30" min="1" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="status">
+                            <option value="available">Available</option>
+                            <option value="unavailable">Unavailable (Maintenance)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Primary Department</label>
+                        <select id="department">
+                            <option value="">No specific department</option>
+                            <option value="cs">Computer Science</option>
+                            <option value="math">Mathematics</option>
+                            <option value="physics">Physics</option>
+                            <option value="engineering">Engineering</option>
+                            <option value="business">Business</option>
+                            <option value="liberal_arts">Liberal Arts</option>
+                            <option value="sciences">General Sciences</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="section-label">Display Equipment</div>
+                <div class="checkbox-group">
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="projector"> Projector</label>
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="tv"> TV/Monitor</label>
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="smartboard"> Smart Board</label>
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="whiteboard"> Whiteboard</label>
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="chalkboard"> Chalkboard</label>
+                </div>
+                
+                <div class="section-label">Technology</div>
+                <div class="checkbox-group">
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="computers"> Computers</label>
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="podium_pc"> Podium PC</label>
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="video_conf"> Video Conferencing</label>
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="doc_camera"> Document Camera</label>
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="audio_system"> Audio System</label>
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="microphone"> Microphone</label>
+                </div>
+                
+                <div class="section-label">Accessibility & Features</div>
+                <div class="checkbox-group">
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="wheelchair"> Wheelchair Accessible</label>
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="hearing_loop"> Hearing Loop</label>
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="adjustable_furniture"> Adjustable Furniture</label>
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="natural_light"> Natural Light</label>
+                    <label class="checkbox-item"><input type="checkbox" name="equipment" value="climate_control"> Climate Control</label>
+                </div>
+                
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>Additional Notes</label>
+                    <textarea id="notes" placeholder="Any additional information about this room..."></textarea>
+                </div>
+                
+                <button type="submit" class="save-btn">Save Room</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Dummy room data
+        let rooms = [
+            {
+                id: 1,
+                building: 'Science Hall',
+                roomNumber: '101',
+                roomType: 'classroom',
+                capacity: 35,
+                department: 'sciences',
+                equipment: ['projector', 'whiteboard', 'podium_pc', 'wheelchair'],
+                status: 'available',
+                notes: ''
+            },
+            {
+                id: 2,
+                building: 'Science Hall',
+                roomNumber: '205',
+                roomType: 'computer_lab',
+                capacity: 30,
+                department: 'cs',
+                equipment: ['computers', 'projector', 'whiteboard', 'podium_pc', 'wheelchair'],
+                status: 'available',
+                notes: '30 Windows workstations with dual monitors'
+            },
+            {
+                id: 3,
+                building: 'Liberal Arts',
+                roomNumber: 'A102',
+                roomType: 'lecture_hall',
+                capacity: 150,
+                department: '',
+                equipment: ['projector', 'smartboard', 'microphone', 'audio_system', 'video_conf', 'wheelchair', 'hearing_loop'],
+                status: 'available',
+                notes: 'Main lecture hall with tiered seating'
+            },
+            {
+                id: 4,
+                building: 'Liberal Arts',
+                roomNumber: 'B210',
+                roomType: 'seminar',
+                capacity: 20,
+                department: 'liberal_arts',
+                equipment: ['tv', 'whiteboard', 'video_conf', 'natural_light'],
+                status: 'available',
+                notes: 'Conference table seating'
+            },
+            {
+                id: 5,
+                building: 'Engineering',
+                roomNumber: '301',
+                roomType: 'computer_lab',
+                capacity: 25,
+                department: 'engineering',
+                equipment: ['computers', 'projector', 'whiteboard', 'podium_pc', 'wheelchair'],
+                status: 'unavailable',
+                notes: 'Under renovation until March 15'
+            },
+            {
+                id: 6,
+                building: 'Engineering',
+                roomNumber: '115',
+                roomType: 'studio',
+                capacity: 40,
+                department: 'engineering',
+                equipment: ['projector', 'whiteboard', 'adjustable_furniture', 'natural_light'],
+                status: 'available',
+                notes: 'Open floor plan with movable furniture'
+            },
+            {
+                id: 7,
+                building: 'Business Center',
+                roomNumber: '200',
+                roomType: 'classroom',
+                capacity: 45,
+                department: 'business',
+                equipment: ['projector', 'smartboard', 'podium_pc', 'doc_camera', 'wheelchair', 'climate_control'],
+                status: 'available',
+                notes: ''
+            },
+            {
+                id: 8,
+                building: 'Business Center',
+                roomNumber: '310',
+                roomType: 'seminar',
+                capacity: 15,
+                department: 'business',
+                equipment: ['tv', 'whiteboard', 'video_conf', 'wheelchair'],
+                status: 'available',
+                notes: 'Executive seminar room'
+            }
+        ];
+
+        const departmentLabels = {
+            cs: 'Computer Science',
+            math: 'Mathematics',
+            physics: 'Physics',
+            engineering: 'Engineering',
+            business: 'Business',
+            liberal_arts: 'Liberal Arts',
+            sciences: 'General Sciences'
+        };
+
+        const equipmentLabels = {
+            projector: 'Projector',
+            tv: 'TV/Monitor',
+            smartboard: 'Smart Board',
+            whiteboard: 'Whiteboard',
+            chalkboard: 'Chalkboard',
+            computers: 'Computers',
+            podium_pc: 'Podium PC',
+            video_conf: 'Video Conf',
+            doc_camera: 'Doc Camera',
+            audio_system: 'Audio',
+            microphone: 'Microphone',
+            wheelchair: 'Wheelchair',
+            hearing_loop: 'Hearing Loop',
+            adjustable_furniture: 'Adj. Furniture',
+            natural_light: 'Natural Light',
+            climate_control: 'Climate Ctrl'
+        };
+
+        const roomTypeLabels = {
+            classroom: 'Standard Classroom',
+            computer_lab: 'Computer Lab',
+            lecture_hall: 'Lecture Hall',
+            seminar: 'Seminar Room',
+            studio: 'Studio'
+        };
+
+        function renderRooms() {
+            const buildingFilter = document.getElementById('buildingFilter').value;
+            const typeFilter = document.getElementById('typeFilter').value;
+            const deptFilter = document.getElementById('deptFilter').value;
+            
+            let filteredRooms = rooms;
+            
+            if (buildingFilter) {
+                filteredRooms = filteredRooms.filter(r => r.building === buildingFilter);
+            }
+            if (typeFilter) {
+                filteredRooms = filteredRooms.filter(r => r.roomType === typeFilter);
+            }
+            if (deptFilter) {
+                filteredRooms = filteredRooms.filter(r => r.department === deptFilter);
+            }
+            
+            const tbody = document.getElementById('roomsTableBody');
+            tbody.innerHTML = filteredRooms.map(room => `
+                <tr>
+                    <td>${room.building}</td>
+                    <td>${room.roomNumber}</td>
+                    <td>${roomTypeLabels[room.roomType] || room.roomType}</td>
+                    <td>${room.capacity}</td>
+                    <td>${room.department ? departmentLabels[room.department] || room.department : '<span style="color:#999">—</span>'}</td>
+                    <td>
+                        <div class="equipment-tags">
+                            ${room.equipment.slice(0, 4).map(eq => `<span class="equipment-tag">${equipmentLabels[eq] || eq}</span>`).join('')}
+                            ${room.equipment.length > 4 ? `<span class="equipment-tag">+${room.equipment.length - 4} more</span>` : ''}
+                        </div>
+                    </td>
+                    <td class="${room.status === 'available' ? 'status-available' : 'status-unavailable'}">
+                        ${room.status === 'available' ? 'Available' : 'Unavailable'}
+                    </td>
+                    <td>
+                        <button class="action-btn edit-btn" onclick="editRoom(${room.id})">Edit</button>
+                        <button class="action-btn delete-btn" onclick="deleteRoom(${room.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterRooms() {
+            renderRooms();
+        }
+
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add New Room';
+            document.getElementById('roomForm').reset();
+            document.getElementById('roomId').value = '';
+            document.getElementById('roomModal').style.display = 'block';
+        }
+
+        function editRoom(id) {
+            const room = rooms.find(r => r.id === id);
+            if (!room) return;
+            
+            document.getElementById('modalTitle').textContent = 'Edit Room';
+            document.getElementById('roomId').value = room.id;
+            document.getElementById('building').value = room.building;
+            document.getElementById('roomNumber').value = room.roomNumber;
+            document.getElementById('roomType').value = room.roomType;
+            document.getElementById('capacity').value = room.capacity;
+            document.getElementById('status').value = room.status;
+            document.getElementById('department').value = room.department || '';
+            document.getElementById('notes').value = room.notes || '';
+            
+            // Clear all checkboxes first
+            document.querySelectorAll('input[name="equipment"]').forEach(cb => cb.checked = false);
+            
+            // Check the appropriate ones
+            room.equipment.forEach(eq => {
+                const checkbox = document.querySelector(`input[name="equipment"][value="${eq}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+            
+            document.getElementById('roomModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('roomModal').style.display = 'none';
+        }
+
+        function saveRoom(event) {
+            event.preventDefault();
+            
+            const id = document.getElementById('roomId').value;
+            const equipment = Array.from(document.querySelectorAll('input[name="equipment"]:checked')).map(cb => cb.value);
+            
+            const roomData = {
+                building: document.getElementById('building').value,
+                roomNumber: document.getElementById('roomNumber').value,
+                roomType: document.getElementById('roomType').value,
+                capacity: parseInt(document.getElementById('capacity').value),
+                department: document.getElementById('department').value,
+                equipment: equipment,
+                status: document.getElementById('status').value,
+                notes: document.getElementById('notes').value
+            };
+            
+            if (id) {
+                // Update existing room
+                const index = rooms.findIndex(r => r.id === parseInt(id));
+                if (index !== -1) {
+                    rooms[index] = { ...rooms[index], ...roomData };
+                }
+                alert('Room updated successfully!');
+            } else {
+                // Add new room
+                const newId = Math.max(...rooms.map(r => r.id)) + 1;
+                rooms.push({ id: newId, ...roomData });
+                alert('Room added successfully!');
+            }
+            
+            closeModal();
+            renderRooms();
+        }
+
+        function deleteRoom(id) {
+            if (confirm('Are you sure you want to delete this room?')) {
+                rooms = rooms.filter(r => r.id !== id);
+                renderRooms();
+                alert('Room deleted successfully!');
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('roomModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Initial render
+        renderRooms();
+    </script>
+</body>
+</html>
