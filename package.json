@@ -10,8 +10,13 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "json2csv": "^6.0.0-alpha.2",
+    "mongoose": "^9.3.3",
     "nuxt": "^4.4.2",
+    "papaparse": "^5.5.3",
     "vue": "^3.5.30",
-    "vue-router": "^5.0.4"
+    "vue-router": "^5.0.4",
+    "xlsx": "^0.18.5",
+    "zod": "^4.3.6"
   }
 }
