@@ -4,5 +4,8 @@ export default defineNuxtConfig({
   app: {
     baseURL: '/COS170/'
   },
+  routeRules: {
+    '/': { redirect: '/auth/login' }
+  },
   devtools: { enabled: true }
 })
