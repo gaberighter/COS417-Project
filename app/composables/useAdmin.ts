@@ -2,5 +2,14 @@ export const useAdmin = () => {
     const viewExistingSchedule = () => {
         
     }
-    return { viewExistingSchedule }
+
+    const createNewSchedule = () => {
+
+    }
+
+    const viewRoomData = () => {
+
+    }
+
+    return { viewExistingSchedule, createNewSchedule, viewRoomData }
 }

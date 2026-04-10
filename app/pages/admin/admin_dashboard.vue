@@ -1,27 +1,32 @@
 <template>
-    <div class="admin-dashboard">
+    <div id="admin-dashboard">
         <h1>Admin Dashboard</h1>
-        <div class="admin-button-wrapper"">
+        <div class="button-wrapper">
             <button @click="viewExistingSchedule">View Existing Schedule</button>
+        </div>
+        <div class="button-wrapper">
+            <button @click="createNewSchedule">Create New Schedule</button>
+        </div>
+        <div class="button-wrapper">
+            <button @click="viewRoomData">Manage Room Data</button>
         </div>
     </div>
     <div class="temporary-debug-buttons">
-        <h1>Temporary Debug Buttons</h1>
         <button @click="redirectToLogin">Login Page</button>
         <button @click="redirectToFaculty">Faculty Page</button>
     </div>
 </template>
 
 <script setup lang="ts">
-const { viewExistingSchedule } = useAdmin()
+const { viewExistingSchedule, createNewSchedule, viewRoomData } = useAdmin()
 const { redirectToLogin, redirectToFaculty } = useDebugNavigation()
 </script>
 
 <style>
 #admin-dashboard {
     display: flex;
-}
-.admin-button-wrapper {
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
 }
 </style>
