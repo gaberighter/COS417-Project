@@ -8,6 +8,8 @@ import { connectDB } from "../../utils/db";
 import { db, type IRoom, type IRoomEquipment } from "../../models/index";
 import { logAction } from "../../services/auditService";
 
+
+// Initiate to false for all except outlets for default arrangement
 const defaultEquipment = (): IRoomEquipment => ({
   projector: false,
   smartboard: false,
@@ -18,6 +20,7 @@ const defaultEquipment = (): IRoomEquipment => ({
   outlets: true,
 });
 
+// Normalize equipment by merging default, current, patch, and legacy features
 function normalizeEquipment(
   current: IRoomEquipment | undefined,
   patch: Partial<IRoomEquipment> | undefined,
@@ -42,11 +45,14 @@ function normalizeEquipment(
   return next;
 }
 
+// Main endpoint call handler
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ["Admin"]);
   await connectDB();
 
+  // Return code and missing information??
   const body = await readBody<Partial<IRoom> & { features?: string[]; isActive?: boolean }>(event);
+
   const buildingCode = body.buildingCode?.trim().toUpperCase();
   const roomNumber = body.roomNumber?.trim();
 
@@ -63,11 +69,16 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "roomType must be 'classroom' or 'lab'" });
   }
 
+  // Check if room exists by buildingCode and roomNumber
   const existing = db.rooms.findIndex(
     (room) => room.buildingCode === buildingCode && room.roomNumber === roomNumber
   );
+
+  // Merge existing record with new data, prioritizing new data
   const current = existing >= 0 ? db.rooms[existing] : undefined;
+  // Set createdAt to now if new record, otherwise keep existing createdAt and update updatedAt
   const now = new Date();
+  // Generate _id as buildingCode-roomNumber if new record, otherwise keep existing _id
   const room: IRoom = {
     _id: current?._id ?? `${buildingCode}-${roomNumber}`,
     buildingCode,
@@ -82,16 +93,19 @@ export default defineEventHandler(async (event) => {
     updatedAt: now,
   };
 
+  // Validate that labStations can only be true if roomType is lab
   if (room.equipment.labStations && room.roomType !== "lab") {
     throw createError({ statusCode: 400, statusMessage: "labStations requires roomType 'lab'" });
   }
 
+  // Updates existing record if found, otherwise adds new record to db.rooms
   if (existing >= 0) {
     db.rooms[existing] = room;
   } else {
     db.rooms.push(room);
   }
 
+  // Log the upsert action for auditing
   await logAction(
     auth,
     "ROOM_UPSERT",
