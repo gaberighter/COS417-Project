@@ -29,6 +29,6 @@ export const useAuth = () => {
     isLoading,
     isAuthenticated,
     loginWithSso,
-    logout
+    logout,
   }
 }
