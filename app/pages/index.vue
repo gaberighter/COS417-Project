@@ -3,5 +3,5 @@ await navigateTo('/auth/login', { replace: true })
 </script>
 
 <template>
-  <div></div>
+  <div />
 </template>
