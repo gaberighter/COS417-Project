@@ -93,6 +93,9 @@ const retryLoad = () => refresh()
 <style scoped>
 .table-container {
     overflow-x: auto;
+    background-color: #fff;
+    border: 1px solid #d0d7de;
+    border-radius: 10px;
 }
 
 table {
