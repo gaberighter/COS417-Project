@@ -5,7 +5,7 @@
             <p>Room search functionality goes here.</p>
         </div>
         <div class="room-content">
-            <p>Room viewer content goes here.</p>
+            
         </div>
     </div>
     <div class="temporary-debug-buttons">
@@ -17,6 +17,3 @@
 <script setup lang="ts">
 const { redirectToLogin, redirectToAdmin } = useDebugNavigation()
 </script>
-
-<style>
-</style>
