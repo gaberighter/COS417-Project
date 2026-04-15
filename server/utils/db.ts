@@ -6,18 +6,18 @@
 //   import { connectDB } from "~/server/utils/db";
 //   await connectDB();
 
-let connected = false;
+let connected = false
 
 export async function connectDB(): Promise<void> {
-  if (connected) return;
+  if (connected) return
 
   const uri = (
     globalThis as { process?: { env?: Record<string, string | undefined> } }
-  ).process?.env?.MONGODB_URI;
+  ).process?.env?.MONGODB_URI
   if (!uri) {
-    console.warn("[db] MONGODB_URI not set — running with in-memory stub data");
-    connected = true; // skip real connection
-    return;
+    console.warn('[db] MONGODB_URI not set — running with in-memory stub data')
+    connected = true // skip real connection
+    return
   }
 
   // TODO: uncomment when mongoose is installed
@@ -26,6 +26,6 @@ export async function connectDB(): Promise<void> {
   // connected = true;
   // console.log("[db] Connected to MongoDB");
 
-  console.warn("[db] connectDB stub — replace with real mongoose.connect()");
-  connected = true;
+  console.warn('[db] connectDB stub — replace with real mongoose.connect()')
+  connected = true
 }

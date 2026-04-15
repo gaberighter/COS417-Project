@@ -3,23 +3,23 @@
 // STUB: writes to the in-memory db.auditLogs array.
 //       Replace the push() call with an AuditLog.create() Mongoose call.
 
-import type { AuthContext } from "../utils/auth";
-import { db, type IAuditLog } from "../models/index";
+import type { AuthContext } from '../utils/auth'
+import { db, type IAuditLog } from '../models/index'
 
 function toDetailText(
   action: string,
   collection: string | null | undefined,
   detail: string | Record<string, unknown> | undefined,
 ): string {
-  if (typeof detail === "string" && detail.trim()) {
-    return detail;
+  if (typeof detail === 'string' && detail.trim()) {
+    return detail
   }
 
   if (detail) {
-    return JSON.stringify(detail);
+    return JSON.stringify(detail)
   }
 
-  return collection ? `${action} on ${collection}` : action;
+  return collection ? `${action} on ${collection}` : action
 }
 
 export async function logAction(
@@ -32,8 +32,8 @@ export async function logAction(
   const professor = db.professors.find(
     (candidate) =>
       candidate.covenantId === actor.userId || candidate._id === actor.userId,
-  );
-  const now = new Date();
+  )
+  const now = new Date()
   const entry: IAuditLog = {
     timestamp: now,
     userId: professor?._id ?? null,
@@ -45,8 +45,8 @@ export async function logAction(
     ipAddress: null,
     createdAt: now,
     updatedAt: now,
-  };
+  }
 
   // TODO: replace with → await AuditLog.create(entry);
-  db.auditLogs.push(entry);
+  db.auditLogs.push(entry)
 }

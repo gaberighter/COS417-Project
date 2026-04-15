@@ -5,18 +5,18 @@
 //       this returns all professors who have submitted preferences.
 //       With Mongoose you'd query a dedicated Preferences collection by term.
 
-import { defineEventHandler, getRouterParam, createError } from "h3";
-import { requireAuth } from "../../utils/auth";
-import { connectDB } from "../../utils/db";
-import { db } from "../../models/index";
+import { defineEventHandler, getRouterParam, createError } from 'h3'
+import { requireAuth } from '../../utils/auth'
+import { connectDB } from '../../utils/db'
+import { db } from '../../models/index'
 
 export default defineEventHandler(async (event) => {
-  requireAuth(event, ["Admin"]);
-  await connectDB();
+  requireAuth(event, ['Admin'])
+  await connectDB()
 
-  const term = getRouterParam(event, "term");
+  const term = getRouterParam(event, 'term')
   if (!term) {
-    throw createError({ statusCode: 400, statusMessage: "term is required" });
+    throw createError({ statusCode: 400, statusMessage: 'term is required' })
   }
 
   const results = db.professors
@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
           departmentCode: professor.departmentCode,
           ...submission,
         })),
-    );
+    )
 
-  return results;
-});
+  return results
+})
