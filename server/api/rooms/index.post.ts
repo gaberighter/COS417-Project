@@ -8,7 +8,6 @@ import { connectDB } from "../../utils/db";
 import { db, type IRoom, type IRoomEquipment } from "../../models/index";
 import { logAction } from "../../services/auditService";
 
-
 // Initiate to false for all except outlets for default arrangement
 const defaultEquipment = (): IRoomEquipment => ({
   projector: false,
@@ -24,7 +23,7 @@ const defaultEquipment = (): IRoomEquipment => ({
 function normalizeEquipment(
   current: IRoomEquipment | undefined,
   patch: Partial<IRoomEquipment> | undefined,
-  legacyFeatures: string[] | undefined
+  legacyFeatures: string[] | undefined,
 ): IRoomEquipment {
   const next = {
     ...defaultEquipment(),
@@ -51,27 +50,54 @@ export default defineEventHandler(async (event) => {
   await connectDB();
 
   // Return code and missing information??
-  const body = await readBody<Partial<IRoom> & { features?: string[]; isActive?: boolean }>(event);
+  let body: Partial<IRoom> & { features?: string[]; isActive?: boolean };
+  try {
+    body =
+      (await readBody<
+        Partial<IRoom> & { features?: string[]; isActive?: boolean }
+      >(event)) ?? {};
+  } catch {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Missing or invalid JSON body",
+    });
+  }
 
   const buildingCode = body.buildingCode?.trim().toUpperCase();
   const roomNumber = body.roomNumber?.trim();
 
   if (!buildingCode || !roomNumber) {
-    throw createError({ statusCode: 400, statusMessage: "buildingCode and roomNumber are required" });
+    throw createError({
+      statusCode: 400,
+      statusMessage: "buildingCode and roomNumber are required",
+    });
   }
   if (!/^[A-Z]{2,4}$/.test(buildingCode)) {
-    throw createError({ statusCode: 400, statusMessage: "buildingCode must be 2-4 uppercase letters" });
+    throw createError({
+      statusCode: 400,
+      statusMessage: "buildingCode must be 2-4 uppercase letters",
+    });
   }
-  if (body.capacity !== undefined && (!Number.isInteger(body.capacity) || body.capacity < 1)) {
-    throw createError({ statusCode: 400, statusMessage: "capacity must be an integer >= 1" });
+  if (
+    body.capacity !== undefined &&
+    (!Number.isInteger(body.capacity) || body.capacity < 1)
+  ) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "capacity must be an integer >= 1",
+    });
   }
   if (body.roomType && !["classroom", "lab"].includes(body.roomType)) {
-    throw createError({ statusCode: 400, statusMessage: "roomType must be 'classroom' or 'lab'" });
+    throw createError({
+      statusCode: 400,
+      statusMessage: "roomType must be 'classroom' or 'lab'",
+    });
   }
 
   // Check if room exists by buildingCode and roomNumber
   const existing = db.rooms.findIndex(
-    (room) => room.buildingCode === buildingCode && room.roomNumber === roomNumber
+    (room) =>
+      room.buildingCode === buildingCode && room.roomNumber === roomNumber,
   );
 
   // Merge existing record with new data, prioritizing new data
@@ -84,18 +110,27 @@ export default defineEventHandler(async (event) => {
     buildingCode,
     roomNumber,
     displayName:
-      body.displayName !== undefined ? body.displayName : current?.displayName ?? null,
+      body.displayName !== undefined
+        ? body.displayName
+        : (current?.displayName ?? null),
     capacity: body.capacity ?? current?.capacity ?? 1,
     roomType: body.roomType ?? current?.roomType ?? "classroom",
     available: body.available ?? body.isActive ?? current?.available ?? true,
-    equipment: normalizeEquipment(current?.equipment, body.equipment, body.features),
+    equipment: normalizeEquipment(
+      current?.equipment,
+      body.equipment,
+      body.features,
+    ),
     createdAt: current?.createdAt ?? now,
     updatedAt: now,
   };
 
   // Validate that labStations can only be true if roomType is lab
   if (room.equipment.labStations && room.roomType !== "lab") {
-    throw createError({ statusCode: 400, statusMessage: "labStations requires roomType 'lab'" });
+    throw createError({
+      statusCode: 400,
+      statusMessage: "labStations requires roomType 'lab'",
+    });
   }
 
   // Updates existing record if found, otherwise adds new record to db.rooms
@@ -111,7 +146,7 @@ export default defineEventHandler(async (event) => {
     "ROOM_UPSERT",
     "rooms",
     room._id,
-    `Created or updated room ${room.buildingCode} ${room.roomNumber}`
+    `Created or updated room ${room.buildingCode} ${room.roomNumber}`,
   );
   return room;
 });

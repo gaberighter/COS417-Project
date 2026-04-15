@@ -11,8 +11,9 @@ let connected = false;
 export async function connectDB(): Promise<void> {
   if (connected) return;
 
-  const uri = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
-    ?.MONGODB_URI;
+  const uri = (
+    globalThis as { process?: { env?: Record<string, string | undefined> } }
+  ).process?.env?.MONGODB_URI;
   if (!uri) {
     console.warn("[db] MONGODB_URI not set — running with in-memory stub data");
     connected = true; // skip real connection

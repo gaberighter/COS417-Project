@@ -17,7 +17,10 @@ export interface AuthContext {
  * Attach auth context to the event or throw 401/403.
  * In production this will validate a JWT from the Covenant SSO cookie.
  */
-export function requireAuth(event: H3Event, allowedRoles: UserRole[]): AuthContext {
+export function requireAuth(
+  event: H3Event,
+  allowedRoles: UserRole[],
+): AuthContext {
   // Dev shim: pass  X-Dev-Role: Admin  or  X-Dev-Role: Faculty  header.
   // Remove before production; replace with JWT decode from cookie.
   const devRole = getHeader(event, "x-dev-role") as UserRole | undefined;

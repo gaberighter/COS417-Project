@@ -15,16 +15,23 @@ export default defineEventHandler(async (event) => {
   await connectDB();
 
   const body = await readBody<{ term: string }>(event);
-  if (!body.term) {
+  if (!body || !body.term) {
     throw createError({ statusCode: 400, statusMessage: "term is required" });
   }
 
   const now = new Date();
   const result = await runScheduler(body.term);
-  const priorRuns = db.schedules.filter((schedule) => schedule.term === body.term);
-  const nextRunNumber = priorRuns.reduce((maxRun, schedule) => Math.max(maxRun, schedule.runNumber), 0) + 1;
+  const priorRuns = db.schedules.filter(
+    (schedule) => schedule.term === body.term,
+  );
+  const nextRunNumber =
+    priorRuns.reduce(
+      (maxRun, schedule) => Math.max(maxRun, schedule.runNumber),
+      0,
+    ) + 1;
   const adminProfessor = db.professors.find(
-    (candidate) => candidate.covenantId === auth.userId || candidate._id === auth.userId
+    (candidate) =>
+      candidate.covenantId === auth.userId || candidate._id === auth.userId,
   );
   const schedule: ISchedule = {
     _id: `${body.term}-${nextRunNumber}`,
@@ -53,7 +60,7 @@ export default defineEventHandler(async (event) => {
     "SCHEDULE_RUN",
     "schedules",
     schedule._id,
-    `Executed scheduling run ${nextRunNumber} for ${body.term}`
+    `Executed scheduling run ${nextRunNumber} for ${body.term}`,
   );
   return schedule;
 });

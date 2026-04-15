@@ -5,7 +5,13 @@
 import { defineEventHandler, getRouterParam, createError, setHeader } from "h3";
 import { requireAuth } from "../../../utils/auth";
 import { connectDB } from "../../../utils/db";
-import { db, type IAssignment, type ICourse, type IProfessor, type IRoom } from "../../../models/index";
+import {
+  db,
+  type IAssignment,
+  type ICourse,
+  type IProfessor,
+  type IRoom,
+} from "../../../models/index";
 import { logAction } from "../../../services/auditService";
 
 const bannerHeaders = [
@@ -23,9 +29,11 @@ const bannerHeaders = [
   "EstimatedEnrollment",
 ] as const;
 
+const TERM_PARAM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/;
+
 function escapeCsv(value: string): string {
   if (/[",\n]/.test(value)) {
-    return `"${value.replace(/"/g, "\"\"")}"`;
+    return `"${value.replace(/"/g, '""')}"`;
   }
 
   return value;
@@ -37,25 +45,31 @@ function findCourse(courseId: string): ICourse | undefined {
 
 function findProfessor(professorId: string): IProfessor | undefined {
   return db.professors.find(
-    (candidate) => candidate._id === professorId || candidate.covenantId === professorId
+    (candidate) =>
+      candidate._id === professorId || candidate.covenantId === professorId,
   );
 }
 
 function findRoom(roomId: string): IRoom | undefined {
   return db.rooms.find(
     (candidate) =>
-      candidate._id === roomId || `${candidate.buildingCode}-${candidate.roomNumber}` === roomId
+      candidate._id === roomId ||
+      `${candidate.buildingCode}-${candidate.roomNumber}` === roomId,
   );
 }
 
 function findEstimatedEnrollment(
   term: string,
   professorId: string,
-  courseId: string
+  courseId: string,
 ): number | null {
   const professor = findProfessor(professorId);
-  const submission = professor?.preferences.find((candidate) => candidate.term === term);
-  const coursePreference = submission?.courses.find((candidate) => candidate.courseId === courseId);
+  const submission = professor?.preferences.find(
+    (candidate) => candidate.term === term,
+  );
+  const coursePreference = submission?.courses.find(
+    (candidate) => candidate.courseId === courseId,
+  );
 
   return coursePreference?.expectedEnrollment ?? null;
 }
@@ -68,7 +82,11 @@ function buildBannerRows(term: string, assignments: IAssignment[]): string[] {
     const course = findCourse(assignment.courseId);
     const professor = findProfessor(assignment.professorId);
     const room = findRoom(assignment.roomId);
-    const estimatedEnrollment = findEstimatedEnrollment(term, assignment.professorId, assignment.courseId);
+    const estimatedEnrollment = findEstimatedEnrollment(
+      term,
+      assignment.professorId,
+      assignment.courseId,
+    );
 
     const values = [
       course?.deptCode ?? "",
@@ -112,12 +130,21 @@ export default defineEventHandler(async (event) => {
   if (!term) {
     throw createError({ statusCode: 400, statusMessage: "term is required" });
   }
+  if (!TERM_PARAM_PATTERN.test(term)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "invalid term format",
+    });
+  }
 
   const schedule = db.schedules
     .filter((candidate) => candidate.term === term)
     .sort((left, right) => right.runNumber - left.runNumber)[0];
   if (!schedule) {
-    throw createError({ statusCode: 404, statusMessage: `No schedule for term: ${term}` });
+    throw createError({
+      statusCode: 404,
+      statusMessage: `No schedule for term: ${term}`,
+    });
   }
   if (!["approved", "exported"].includes(schedule.status)) {
     throw createError({
@@ -133,14 +160,19 @@ export default defineEventHandler(async (event) => {
   schedule.updatedAt = new Date();
 
   setHeader(event, "Content-Type", "text/csv; charset=utf-8");
-  setHeader(event, "Content-Disposition", `attachment; filename="schedule_${term}.csv"`);
+  const encodedTerm = encodeURIComponent(term);
+  setHeader(
+    event,
+    "Content-Disposition",
+    `attachment; filename="schedule_${term}.csv"; filename*=UTF-8''schedule_${encodedTerm}.csv`,
+  );
 
   await logAction(
     auth,
     "SCHEDULE_EXPORT",
     "schedules",
     schedule._id,
-    `Exported Banner CSV for ${term}`
+    `Exported Banner CSV for ${term}`,
   );
   return csv;
 });

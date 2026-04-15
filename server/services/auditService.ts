@@ -9,7 +9,7 @@ import { db, type IAuditLog } from "../models/index";
 function toDetailText(
   action: string,
   collection: string | null | undefined,
-  detail: string | Record<string, unknown> | undefined
+  detail: string | Record<string, unknown> | undefined,
 ): string {
   if (typeof detail === "string" && detail.trim()) {
     return detail;
@@ -27,10 +27,11 @@ export async function logAction(
   action: string,
   targetCollection: string,
   targetId?: string,
-  detail?: string | Record<string, unknown>
+  detail?: string | Record<string, unknown>,
 ): Promise<void> {
   const professor = db.professors.find(
-    (candidate) => candidate.covenantId === actor.userId || candidate._id === actor.userId
+    (candidate) =>
+      candidate.covenantId === actor.userId || candidate._id === actor.userId,
   );
   const now = new Date();
   const entry: IAuditLog = {

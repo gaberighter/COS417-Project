@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
           displayName: professor.displayName,
           departmentCode: professor.departmentCode,
           ...submission,
-        }))
+        })),
     );
 
   return results;

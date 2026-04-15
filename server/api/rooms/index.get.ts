@@ -4,7 +4,7 @@
 
 import { defineEventHandler } from "h3";
 import { requireAuth } from "../../utils/auth";
-import { connectDB, } from "../../utils/db";
+import { connectDB } from "../../utils/db";
 import { db } from "../../models/index";
 
 export default defineEventHandler(async (event) => {

@@ -21,7 +21,10 @@ export default defineEventHandler(async (event) => {
     .sort((left, right) => right.runNumber - left.runNumber)[0];
 
   if (!schedule) {
-    throw createError({ statusCode: 404, statusMessage: `No schedule for term: ${term}` });
+    throw createError({
+      statusCode: 404,
+      statusMessage: `No schedule for term: ${term}`,
+    });
   }
 
   return schedule;
