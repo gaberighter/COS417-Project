@@ -67,7 +67,9 @@ async function loadDotEnv() {
 function requireMongoUri() {
   const uri = process.env.MONGO_URI
   if (!uri) {
-    throw new Error('MONGO_URI is required. Set it in environment or .env file.')
+    throw new Error(
+      'MONGO_URI is required. Set it in environment or .env file.',
+    )
   }
 
   return uri
@@ -75,11 +77,17 @@ function requireMongoUri() {
 
 function normalizeRoom(input) {
   const roomNumber = String(input.roomNumber ?? '').trim()
-  const rawCode = String(input.buildingCode ?? '').trim().toUpperCase()
-  const abbrev = String(input.abbreviation ?? '').trim().toUpperCase()
+  const rawCode = String(input.buildingCode ?? '')
+    .trim()
+    .toUpperCase()
+  const abbrev = String(input.abbreviation ?? '')
+    .trim()
+    .toUpperCase()
   const buildingCodeFromAbbrev = abbrev.split(/\s+/)[0] || ''
   const buildingCode = rawCode || buildingCodeFromAbbrev
-  const buildingName = String(input.buildingName ?? input.buildingCode ?? buildingCode).trim()
+  const buildingName = String(
+    input.buildingName ?? input.buildingCode ?? buildingCode,
+  ).trim()
   const roomAbbreviation = abbrev || `${buildingCode} ${roomNumber}`.trim()
 
   const equipment = {
@@ -104,7 +112,9 @@ function normalizeRoom(input) {
 }
 
 function normalizeCourse(input) {
-  const deptCode = String(input.deptCode ?? '').trim().toUpperCase()
+  const deptCode = String(input.deptCode ?? '')
+    .trim()
+    .toUpperCase()
   const courseNumber = String(input.courseNumber ?? '').trim()
 
   return {
@@ -149,7 +159,9 @@ function normalizePreferenceSubmission(input, professorId, departmentCode) {
 
   return {
     term: String(input.term ?? '').trim(),
-    department: String(input.department ?? departmentCode ?? '').trim().toUpperCase(),
+    department: String(input.department ?? departmentCode ?? '')
+      .trim()
+      .toUpperCase(),
     submittedBy: String(input.submittedBy ?? professorId).trim(),
     submittedAt: submitted ? new Date(input.submittedAt ?? new Date()) : null,
     status,
@@ -176,15 +188,18 @@ function normalizePreferenceSubmission(input, professorId, departmentCode) {
             ? course.requiredEquipment.map((value) => String(value))
             : [],
           preferredBuilding:
-            course.preferredBuilding === null || course.preferredBuilding === undefined
+            course.preferredBuilding === null ||
+            course.preferredBuilding === undefined
               ? null
               : String(course.preferredBuilding),
           preferredRoomId:
-            course.preferredRoomId === null || course.preferredRoomId === undefined
+            course.preferredRoomId === null ||
+            course.preferredRoomId === undefined
               ? null
               : String(course.preferredRoomId),
           backToBackWith:
-            course.backToBackWith === null || course.backToBackWith === undefined
+            course.backToBackWith === null ||
+            course.backToBackWith === undefined
               ? null
               : String(course.backToBackWith),
           coreqWith: Array.isArray(course.coreqWith)
@@ -196,13 +211,17 @@ function normalizePreferenceSubmission(input, professorId, departmentCode) {
 }
 
 function normalizeProfessor(input) {
-  const covenantId = String(input.covenantId ?? '').trim().toLowerCase()
+  const covenantId = String(input.covenantId ?? '')
+    .trim()
+    .toLowerCase()
 
   return {
     _id: covenantId,
     covenantId,
     displayName: String(input.displayName ?? '').trim(),
-    departmentCode: String(input.departmentCode ?? '').trim().toUpperCase(),
+    departmentCode: String(input.departmentCode ?? '')
+      .trim()
+      .toUpperCase(),
     officeBuilding:
       input.officeBuilding === null || input.officeBuilding === undefined
         ? null
@@ -241,13 +260,18 @@ function normalizeSchedule(input) {
     assignments: Array.isArray(input.assignments)
       ? input.assignments.map((assignment) => ({
           courseId: String(assignment.courseId ?? '').trim(),
-          professorId: String(assignment.professorId ?? '').trim().toLowerCase(),
-          roomId: String(assignment.roomId ?? '').trim().toUpperCase(),
+          professorId: String(assignment.professorId ?? '')
+            .trim()
+            .toLowerCase(),
+          roomId: String(assignment.roomId ?? '')
+            .trim()
+            .toUpperCase(),
           days: String(assignment.days ?? 'MWF'),
           startTime: String(assignment.startTime ?? ''),
           endTime: String(assignment.endTime ?? ''),
           overrideBy:
-            assignment.overrideBy === null || assignment.overrideBy === undefined
+            assignment.overrideBy === null ||
+            assignment.overrideBy === undefined
               ? null
               : String(assignment.overrideBy),
         }))
@@ -464,7 +488,8 @@ function normalizeDataset(dataset) {
 async function resetCollections(db, normalized) {
   const promises = []
 
-  if (normalized.rooms.length > 0) promises.push(db.collection('rooms').deleteMany({}))
+  if (normalized.rooms.length > 0)
+    promises.push(db.collection('rooms').deleteMany({}))
   if (normalized.courses.length > 0)
     promises.push(db.collection('courseCatalog').deleteMany({}))
   if (normalized.professors.length > 0)
@@ -495,9 +520,7 @@ async function upsertById(collection, docs) {
 async function run() {
   const args = parseArgs(process.argv.slice(2))
   if (!args.minimal && !args.inmemoryFile) {
-    throw new Error(
-      'Provide one mode: --minimal or --inmemory-file <path>',
-    )
+    throw new Error('Provide one mode: --minimal or --inmemory-file <path>')
   }
 
   await loadDotEnv()

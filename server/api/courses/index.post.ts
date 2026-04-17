@@ -45,7 +45,10 @@ function parseCourseKey(input: CourseInput): CourseKey {
 
       if (parsedDeptCode && parsedCourseNumber) {
         return {
-          _id: courseCode({ deptCode: parsedDeptCode, courseNumber: parsedCourseNumber }),
+          _id: courseCode({
+            deptCode: parsedDeptCode,
+            courseNumber: parsedCourseNumber,
+          }),
           deptCode: parsedDeptCode,
           courseNumber: parsedCourseNumber,
         }
@@ -137,7 +140,9 @@ export default defineEventHandler(async (event) => {
   })
     .lean()
     .exec()
-  const existingById = new Map(existing.map((course) => [course._id ?? '', course]))
+  const existingById = new Map(
+    existing.map((course) => [course._id ?? '', course]),
+  )
 
   const courses = keyed.map(({ raw, key }) =>
     mergeCourse(raw, existingById.get(key._id) ?? null, key),

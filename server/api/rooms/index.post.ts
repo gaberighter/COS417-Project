@@ -74,7 +74,10 @@ export default defineEventHandler(async (event) => {
   }
 
   const buildingCode = body.buildingCode?.trim().toUpperCase()
-  const inferredBuildingCode = body.abbreviation?.trim().split(/\s+/)[0]?.toUpperCase()
+  const inferredBuildingCode = body.abbreviation
+    ?.trim()
+    .split(/\s+/)[0]
+    ?.toUpperCase()
   const normalizedBuildingCode = buildingCode ?? inferredBuildingCode
   const roomNumber = body.roomNumber?.trim()
 
@@ -120,7 +123,9 @@ export default defineEventHandler(async (event) => {
     _id: abbreviation,
     abbreviation,
     buildingName:
-      body.buildingName?.trim() ?? existing?.buildingName ?? normalizedBuildingCode,
+      body.buildingName?.trim() ??
+      existing?.buildingName ??
+      normalizedBuildingCode,
     roomNumber,
     displayName: String(resolvedDisplayName),
     capacity: body.capacity ?? existing?.capacity ?? 1,

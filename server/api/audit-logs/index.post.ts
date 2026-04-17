@@ -40,7 +40,10 @@ export default defineEventHandler(async (event) => {
   try {
     body = (await readBody<Payload | AuditInput | AuditInput[]>(event)) ?? {}
   } catch {
-    throw createError({ statusCode: 400, statusMessage: 'Missing or invalid JSON body' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Missing or invalid JSON body',
+    })
   }
 
   const rawLogs = Array.isArray(body)
@@ -50,10 +53,15 @@ export default defineEventHandler(async (event) => {
       : [body as AuditInput]
 
   if (rawLogs.length === 0) {
-    throw createError({ statusCode: 400, statusMessage: 'At least one log is required' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'At least one log is required',
+    })
   }
 
-  const logs = rawLogs.map((raw) => normalizeAudit(raw, auth.userId.toLowerCase()))
+  const logs = rawLogs.map((raw) =>
+    normalizeAudit(raw, auth.userId.toLowerCase()),
+  )
   await AuditLog.insertMany(logs, { ordered: false })
 
   return { ok: true, count: logs.length }

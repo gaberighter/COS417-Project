@@ -32,8 +32,7 @@ function getMongoUri(): string {
   const uri = process.env.MONGO_URI
   if (uri) return uri
 
-  const message =
-    'MONGO_URI is required to connect to MongoDB'
+  const message = 'MONGO_URI is required to connect to MongoDB'
   if (process.env.NODE_ENV === 'production') {
     throw new Error(message)
   }

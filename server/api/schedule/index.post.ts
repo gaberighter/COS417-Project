@@ -33,9 +33,13 @@ export default defineEventHandler(async (event) => {
 
   let body: Payload | ScheduleInput | ScheduleInput[]
   try {
-    body = (await readBody<Payload | ScheduleInput | ScheduleInput[]>(event)) ?? {}
+    body =
+      (await readBody<Payload | ScheduleInput | ScheduleInput[]>(event)) ?? {}
   } catch {
-    throw createError({ statusCode: 400, statusMessage: 'Missing or invalid JSON body' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Missing or invalid JSON body',
+    })
   }
 
   const rawSchedules = Array.isArray(body)
@@ -45,11 +49,16 @@ export default defineEventHandler(async (event) => {
       : [body as ScheduleInput]
 
   if (rawSchedules.length === 0) {
-    throw createError({ statusCode: 400, statusMessage: 'At least one schedule is required' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'At least one schedule is required',
+    })
   }
 
   const maxRunByTerm = new Map<string, number>()
-  const termList = [...new Set(rawSchedules.map((entry) => normalizeTerm(entry.term)))]
+  const termList = [
+    ...new Set(rawSchedules.map((entry) => normalizeTerm(entry.term))),
+  ]
   const latestSchedules = await Schedule.find({ term: { $in: termList } })
     .sort({ runNumber: -1 })
     .lean()

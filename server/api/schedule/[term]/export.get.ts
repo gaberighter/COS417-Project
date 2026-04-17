@@ -47,7 +47,15 @@ function buildBannerRows(
   term: string,
   assignments: IAssignment[],
   lookups: {
-    coursesById: Map<string, { deptCode: string; courseNumber: string; title: string; creditHours: number }>
+    coursesById: Map<
+      string,
+      {
+        deptCode: string
+        courseNumber: string
+        title: string
+        creditHours: number
+      }
+    >
     professorsById: Map<string, { covenantId: string }>
     roomsById: Map<string, { abbreviation: string; roomNumber: string }>
     estimatedEnrollmentByKey: Map<string, number>
@@ -136,7 +144,9 @@ export default defineEventHandler(async (event) => {
   }
 
   const courseIds = [...new Set(schedule.assignments.map((a) => a.courseId))]
-  const professorIds = [...new Set(schedule.assignments.map((a) => a.professorId))]
+  const professorIds = [
+    ...new Set(schedule.assignments.map((a) => a.professorId)),
+  ]
   const roomIds = [...new Set(schedule.assignments.map((a) => a.roomId))]
 
   const [courses, professors, rooms] = await Promise.all([
@@ -184,7 +194,9 @@ export default defineEventHandler(async (event) => {
   const estimatedEnrollmentByKey = new Map<string, number>()
   for (const professor of professors) {
     professorsById.set(professor._id, { covenantId: professor.covenantId })
-    professorsById.set(professor.covenantId, { covenantId: professor.covenantId })
+    professorsById.set(professor.covenantId, {
+      covenantId: professor.covenantId,
+    })
 
     for (const submission of professor.preferences ?? []) {
       if (submission.term !== term) continue
@@ -201,10 +213,19 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const roomsById = new Map<string, { abbreviation: string; roomNumber: string }>()
+  const roomsById = new Map<
+    string,
+    { abbreviation: string; roomNumber: string }
+  >()
   for (const room of rooms) {
-    roomsById.set(room._id, { abbreviation: room.abbreviation, roomNumber: room.roomNumber })
-    roomsById.set(room.abbreviation, { abbreviation: room.abbreviation, roomNumber: room.roomNumber })
+    roomsById.set(room._id, {
+      abbreviation: room.abbreviation,
+      roomNumber: room.roomNumber,
+    })
+    roomsById.set(room.abbreviation, {
+      abbreviation: room.abbreviation,
+      roomNumber: room.roomNumber,
+    })
   }
 
   const rows = buildBannerRows(term, schedule.assignments, {
@@ -215,7 +236,10 @@ export default defineEventHandler(async (event) => {
   })
   const csv = [bannerHeaders.join(','), ...rows].join('\n')
 
-  await Schedule.updateOne({ _id: schedule._id }, { $set: { status: 'exported' } }).exec()
+  await Schedule.updateOne(
+    { _id: schedule._id },
+    { $set: { status: 'exported' } },
+  ).exec()
 
   setHeader(event, 'Content-Type', 'text/csv; charset=utf-8')
   const encodedTerm = encodeURIComponent(term)

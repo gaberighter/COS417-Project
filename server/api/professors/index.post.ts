@@ -29,7 +29,8 @@ function hasOwn(obj: object, key: string): boolean {
 }
 
 function parseProfessorKey(input: ProfessorInput): ProfessorKey {
-  const covenantId = input.covenantId?.trim().toLowerCase() ?? input._id?.trim().toLowerCase()
+  const covenantId =
+    input.covenantId?.trim().toLowerCase() ?? input._id?.trim().toLowerCase()
 
   if (!covenantId) {
     throw createError({
@@ -73,7 +74,10 @@ function normalizeProfessor(input: ProfessorInput): IProfessor {
   }
 }
 
-function mergeProfessor(input: ProfessorInput, existing: IProfessor | null): IProfessor {
+function mergeProfessor(
+  input: ProfessorInput,
+  existing: IProfessor | null,
+): IProfessor {
   const base = normalizeProfessor(input)
 
   return {
@@ -131,13 +135,18 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const keyed = rawProfessors.map((raw) => ({ raw, key: parseProfessorKey(raw) }))
+  const keyed = rawProfessors.map((raw) => ({
+    raw,
+    key: parseProfessorKey(raw),
+  }))
   const existing = await Professor.find({
     _id: { $in: keyed.map((entry) => entry.key._id) },
   })
     .lean()
     .exec()
-  const existingById = new Map(existing.map((professor) => [professor._id ?? '', professor]))
+  const existingById = new Map(
+    existing.map((professor) => [professor._id ?? '', professor]),
+  )
 
   const professors = keyed.map(({ raw, key }) =>
     mergeProfessor(raw, existingById.get(key._id) ?? null),

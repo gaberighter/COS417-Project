@@ -38,7 +38,10 @@ export default defineEventHandler(async (event) => {
   try {
     body = (await readBody<SchedulePatchPayload>(event)) ?? {}
   } catch {
-    throw createError({ statusCode: 400, statusMessage: 'Missing or invalid JSON body' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Missing or invalid JSON body',
+    })
   }
 
   if (
@@ -51,16 +54,17 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const filter = body.runNumber
-    ? { term, runNumber: body.runNumber }
-    : { term }
+  const filter = body.runNumber ? { term, runNumber: body.runNumber } : { term }
 
   const schedule = await Schedule.findOne(filter)
     .sort(body.runNumber ? undefined : { runNumber: -1 })
     .exec()
 
   if (!schedule) {
-    throw createError({ statusCode: 404, statusMessage: `No schedule for term: ${term}` })
+    throw createError({
+      statusCode: 404,
+      statusMessage: `No schedule for term: ${term}`,
+    })
   }
 
   let changes = 0

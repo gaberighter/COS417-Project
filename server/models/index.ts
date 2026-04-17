@@ -130,7 +130,9 @@ function buildRoomId(room: Pick<IRoom, 'abbreviation'>): string {
   return normalize(room.abbreviation).toUpperCase()
 }
 
-function buildCourseId(course: Pick<ICourse, 'deptCode' | 'courseNumber'>): string {
+function buildCourseId(
+  course: Pick<ICourse, 'deptCode' | 'courseNumber'>,
+): string {
   return `${normalize(course.deptCode).toUpperCase()} ${normalize(course.courseNumber)}`
 }
 
@@ -251,12 +253,21 @@ const professorSchema = new Schema<IProfessor>(
     _id: { type: String },
     covenantId: { type: String, required: true, trim: true, lowercase: true },
     displayName: { type: String, required: true, trim: true },
-    departmentCode: { type: String, required: true, trim: true, uppercase: true },
+    departmentCode: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+    },
     officeBuilding: { type: String, default: null, trim: true },
     officeRoom: { type: String, default: null, trim: true },
     seniorityYear: { type: Number, default: null },
     active: { type: Boolean, required: true, default: true },
-    preferences: { type: [preferenceSubmissionSchema], required: true, default: [] },
+    preferences: {
+      type: [preferenceSubmissionSchema],
+      required: true,
+      default: [],
+    },
   },
   { collection: 'professors', timestamps: true, versionKey: false },
 )
@@ -389,11 +400,15 @@ export function roomCode(room: Pick<IRoom, 'abbreviation'>): string {
   return buildRoomId(room)
 }
 
-export function courseCode(course: Pick<ICourse, 'deptCode' | 'courseNumber'>): string {
+export function courseCode(
+  course: Pick<ICourse, 'deptCode' | 'courseNumber'>,
+): string {
   return buildCourseId(course)
 }
 
-export function professorCode(professor: Pick<IProfessor, 'covenantId'>): string {
+export function professorCode(
+  professor: Pick<IProfessor, 'covenantId'>,
+): string {
   return buildProfessorId(professor)
 }
 
