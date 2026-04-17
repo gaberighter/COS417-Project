@@ -9,6 +9,8 @@ import { connectDB } from '../../../utils/db'
 import { Professor, Schedule, type IAssignment } from '../../../models/index'
 import { logAction } from '../../../services/auditService'
 
+const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
+
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
   await connectDB()
@@ -16,6 +18,9 @@ export default defineEventHandler(async (event) => {
   const term = getRouterParam(event, 'term')
   if (!term) {
     throw createError({ statusCode: 400, statusMessage: 'term is required' })
+  }
+  if (!TERM_PATTERN.test(term)) {
+    throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
   }
 
   let body: Partial<IAssignment> & { courseId?: string }
@@ -36,6 +41,13 @@ export default defineEventHandler(async (event) => {
       statusMessage: 'courseId is required to identify assignment',
     })
   }
+  const courseId = body.courseId.trim()
+  if (!courseId) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'courseId is required to identify assignment',
+    })
+  }
 
   const schedule = await Schedule.findOne({ term })
     .sort({ runNumber: -1 })
@@ -48,12 +60,12 @@ export default defineEventHandler(async (event) => {
   }
 
   const assignmentIndex = schedule.assignments.findIndex(
-    (assignment) => assignment.courseId === body.courseId,
+    (assignment) => assignment.courseId === courseId,
   )
   if (assignmentIndex < 0) {
     throw createError({
       statusCode: 404,
-      statusMessage: `Assignment not found: ${body.courseId}`,
+      statusMessage: `Assignment not found: ${courseId}`,
     })
   }
 
@@ -61,7 +73,7 @@ export default defineEventHandler(async (event) => {
   if (!current) {
     throw createError({
       statusCode: 404,
-      statusMessage: `Assignment not found: ${body.courseId}`,
+      statusMessage: `Assignment not found: ${courseId}`,
     })
   }
 
@@ -94,7 +106,7 @@ export default defineEventHandler(async (event) => {
     'SCHEDULE_OVERRIDE',
     'schedules',
     schedule._id,
-    `Manually overrode assignment for course ${body.courseId} in ${term}`,
+    `Manually overrode assignment for course ${courseId} in ${term}`,
   )
 
   return schedule.assignments[assignmentIndex]

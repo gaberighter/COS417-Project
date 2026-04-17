@@ -8,6 +8,8 @@ import { connectDB } from '../../../utils/db'
 import { Schedule, type ISchedule } from '../../../models/index'
 import { logAction } from '../../../services/auditService'
 
+const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
+
 type SchedulePatchPayload = {
   runNumber?: number
   status?: ISchedule['status']
@@ -28,12 +30,25 @@ export default defineEventHandler(async (event) => {
   if (!term) {
     throw createError({ statusCode: 400, statusMessage: 'term is required' })
   }
+  if (!TERM_PATTERN.test(term)) {
+    throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
+  }
 
   let body: SchedulePatchPayload
   try {
     body = (await readBody<SchedulePatchPayload>(event)) ?? {}
   } catch {
     throw createError({ statusCode: 400, statusMessage: 'Missing or invalid JSON body' })
+  }
+
+  if (
+    body.runNumber !== undefined &&
+    (!Number.isInteger(body.runNumber) || body.runNumber < 1)
+  ) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'runNumber must be an integer >= 1',
+    })
   }
 
   const filter = body.runNumber

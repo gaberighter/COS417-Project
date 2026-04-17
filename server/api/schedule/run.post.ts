@@ -10,17 +10,32 @@ import { Professor, Schedule } from '../../models/index'
 import { logAction } from '../../services/auditService'
 import { run as runScheduler } from '../../services/schedulingEngine'
 
+const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
+
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
   await connectDB()
 
-  const body = await readBody<{ term: string }>(event)
-  if (!body || !body.term) {
-    throw createError({ statusCode: 400, statusMessage: 'term is required' })
+  let body: { term: string }
+  try {
+    body = (await readBody<{ term: string }>(event)) ?? { term: '' }
+  } catch {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Missing or invalid JSON body',
+    })
   }
 
-  const result = await runScheduler(body.term)
-  const latestRun = await Schedule.findOne({ term: body.term })
+  const term = String(body.term ?? '').trim()
+  if (!term) {
+    throw createError({ statusCode: 400, statusMessage: 'term is required' })
+  }
+  if (!TERM_PATTERN.test(term)) {
+    throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
+  }
+
+  const result = await runScheduler(term)
+  const latestRun = await Schedule.findOne({ term })
     .sort({ runNumber: -1 })
     .select({ runNumber: 1 })
     .lean()
@@ -39,7 +54,7 @@ export default defineEventHandler(async (event) => {
     .exec()
 
   const schedule = await Schedule.create({
-    term: body.term,
+    term,
     runNumber: nextRunNumber,
     status: result.conflicts.length > 0 ? 'under_review' : 'approved',
     createdBy: adminProfessor?._id ?? auth.userId.toLowerCase(),
@@ -52,7 +67,7 @@ export default defineEventHandler(async (event) => {
     'SCHEDULE_RUN',
     'schedules',
     schedule._id,
-    `Executed scheduling run ${nextRunNumber} for ${body.term}`,
+    `Executed scheduling run ${nextRunNumber} for ${term}`,
   )
   return schedule.toObject()
 })

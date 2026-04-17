@@ -365,6 +365,26 @@ export const AuditLog =
   (mongoose.models.AuditLog as Model<IAuditLog>) ??
   mongoose.model<IAuditLog>('AuditLog', auditLogSchema)
 
+let indexesInitPromise: Promise<void> | null = null
+
+export async function initializeModelIndexes(): Promise<void> {
+  if (!indexesInitPromise) {
+    indexesInitPromise = Promise.all([
+      Room.init(),
+      CourseCatalog.init(),
+      Professor.init(),
+      Schedule.init(),
+      AuditLog.init(),
+    ]).then(() => undefined)
+
+    indexesInitPromise.catch(() => {
+      indexesInitPromise = null
+    })
+  }
+
+  await indexesInitPromise
+}
+
 export function roomCode(room: Pick<IRoom, 'abbreviation'>): string {
   return buildRoomId(room)
 }

@@ -6,10 +6,13 @@
 //   await connectDB();
 
 import mongoose from 'mongoose'
+import { initializeModelIndexes } from '../models/index'
 
 type MongoCache = {
   connection: typeof mongoose | null
   promise: Promise<typeof mongoose> | null
+  indexesReadyPromise: Promise<void> | null
+  listenersAttached: boolean
 }
 
 const globalForMongo = globalThis as typeof globalThis & {
@@ -19,6 +22,8 @@ const globalForMongo = globalThis as typeof globalThis & {
 const mongoCache: MongoCache = globalForMongo.__mongoCache ?? {
   connection: null,
   promise: null,
+  indexesReadyPromise: null,
+  listenersAttached: false,
 }
 
 globalForMongo.__mongoCache = mongoCache
@@ -37,17 +42,51 @@ function getMongoUri(): string {
 }
 
 export async function connectDB(): Promise<typeof mongoose> {
+  if (mongoose.connection.readyState !== 1) {
+    mongoCache.connection = null
+  }
+
   if (mongoCache.connection && mongoose.connection.readyState === 1) {
     return mongoCache.connection
   }
 
   if (!mongoCache.promise) {
     const uri = getMongoUri()
-    mongoCache.promise = mongoose.connect(uri, {
-      bufferCommands: false,
-    })
+    mongoCache.promise = mongoose
+      .connect(uri, {
+        bufferCommands: false,
+      })
+      .catch((error) => {
+        mongoCache.promise = null
+        mongoCache.connection = null
+        mongoCache.indexesReadyPromise = null
+        throw error
+      })
   }
 
   mongoCache.connection = await mongoCache.promise
+
+  if (!mongoCache.listenersAttached) {
+    mongoose.connection.on('disconnected', () => {
+      mongoCache.connection = null
+      mongoCache.promise = null
+      mongoCache.indexesReadyPromise = null
+    })
+    mongoose.connection.on('error', () => {
+      mongoCache.connection = null
+      mongoCache.promise = null
+      mongoCache.indexesReadyPromise = null
+    })
+    mongoCache.listenersAttached = true
+  }
+
+  if (!mongoCache.indexesReadyPromise) {
+    mongoCache.indexesReadyPromise = initializeModelIndexes().catch((error) => {
+      mongoCache.indexesReadyPromise = null
+      throw error
+    })
+  }
+
+  await mongoCache.indexesReadyPromise
   return mongoCache.connection
 }
