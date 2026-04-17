@@ -1,8 +1,7 @@
 type AuthUser = Record<string, unknown>
 
 export const useAuth = () => {
-  // TODO: Replace with your real external SSO login URL.
-  const SSO_LOGIN_URL = 'https://example.com/sso-login'
+  const SSO_LOGIN_URL = '/saml/login'
 
   const token = useState<string | null>('auth-token', () => null)
   const user = useState<AuthUser | null>('auth-user', () => null)
