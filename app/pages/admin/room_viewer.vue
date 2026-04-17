@@ -1,7 +1,104 @@
 <template>
     <div class="room-viewer">
         <div class="room-search">
-            <p>Room search functionality goes here.</p>
+            <h2>Filter Rooms</h2>
+            <div class="filter-grid">
+                <label>
+                    Building Code
+                    <input v-model="filters.buildingCode" type="text" placeholder="e.g. SCI" />
+                </label>
+                <label>
+                    Room Number
+                    <input v-model="filters.roomNumber" type="text" placeholder="e.g. 101" />
+                </label>
+                <label>
+                    Display Name
+                    <input v-model="filters.displayName" type="text" placeholder="e.g. Physics Lab" />
+                </label>
+                <label>
+                    Room Type
+                    <select v-model="filters.roomType">
+                        <option value="">Any</option>
+                        <option v-for="type in roomTypeOptions" :key="type" :value="type">{{ type }}</option>
+                    </select>
+                </label>
+                <label>
+                    Capacity (Min)
+                    <input v-model.number="filters.capacityMin" type="number" min="0" placeholder="No minimum" />
+                </label>
+                <label>
+                    Capacity (Max)
+                    <input v-model.number="filters.capacityMax" type="number" min="0" placeholder="No maximum" />
+                </label>
+                <label>
+                    Available
+                    <select v-model="filters.available">
+                        <option value="any">Any</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </label>
+                <label>
+                    Projector
+                    <select v-model="filters.projector">
+                        <option value="any">Any</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </label>
+                <label>
+                    Smartboard
+                    <select v-model="filters.smartboard">
+                        <option value="any">Any</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </label>
+                <label>
+                    Whiteboard
+                    <select v-model="filters.whiteboard">
+                        <option value="any">Any</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </label>
+                <label>
+                    Piano
+                    <select v-model="filters.piano">
+                        <option value="any">Any</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </label>
+                <label>
+                    Lab Stations
+                    <select v-model="filters.labStations">
+                        <option value="any">Any</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </label>
+                <label>
+                    Computers
+                    <select v-model="filters.computers">
+                        <option value="any">Any</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </label>
+                <label>
+                    Outlets
+                    <select v-model="filters.outlets">
+                        <option value="any">Any</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </label>
+            </div>
+            <div class="filter-actions">
+                <button @click="resetFilters">Clear Filters</button>
+                <p class="filter-results">Showing {{ filteredRooms.length }} of {{ rooms.length }} rooms</p>
+            </div>
         </div>
         <div class="room-content">
             <p v-if="pending">Loading rooms...</p>
@@ -29,7 +126,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="room in rooms" :key="`${room.buildingCode}-${room.roomNumber}`">
+                        <tr v-for="room in filteredRooms" :key="`${room.buildingCode}-${room.roomNumber}`">
                             <td>{{ room.buildingCode }}</td>
                             <td>{{ room.roomNumber }}</td>
                             <td>{{ room.displayName }}</td>
@@ -44,7 +141,7 @@
                             <td>{{ formatBoolean(room.equipment.computers) }}</td>
                             <td>{{ formatBoolean(room.equipment.outlets) }}</td>
                         </tr>
-                        <tr v-if="rooms.length === 0">
+                        <tr v-if="filteredRooms.length === 0">
                             <td colspan="13">No rooms found.</td>
                         </tr>
                     </tbody>
@@ -83,17 +180,200 @@ interface Room {
     equipment: RoomEquipment
 }
 
+type BooleanFilter = 'any' | 'true' | 'false'
+
+interface RoomFilters {
+    buildingCode: string
+    roomNumber: string
+    displayName: string
+    roomType: string
+    capacityMin: number | null
+    capacityMax: number | null
+    available: BooleanFilter
+    projector: BooleanFilter
+    smartboard: BooleanFilter
+    whiteboard: BooleanFilter
+    piano: BooleanFilter
+    labStations: BooleanFilter
+    computers: BooleanFilter
+    outlets: BooleanFilter
+}
+
 const { data: rooms, pending, error, refresh } = await useFetch<Room[]>('/api/rooms', {
     default: () => []
 })
 
 const { redirectToLogin, redirectToAdmin } = useDebugNavigation()
 
+const createDefaultFilters = (): RoomFilters => ({
+    buildingCode: '',
+    roomNumber: '',
+    displayName: '',
+    roomType: '',
+    capacityMin: null,
+    capacityMax: null,
+    available: 'any',
+    projector: 'any',
+    smartboard: 'any',
+    whiteboard: 'any',
+    piano: 'any',
+    labStations: 'any',
+    computers: 'any',
+    outlets: 'any',
+})
+
+const filters = reactive<RoomFilters>(createDefaultFilters())
+
+const roomTypeOptions = computed(() => {
+    const uniqueTypes = new Set(
+        rooms.value
+            .map((room) => room.roomType)
+            .filter((roomType) => roomType && roomType.trim().length > 0)
+    )
+
+    return Array.from(uniqueTypes).sort((left, right) => left.localeCompare(right))
+})
+
+const includesInsensitive = (value: string, query: string) => {
+    return value.toLowerCase().includes(query.trim().toLowerCase())
+}
+
+const matchesBooleanFilter = (value: boolean, filter: BooleanFilter) => {
+    if (filter === 'any') {
+        return true
+    }
+
+    return filter === 'true' ? value : !value
+}
+
+const filteredRooms = computed(() => {
+    return rooms.value.filter((room) => {
+        if (filters.buildingCode && !includesInsensitive(room.buildingCode, filters.buildingCode)) {
+            return false
+        }
+
+        if (filters.roomNumber && !includesInsensitive(room.roomNumber, filters.roomNumber)) {
+            return false
+        }
+
+        if (filters.displayName && !includesInsensitive(room.displayName ?? '', filters.displayName)) {
+            return false
+        }
+
+        if (filters.roomType && room.roomType !== filters.roomType) {
+            return false
+        }
+
+        if (filters.capacityMin !== null && room.capacity < filters.capacityMin) {
+            return false
+        }
+
+        if (filters.capacityMax !== null && room.capacity > filters.capacityMax) {
+            return false
+        }
+
+        if (!matchesBooleanFilter(room.available, filters.available)) {
+            return false
+        }
+
+        if (!matchesBooleanFilter(room.equipment.projector, filters.projector)) {
+            return false
+        }
+
+        if (!matchesBooleanFilter(room.equipment.smartboard, filters.smartboard)) {
+            return false
+        }
+
+        if (!matchesBooleanFilter(room.equipment.whiteboard, filters.whiteboard)) {
+            return false
+        }
+
+        if (!matchesBooleanFilter(room.equipment.piano, filters.piano)) {
+            return false
+        }
+
+        if (!matchesBooleanFilter(room.equipment.labStations, filters.labStations)) {
+            return false
+        }
+
+        if (!matchesBooleanFilter(room.equipment.computers, filters.computers)) {
+            return false
+        }
+
+        if (!matchesBooleanFilter(room.equipment.outlets, filters.outlets)) {
+            return false
+        }
+
+        return true
+    })
+})
+
 const formatBoolean = (value: boolean) => (value ? 'Yes' : 'No')
 const retryLoad = () => refresh()
+const resetFilters = () => {
+    Object.assign(filters, createDefaultFilters())
+}
 </script>
 
 <style scoped>
+.room-viewer {
+    display: grid;
+    gap: 1rem;
+}
+
+.room-search {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.room-search h2 {
+    margin-top: 0;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.75rem;
+}
+
+.filter-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+}
+
+.filter-grid input,
+.filter-grid select {
+    background-color: var(--color-surface-elevated);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    border-radius: 6px;
+    min-height: 2.1rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.filter-grid input:focus-visible,
+.filter-grid select:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+}
+
+.filter-actions {
+    margin-top: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.filter-results {
+    margin: 0;
+    color: var(--color-text-secondary);
+}
+
 .table-container {
     overflow-x: auto;
     background-color: var(--color-surface);
@@ -121,5 +401,12 @@ thead {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+}
+
+@media (max-width: 700px) {
+    .filter-actions {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 </style>
