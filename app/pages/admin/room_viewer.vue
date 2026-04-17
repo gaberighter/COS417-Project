@@ -1,6 +1,5 @@
 <template>
     <div class="room-viewer">
-        <h1>Room Viewer</h1>
         <div class="room-search">
             <p>Room search functionality goes here.</p>
         </div>
@@ -97,8 +96,8 @@ const retryLoad = () => refresh()
 <style scoped>
 .table-container {
     overflow-x: auto;
-    background-color: #fff;
-    border: 1px solid #d0d7de;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 10px;
 }
 
@@ -109,13 +108,13 @@ table {
 
 th,
 td {
-    border: 1px solid #d0d7de;
+    border: 1px solid var(--color-border);
     padding: 0.5rem;
     text-align: left;
 }
 
 thead {
-    background-color: #f6f8fa;
+    background-color: var(--color-surface-elevated);
 }
 
 .error-state {

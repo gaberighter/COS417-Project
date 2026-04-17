@@ -1,6 +1,5 @@
 <template>
     <div id="admin-dashboard">
-        <h1>Admin Dashboard</h1>
         <div class="button-wrapper">
             <button @click="viewExistingSchedule">View Existing Schedule</button>
         </div>
@@ -30,7 +29,7 @@ const { redirectToLogin, redirectToFaculty } = useDebugNavigation()
 #admin-dashboard {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: left;
     gap: 20px;
 }
 </style>

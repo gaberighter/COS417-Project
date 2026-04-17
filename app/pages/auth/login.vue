@@ -24,7 +24,7 @@ const { redirectToAdmin, redirectToFaculty } = useDebugNavigation()
 
 <style>
 .error {
-    color: #c31b1b;
+    color: var(--color-text-danger);
     margin-top: 0.75rem;
 }
 </style>

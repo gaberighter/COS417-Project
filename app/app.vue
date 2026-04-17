@@ -35,6 +35,14 @@
 </template>
 
 <script setup lang="ts">
+const currentTheme = useState('site-theme', () => 'dark')
+
+useHead(() => ({
+  htmlAttrs: {
+    'data-theme': currentTheme.value,
+  },
+}))
+
 const route = useRoute()
 const auth = useAuth() as Record<string, unknown>
 
