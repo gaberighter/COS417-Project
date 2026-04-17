@@ -13,7 +13,10 @@
 </template>
 
 <script setup lang="ts">
-import { useAuth } from '~/composables/useAuth'
+definePageMeta({
+    pageTitle: 'Login',
+    hideTopBar: true,
+})
 
 const { loginWithSso, isLoading, error } = useAuth()
 const { redirectToAdmin, redirectToFaculty } = useDebugNavigation()

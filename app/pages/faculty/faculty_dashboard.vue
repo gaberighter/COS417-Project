@@ -10,6 +10,9 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+    pageTitle: 'Faculty Dashboard',
+})
 
 const { redirectToLogin, redirectToAdmin } = useDebugNavigation()
 

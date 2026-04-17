@@ -60,6 +60,10 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+    pageTitle: 'Room Viewer',
+})
+
 interface RoomEquipment {
     projector: boolean
     smartboard: boolean

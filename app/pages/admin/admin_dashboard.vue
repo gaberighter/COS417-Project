@@ -18,6 +18,10 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+    pageTitle: 'Admin Dashboard',
+})
+
 const { viewExistingSchedule, createNewSchedule, viewRoomData } = useAdmin()
 const { redirectToLogin, redirectToFaculty } = useDebugNavigation()
 </script>

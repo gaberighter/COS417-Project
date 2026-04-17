@@ -2,7 +2,7 @@
     <div class="schedule-viewer">
         <h1>Schedule Viewer</h1>
         <div class="schedule-list">
-            <p>Schedule viewing functionality goes here.</p>
+            <p>List of Viewable Schedules goes here</p>
         </div>
         <div class="schedule-content">
             <p>Selected schedule content will be displayed here.</p>
@@ -15,6 +15,10 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+    pageTitle: 'Schedule Viewer',
+})
+
 const { redirectToLogin, redirectToAdmin } = useDebugNavigation()
 </script>
 

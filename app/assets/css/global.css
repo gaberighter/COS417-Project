@@ -3,22 +3,85 @@ body,
 #__nuxt {
   margin: 0;
   padding: 0;
-  min-height: 100%;
+  min-height: 100vh;
 }
 
 body {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: lightgray;
 }
 
 #__nuxt {
+  width: 100%;
+}
+
+.app-shell {
   min-height: 100vh;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+}
+
+.site-top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background: #ffffff;
+  border-bottom: 1px solid #cfd4dc;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.site-top-bar__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #1a1f2b;
+}
+
+.site-top-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.site-top-bar__auth-context {
+  font-size: 0.88rem;
+  color: #4b5563;
+}
+
+.site-top-bar__auth-btn {
+  border: 1px solid #0b4dbb;
+  background: #0b4dbb;
+  color: #ffffff;
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.site-top-bar__auth-btn:hover {
+  background: #08398c;
+  border-color: #08398c;
+}
+
+.site-top-bar__auth-btn--secondary {
+  background: #ffffff;
+  color: #0b4dbb;
+}
+
+.site-top-bar__auth-btn--secondary:hover {
+  background: #eaf1ff;
+}
+
+.app-content {
+  flex: 1;
+  width: min(1200px, calc(100% - 2rem));
+  margin: 1rem auto 2rem;
 }
 
 .button-wrapper {
@@ -46,4 +109,26 @@ body {
     display: flex;
     flex-direction: column;
     gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .site-top-bar {
+    padding: 0.75rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .site-top-bar__title {
+    font-size: 1rem;
+  }
+
+  .site-top-bar__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .app-content {
+    width: calc(100% - 1rem);
+    margin-top: 0.75rem;
+  }
 }
