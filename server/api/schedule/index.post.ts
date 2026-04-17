@@ -112,7 +112,7 @@ export default defineEventHandler(async (event) => {
     auth,
     'SCHEDULE_UPSERT',
     'schedules',
-    null,
+    undefined,
     `Upserted ${upserted.length} schedule record(s)`,
   )
 

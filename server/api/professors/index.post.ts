@@ -170,7 +170,7 @@ export default defineEventHandler(async (event) => {
     auth,
     'PROFESSOR_UPSERT',
     'professors',
-    null,
+    undefined,
     `Upserted ${professors.length} professor record(s)`,
   )
 
