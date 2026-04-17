@@ -2,7 +2,7 @@
 // §4.6 Scheduling Engine — constraint-satisfaction algorithm (§6)
 // STUB: returns an empty result. Replace with the real algorithm from §6.3.
 
-import { db, type ISchedule } from '../models/index'
+import { CourseCatalog, Professor, Room, type ISchedule } from '../models/index'
 
 export interface EngineResult {
   assignments: ISchedule['assignments']
@@ -22,9 +22,11 @@ export async function run(term: string): Promise<EngineResult> {
   // TODO: implement phases per §6.3.1–§6.3.5
 
   // Phase 1 — collect inputs from DB
-  const _rooms = db.rooms.filter((room) => room.available)
-  const _courses = db.courses.filter((course) => course.active)
-  const _professors = db.professors.filter((professor) => professor.active)
+  const [_rooms, _courses, _professors] = await Promise.all([
+    Room.find({ available: true }).lean().exec(),
+    CourseCatalog.find({ active: true }).lean().exec(),
+    Professor.find({ active: true }).lean().exec(),
+  ])
   void term
   void _rooms
   void _courses

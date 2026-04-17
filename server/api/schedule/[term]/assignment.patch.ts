@@ -6,7 +6,7 @@
 import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
 import { requireAuth } from '../../../utils/auth'
 import { connectDB } from '../../../utils/db'
-import { db, type IAssignment } from '../../../models/index'
+import { Professor, Schedule, type IAssignment } from '../../../models/index'
 import { logAction } from '../../../services/auditService'
 
 export default defineEventHandler(async (event) => {
@@ -37,9 +37,9 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const schedule = db.schedules
-    .filter((candidate) => candidate.term === term)
-    .sort((left, right) => right.runNumber - left.runNumber)[0]
+  const schedule = await Schedule.findOne({ term })
+    .sort({ runNumber: -1 })
+    .exec()
   if (!schedule) {
     throw createError({
       statusCode: 404,
@@ -65,11 +65,17 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const adminProfessor = db.professors.find(
-    (candidate) =>
-      candidate.covenantId === auth.userId || candidate._id === auth.userId,
-  )
-  const now = new Date()
+  const adminProfessor = await Professor.findOne({
+    $or: [
+      { covenantId: auth.userId.toLowerCase() },
+      { _id: auth.userId.toLowerCase() },
+      { _id: auth.userId },
+    ],
+  })
+    .select({ _id: 1 })
+    .lean()
+    .exec()
+
   schedule.assignments[assignmentIndex] = {
     ...current,
     ...Object.fromEntries(
@@ -77,12 +83,11 @@ export default defineEventHandler(async (event) => {
         ([key, value]) => key !== 'courseId' && value !== undefined,
       ),
     ),
-    overrideBy: adminProfessor?._id ?? auth.userId,
-    createdAt: current.createdAt ?? now,
-    updatedAt: now,
+    overrideBy: adminProfessor?._id ?? auth.userId.toLowerCase(),
   }
   schedule.status = 'under_review'
-  schedule.updatedAt = now
+
+  await schedule.save()
 
   await logAction(
     auth,

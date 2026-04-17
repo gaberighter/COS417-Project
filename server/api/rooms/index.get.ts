@@ -5,12 +5,11 @@
 import { defineEventHandler } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
-import { db } from '../../models/index'
+import { Room } from '../../models/index'
 
 export default defineEventHandler(async (event) => {
   requireAuth(event, ['Admin'])
   await connectDB()
 
-  // TODO: replace with → return Room.find({});
-  return db.rooms
+  return Room.find({}).lean().exec()
 })

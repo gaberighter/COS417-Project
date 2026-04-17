@@ -1,10 +1,8 @@
 // server/services/auditService.ts
 // §4.7 Audit Service — append-only log of every state-mutating action.
-// STUB: writes to the in-memory db.auditLogs array.
-//       Replace the push() call with an AuditLog.create() Mongoose call.
 
 import type { AuthContext } from '../utils/auth'
-import { db, type IAuditLog } from '../models/index'
+import { AuditLog, Professor, type IAuditLog } from '../models/index'
 
 function toDetailText(
   action: string,
@@ -29,24 +27,28 @@ export async function logAction(
   targetId?: string,
   detail?: string | Record<string, unknown>,
 ): Promise<void> {
-  const professor = db.professors.find(
-    (candidate) =>
-      candidate.covenantId === actor.userId || candidate._id === actor.userId,
-  )
+  const professor = await Professor.findOne({
+    $or: [
+      { covenantId: actor.userId.toLowerCase() },
+      { _id: actor.userId.toLowerCase() },
+      { _id: actor.userId },
+    ],
+  })
+    .select({ _id: 1, covenantId: 1 })
+    .lean()
+    .exec()
+
   const now = new Date()
   const entry: IAuditLog = {
     timestamp: now,
     userId: professor?._id ?? null,
-    covenantId: professor?.covenantId ?? actor.userId,
+    covenantId: professor?.covenantId ?? actor.userId.toLowerCase(),
     action,
     collection: targetCollection,
     documentId: targetId ?? null,
     detail: toDetailText(action, targetCollection, detail),
     ipAddress: null,
-    createdAt: now,
-    updatedAt: now,
   }
 
-  // TODO: replace with → await AuditLog.create(entry);
-  db.auditLogs.push(entry)
+  await AuditLog.create(entry)
 }

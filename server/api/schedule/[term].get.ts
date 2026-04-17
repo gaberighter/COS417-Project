@@ -5,7 +5,7 @@
 import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
-import { db } from '../../models/index'
+import { Schedule } from '../../models/index'
 
 export default defineEventHandler(async (event) => {
   requireAuth(event, ['Admin'])
@@ -16,9 +16,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'term is required' })
   }
 
-  const schedule = db.schedules
-    .filter((candidate) => candidate.term === term)
-    .sort((left, right) => right.runNumber - left.runNumber)[0]
+  const schedule = await Schedule.findOne({ term })
+    .sort({ runNumber: -1 })
+    .lean()
+    .exec()
 
   if (!schedule) {
     throw createError({

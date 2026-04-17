@@ -1,31 +1,53 @@
 // server/utils/db.ts
 // Singleton MongoDB connection via Mongoose — §10.1 / §5.1
-// STUB: connectDB is a no-op until MONGODB_URI is set in .env
 //
 // Usage (in any server route or service):
 //   import { connectDB } from "~/server/utils/db";
 //   await connectDB();
 
-let connected = false
+import mongoose from 'mongoose'
 
-export async function connectDB(): Promise<void> {
-  if (connected) return
+type MongoCache = {
+  connection: typeof mongoose | null
+  promise: Promise<typeof mongoose> | null
+}
 
-  const uri = (
-    globalThis as { process?: { env?: Record<string, string | undefined> } }
-  ).process?.env?.MONGODB_URI
-  if (!uri) {
-    console.warn('[db] MONGODB_URI not set — running with in-memory stub data')
-    connected = true // skip real connection
-    return
+const globalForMongo = globalThis as typeof globalThis & {
+  __mongoCache?: MongoCache
+}
+
+const mongoCache: MongoCache = globalForMongo.__mongoCache ?? {
+  connection: null,
+  promise: null,
+}
+
+globalForMongo.__mongoCache = mongoCache
+
+function getMongoUri(): string {
+  const uri = process.env.MONGO_URI
+  if (uri) return uri
+
+  const message =
+    'MONGO_URI is required to connect to MongoDB'
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(message)
   }
 
-  // TODO: uncomment when mongoose is installed
-  // const mongoose = await import("mongoose");
-  // await mongoose.connect(uri);
-  // connected = true;
-  // console.log("[db] Connected to MongoDB");
+  throw new Error(`${message} in this environment`)
+}
 
-  console.warn('[db] connectDB stub — replace with real mongoose.connect()')
-  connected = true
+export async function connectDB(): Promise<typeof mongoose> {
+  if (mongoCache.connection && mongoose.connection.readyState === 1) {
+    return mongoCache.connection
+  }
+
+  if (!mongoCache.promise) {
+    const uri = getMongoUri()
+    mongoCache.promise = mongoose.connect(uri, {
+      bufferCommands: false,
+    })
+  }
+
+  mongoCache.connection = await mongoCache.promise
+  return mongoCache.connection
 }
