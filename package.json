@@ -12,15 +12,18 @@
     "typecheck": "nuxt typecheck"
   },
   "devDependencies": {
+    "@types/node": "^22.18.12",
     "@vue/language-core": "^3.2.6",
     "vue-tsc": "^3.2.6"
   },
   "dependencies": {
+    "@pinia/nuxt": "^0.11.2",
     "json2csv": "^6.0.0-alpha.2",
     "mongoose": "^9.3.3",
     "nuxt": "^4.4.2",
     "nuxt-auth-utils": "^0.5.29",
     "papaparse": "^5.5.3",
+    "pinia": "^3.0.3",
     "saml2-js": "^4.0.4",
     "vue": "^3.5.30",
     "vue-router": "^5.0.4",

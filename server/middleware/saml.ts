@@ -1,0 +1,223 @@
+import { H3Event, sendRedirect } from 'h3'
+import fs from 'fs'
+// @ts-expect-error - saml2-js does not currently publish TypeScript definitions.
+import saml2 from 'saml2-js'
+
+import { Users } from '../models/user.model'
+type SAMLProviders = {
+  sp: saml2.ServiceProvider
+  idp: saml2.IdentityProvider
+}
+
+const UsersCollection = Users as any
+
+let providers: SAMLProviders | null = null
+
+function readFileOrThrow(path: string, label: string) {
+  if (!fs.existsSync(path)) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: `${label} file not found at ${path}`,
+    })
+  }
+
+  return fs.readFileSync(path, 'utf8')
+}
+
+function getProviders() {
+  if (providers) {
+    return providers
+  }
+
+  const assertEndpoint = process.env.SAML_ASSERT_ENDPOINT
+  const loginUrl = process.env.SAML_LOGIN_URL
+  const logoutUrl = process.env.SAML_LOGOUT_URL
+
+  if (!assertEndpoint || !loginUrl || !logoutUrl) {
+    throw createError({
+      statusCode: 500,
+      statusMessage:
+        'Missing SAML configuration. Ensure SAML_ASSERT_ENDPOINT, SAML_LOGIN_URL, and SAML_LOGOUT_URL are set.',
+    })
+  }
+
+  const privateKeyPath =
+    process.env.SAML_PRIVATE_KEY_PATH || 'wildcard_covenant_edu.key'
+  const certificatePath =
+    process.env.SAML_PUBLIC_CERT_PATH || 'wildcard_covenant_edu.pem'
+  const idpCertificatePath = process.env.SAML_CERT || 'microsoft_saml.cer'
+
+  const spOptions = {
+    entity_id: process.env.SAML_ENTITY_ID || 'cbi3.covenant.edu',
+    private_key: readFileOrThrow(privateKeyPath, 'SAML private key'),
+    certificate: readFileOrThrow(certificatePath, 'SAML public certificate'),
+    assert_endpoint: assertEndpoint,
+  }
+
+  const idpOptions = {
+    sso_login_url: loginUrl,
+    sso_logout_url: logoutUrl,
+    certificates: [readFileOrThrow(idpCertificatePath, 'IdP certificate')],
+    allow_unencrypted_assertion: true,
+  }
+
+  providers = {
+    sp: new saml2.ServiceProvider(spOptions),
+    idp: new saml2.IdentityProvider(idpOptions),
+  }
+
+  return providers
+}
+
+export default defineEventHandler(async (event: H3Event) => {
+  const { sp, idp } = getProviders()
+  const urlObj = getRequestURL(event)
+
+  const temp = urlObj.pathname.substring(1).split('/')
+  if (temp[0] === 'saml') {
+    switch (temp[1]) {
+      case 'login':
+        return new Promise((resolve, reject) => {
+          sp.create_login_request_url(
+            idp,
+            {},
+            (err: Error | null, login_url: string) => {
+              if (err) {
+                return reject(
+                  createError({
+                    statusCode: 500,
+                    statusMessage: err.message,
+                  }),
+                )
+              }
+
+              return resolve(sendRedirect(event, login_url))
+            },
+          )
+        })
+      case 'assert': {
+        const requestBody = await readBody(event)
+        return new Promise((resolve, reject) => {
+          sp.post_assert(
+            idp,
+            { request_body: requestBody },
+            async (err: Error | null, samlResponse: any) => {
+              if (err) {
+                return reject(
+                  createError({
+                    statusCode: 500,
+                    statusMessage: err.message,
+                  }),
+                )
+              }
+
+              // Save name_id and session_index for logout.
+              const {
+                name_id,
+                session_index,
+                attributes: samlUser,
+              } = samlResponse.user
+
+              for (const field in samlUser) {
+                if (
+                  Array.isArray(samlUser[field]) &&
+                  samlUser[field].length === 1
+                ) {
+                  samlUser[field] = samlUser[field][0]
+                }
+
+                if (field.substring(0, 7) === 'http://') {
+                  delete samlUser[field]
+                }
+              }
+
+              // Look up the user from Banner to get their Oracle username.
+              const username =
+                'oracleUser' in samlUser
+                  ? samlUser.oracleUser
+                  : lookupOracleUser(samlUser.email)
+              const roles = getRoles(username)
+
+              // Look up the user and create the session payload.
+              const user: Record<string, unknown> = {
+                ...samlUser,
+                username,
+                roles,
+                lastLogin: new Date(),
+                name_id,
+                session_index,
+              }
+
+              // See if this user exists in the Users collection.
+              const existingUser = await UsersCollection.findOne({
+                username: user.username,
+              })
+              if (!existingUser) {
+                const createdUser = await UsersCollection.create(user)
+                user._id = createdUser._id?.toString?.() || createdUser._id
+              } else {
+                user._id = existingUser._id?.toString?.() || existingUser._id
+                await UsersCollection.updateOne({ _id: existingUser._id }, user)
+              }
+
+              await setUserSession(event, {
+                user,
+                loggedInAt: Date.now(),
+              })
+
+              return resolve(
+                sendRedirect(event, process.env.SAML_REDIRECT_TO || '/'),
+              )
+            },
+          )
+        })
+      }
+      case 'logout': {
+        const query = getQuery(event)
+        return new Promise((resolve, reject) => {
+          sp.create_logout_request_url(
+            idp,
+            query,
+            (err: Error | null, logoutRequestUrl: string) => {
+              if (err) {
+                return reject(
+                  createError({
+                    statusCode: 500,
+                    statusMessage: err.message,
+                  }),
+                )
+              }
+
+              return resolve(sendRedirect(event, logoutRequestUrl))
+            },
+          )
+        })
+      }
+      case 'manifest.xml':
+        setResponseHeaders(event, {
+          'Content-Disposition': 'attachment; filename=test.xml',
+          'Content-Type': 'text/xml; charset=latin1',
+        })
+        return sp.create_metadata()
+      default:
+        return
+    }
+  }
+
+  if (temp[0] === 'api' && urlObj.pathname !== '/api/_auth/session') {
+    await requireUserSession(event)
+  }
+})
+
+// The Oracle username is the first letter of the first name and then the last name, in all caps.
+function lookupOracleUser(email: string) {
+  return (
+    email.substring(0, 1) +
+    email.substring(email.indexOf('.') + 1, email.indexOf('@'))
+  ).toUpperCase()
+}
+
+// Just a list of role names. Oracle roles are all-caps.
+function getRoles(_user: string) {
+  return ['REGISTRAR']
+}
