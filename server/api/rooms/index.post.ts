@@ -111,6 +111,10 @@ export default defineEventHandler(async (event) => {
     `${normalizedBuildingCode} ${roomNumber}`
 
   const existing = await Room.findOne({ _id: abbreviation }).lean().exec()
+  const resolvedDisplayName =
+    body.displayName ??
+    existing?.displayName ??
+    `${normalizedBuildingCode} ${roomNumber}`
 
   const room: Partial<IRoom> = {
     _id: abbreviation,
@@ -118,10 +122,7 @@ export default defineEventHandler(async (event) => {
     buildingName:
       body.buildingName?.trim() ?? existing?.buildingName ?? normalizedBuildingCode,
     roomNumber,
-    displayName:
-      body.displayName !== undefined
-        ? body.displayName
-        : (existing?.displayName ?? `${normalizedBuildingCode} ${roomNumber}`),
+    displayName: String(resolvedDisplayName),
     capacity: body.capacity ?? existing?.capacity ?? 1,
     roomType: body.roomType ?? existing?.roomType ?? 'classroom',
     available: body.available ?? body.isActive ?? existing?.available ?? true,
