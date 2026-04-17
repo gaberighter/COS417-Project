@@ -127,6 +127,10 @@ body {
   background: var(--color-action-secondary-bg-hover);
 }
 
+.site-top-bar__theme-btn {
+  min-width: 7.25rem;
+}
+
 button {
   border: 1px solid var(--color-action-primary-bg);
   background: var(--color-action-primary-bg);
