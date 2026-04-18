@@ -24,9 +24,26 @@ function hasOwn(obj: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(obj, key)
 }
 
+function normalizeCourseKeyField(
+  value: unknown,
+  fieldName: 'deptCode' | 'courseNumber' | '_id',
+): string | undefined {
+  if (value == null) {
+    return undefined
+  }
+  if (typeof value !== 'string') {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `${fieldName} must be a string`,
+    })
+  }
+
+  return value.trim()
+}
+
 function parseCourseKey(input: CourseInput): CourseKey {
-  const deptCode = input.deptCode?.trim().toUpperCase()
-  const courseNumber = input.courseNumber?.trim()
+  const deptCode = normalizeCourseKeyField(input.deptCode, 'deptCode')?.toUpperCase()
+  const courseNumber = normalizeCourseKeyField(input.courseNumber, 'courseNumber')
 
   if (deptCode && courseNumber) {
     return {
@@ -36,7 +53,7 @@ function parseCourseKey(input: CourseInput): CourseKey {
     }
   }
 
-  const fromId = input._id?.trim()
+  const fromId = normalizeCourseKeyField(input._id, '_id')
   if (fromId) {
     const split = fromId.split(/\s+/)
     if (split.length >= 2) {

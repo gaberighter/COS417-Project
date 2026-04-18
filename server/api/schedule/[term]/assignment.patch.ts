@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (!body || typeof body !== 'object' || !body.courseId) {
+  if (!body || typeof body !== 'object' || typeof body.courseId !== 'string') {
     throw createError({
       statusCode: 400,
       statusMessage: 'courseId is required to identify assignment',

@@ -9,6 +9,7 @@ import { Schedule, scheduleCode, type ISchedule } from '../../models/index'
 import { logAction } from '../../services/auditService'
 
 type ScheduleInput = Partial<ISchedule>
+const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 
 interface Payload {
   schedules?: ScheduleInput[]
@@ -22,6 +23,9 @@ function normalizeTerm(term: unknown): string {
   const normalized = String(term ?? '').trim()
   if (!normalized) {
     throw createError({ statusCode: 400, statusMessage: 'term is required' })
+  }
+  if (!TERM_PATTERN.test(normalized)) {
+    throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
   }
 
   return normalized
@@ -71,10 +75,8 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const upserted: ISchedule[] = []
-  for (const raw of rawSchedules) {
+  const preparedSchedules = rawSchedules.map((raw) => {
     const term = normalizeTerm(raw.term)
-
     const runNumber =
       raw.runNumber && Number.isInteger(raw.runNumber) && raw.runNumber > 0
         ? raw.runNumber
@@ -83,7 +85,18 @@ export default defineEventHandler(async (event) => {
     maxRunByTerm.set(term, Math.max(maxRunByTerm.get(term) ?? 0, runNumber))
 
     const _id = scheduleCode(term, runNumber)
-    const existing = await Schedule.findOne({ _id }).lean().exec()
+    return { raw, term, runNumber, _id }
+  })
+
+  const scheduleIds = [...new Set(preparedSchedules.map((entry) => entry._id))]
+  const existingSchedules = await Schedule.find({ _id: { $in: scheduleIds } })
+    .lean()
+    .exec()
+  const existingById = new Map(existingSchedules.map((schedule) => [schedule._id, schedule]))
+
+  const upserted: ISchedule[] = []
+  for (const { raw, term, runNumber, _id } of preparedSchedules) {
+    const existing = existingById.get(_id)
 
     const merged: Partial<ISchedule> = {
       _id,
@@ -114,6 +127,7 @@ export default defineEventHandler(async (event) => {
 
     if (saved) {
       upserted.push(saved)
+      existingById.set(saved._id, saved)
     }
   }
 

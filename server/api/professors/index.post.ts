@@ -28,9 +28,27 @@ function hasOwn(obj: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(obj, key)
 }
 
+function normalizeProfessorKeyField(
+  value: unknown,
+  fieldName: 'covenantId' | '_id',
+): string | undefined {
+  if (value == null) {
+    return undefined
+  }
+  if (typeof value !== 'string') {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `${fieldName} must be a string`,
+    })
+  }
+
+  return value.trim().toLowerCase()
+}
+
 function parseProfessorKey(input: ProfessorInput): ProfessorKey {
   const covenantId =
-    input.covenantId?.trim().toLowerCase() ?? input._id?.trim().toLowerCase()
+    normalizeProfessorKeyField(input.covenantId, 'covenantId') ??
+    normalizeProfessorKeyField(input._id, '_id')
 
   if (!covenantId) {
     throw createError({

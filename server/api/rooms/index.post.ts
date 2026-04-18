@@ -108,15 +108,28 @@ export default defineEventHandler(async (event) => {
       statusMessage: "roomType must be 'classroom' or 'lab'",
     })
   }
+  if (
+    body.displayName !== undefined &&
+    body.displayName !== null &&
+    typeof body.displayName !== 'string'
+  ) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'displayName must be a string when provided',
+    })
+  }
 
   const abbreviation =
     body.abbreviation?.trim().toUpperCase() ??
     `${normalizedBuildingCode} ${roomNumber}`
 
   const existing = await Room.findOne({ _id: abbreviation }).lean().exec()
+  const requestedDisplayName =
+    typeof body.displayName === 'string' ? body.displayName.trim() : ''
+  const existingDisplayName = existing?.displayName?.trim() ?? ''
   const resolvedDisplayName =
-    body.displayName ??
-    existing?.displayName ??
+    requestedDisplayName ||
+    existingDisplayName ||
     `${normalizedBuildingCode} ${roomNumber}`
 
   const room: Partial<IRoom> = {
@@ -127,7 +140,7 @@ export default defineEventHandler(async (event) => {
       existing?.buildingName ??
       normalizedBuildingCode,
     roomNumber,
-    displayName: String(resolvedDisplayName),
+    displayName: resolvedDisplayName,
     capacity: body.capacity ?? existing?.capacity ?? 1,
     roomType: body.roomType ?? existing?.roomType ?? 'classroom',
     available: body.available ?? body.isActive ?? existing?.available ?? true,

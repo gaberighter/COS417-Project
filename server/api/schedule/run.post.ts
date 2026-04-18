@@ -11,6 +11,15 @@ import { logAction } from '../../services/auditService'
 import { run as runScheduler } from '../../services/schedulingEngine'
 
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
+const MAX_SCHEDULE_CREATE_RETRIES = 3
+
+function isDuplicateKeyError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false
+  }
+
+  return 'code' in error && (error as { code?: number }).code === 11000
+}
 
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
@@ -35,12 +44,6 @@ export default defineEventHandler(async (event) => {
   }
 
   const result = await runScheduler(term)
-  const latestRun = await Schedule.findOne({ term })
-    .sort({ runNumber: -1 })
-    .select({ runNumber: 1 })
-    .lean()
-    .exec()
-  const nextRunNumber = (latestRun?.runNumber ?? 0) + 1
 
   const adminProfessor = await Professor.findOne({
     $or: [
@@ -53,21 +56,48 @@ export default defineEventHandler(async (event) => {
     .lean()
     .exec()
 
-  const schedule = await Schedule.create({
-    term,
-    runNumber: nextRunNumber,
-    status: result.conflicts.length > 0 ? 'under_review' : 'approved',
-    createdBy: adminProfessor?._id ?? auth.userId.toLowerCase(),
-    assignments: result.assignments,
-    conflicts: result.conflicts,
-  })
+  const createdBy = adminProfessor?._id ?? auth.userId.toLowerCase()
+  const status = result.conflicts.length > 0 ? 'under_review' : 'approved'
+
+  const { schedule, runNumber } = await (async () => {
+    for (let attempt = 0; attempt < MAX_SCHEDULE_CREATE_RETRIES; attempt += 1) {
+      const latestRun = await Schedule.findOne({ term })
+        .sort({ runNumber: -1 })
+        .select({ runNumber: 1 })
+        .lean()
+        .exec()
+      const nextRunNumber = (latestRun?.runNumber ?? 0) + 1
+
+      try {
+        const createdSchedule = await Schedule.create({
+          term,
+          runNumber: nextRunNumber,
+          status,
+          createdBy,
+          assignments: result.assignments,
+          conflicts: result.conflicts,
+        })
+
+        return { schedule: createdSchedule, runNumber: nextRunNumber }
+      } catch (error: unknown) {
+        if (!isDuplicateKeyError(error) || attempt === MAX_SCHEDULE_CREATE_RETRIES - 1) {
+          throw error
+        }
+      }
+    }
+
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Failed to persist schedule run',
+    })
+  })()
 
   await logAction(
     auth,
     'SCHEDULE_RUN',
     'schedules',
     schedule._id,
-    `Executed scheduling run ${nextRunNumber} for ${term}`,
+    `Executed scheduling run ${runNumber} for ${term}`,
   )
   return schedule.toObject()
 })
