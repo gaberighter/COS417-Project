@@ -105,12 +105,17 @@ function normalizeAudit(
     })
   }
 
-  const action = String(input.action ?? '').trim().toUpperCase()
+  const action = String(input.action ?? '')
+    .trim()
+    .toUpperCase()
   if (!action) {
     throw createError({ statusCode: 400, statusMessage: 'action is required' })
   }
   if (!ALLOWED_ACTIONS.has(action)) {
-    throw createError({ statusCode: 400, statusMessage: `Unsupported action: ${action}` })
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Unsupported action: ${action}`,
+    })
   }
 
   const detail = String(input.detail ?? action).trim()

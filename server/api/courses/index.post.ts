@@ -42,8 +42,14 @@ function normalizeCourseKeyField(
 }
 
 function parseCourseKey(input: CourseInput): CourseKey {
-  const deptCode = normalizeCourseKeyField(input.deptCode, 'deptCode')?.toUpperCase()
-  const courseNumber = normalizeCourseKeyField(input.courseNumber, 'courseNumber')
+  const deptCode = normalizeCourseKeyField(
+    input.deptCode,
+    'deptCode',
+  )?.toUpperCase()
+  const courseNumber = normalizeCourseKeyField(
+    input.courseNumber,
+    'courseNumber',
+  )
 
   if (deptCode && courseNumber) {
     return {

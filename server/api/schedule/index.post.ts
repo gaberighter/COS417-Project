@@ -92,7 +92,9 @@ export default defineEventHandler(async (event) => {
   const existingSchedules = await Schedule.find({ _id: { $in: scheduleIds } })
     .lean()
     .exec()
-  const existingById = new Map(existingSchedules.map((schedule) => [schedule._id, schedule]))
+  const existingById = new Map(
+    existingSchedules.map((schedule) => [schedule._id, schedule]),
+  )
 
   const upserted: ISchedule[] = []
   for (const { raw, term, runNumber, _id } of preparedSchedules) {

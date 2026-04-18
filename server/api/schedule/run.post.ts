@@ -80,7 +80,10 @@ export default defineEventHandler(async (event) => {
 
         return { schedule: createdSchedule, runNumber: nextRunNumber }
       } catch (error: unknown) {
-        if (!isDuplicateKeyError(error) || attempt === MAX_SCHEDULE_CREATE_RETRIES - 1) {
+        if (
+          !isDuplicateKeyError(error) ||
+          attempt === MAX_SCHEDULE_CREATE_RETRIES - 1
+        ) {
           throw error
         }
       }
