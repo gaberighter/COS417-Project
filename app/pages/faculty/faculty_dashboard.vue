@@ -1,6 +1,11 @@
 <template>
     <div class="faculty-dashboard">
-        <p>Faculty dashboard content goes here.</p>
+        <div class="button-wrapper">
+            <button @click="viewChangePreferences">View/Change Existing Preferences</button>
+        </div>
+        <div class="button-wrapper">
+            <button @click="addNewPreference">Enter Preferences</button>
+        </div>
     </div>
     <div class="temporary-debug-buttons">
         <button @click="redirectToLogin">Login Page</button>
@@ -13,6 +18,7 @@ definePageMeta({
     pageTitle: 'Faculty Dashboard',
 })
 
+const { viewChangePreferences, addNewPreference} = useFaculty()
 const { redirectToLogin, redirectToAdmin } = useDebugNavigation()
 
 </script>
