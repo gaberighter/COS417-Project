@@ -4,6 +4,7 @@ import {
   defineEventHandler,
   createError,
   getRequestURL,
+  getMethod,
   readBody,
   getQuery,
   setResponseHeaders,
@@ -80,12 +81,17 @@ function getProviders() {
 }
 
 export default defineEventHandler(async (event: H3Event) => {
-  const { sp, idp } = getProviders()
   const urlObj = getRequestURL(event)
 
-  const temp = urlObj.pathname.substring(1).split('/')
-  if (temp[0] === 'saml') {
-    switch (temp[1]) {
+  const segments = urlObj.pathname.split('/').filter(Boolean)
+  const samlIndex = segments.indexOf('saml')
+  const apiIndex = segments.indexOf('api')
+
+  if (samlIndex !== -1) {
+    const { sp, idp } = getProviders()
+    const samlAction = segments[samlIndex + 1]
+
+    switch (samlAction) {
       case 'login':
         return new Promise((resolve, reject) => {
           sp.create_login_request_url(
@@ -106,79 +112,120 @@ export default defineEventHandler(async (event: H3Event) => {
           )
         })
       case 'assert': {
-        const requestBody = await readBody(event)
+        const method = getMethod(event)
+        if (method !== 'POST' && method !== 'GET') {
+          throw createError({
+            statusCode: 405,
+            statusMessage:
+              'SAML assert endpoint only accepts POST or GET from the IdP. Start login at /saml/login.',
+          })
+        }
+
+        const requestPayload =
+          method === 'POST' ? await readBody(event) : getQuery(event)
+
+        const hasSamlPayload =
+          typeof requestPayload === 'object' &&
+          requestPayload !== null &&
+          ('SAMLResponse' in requestPayload || 'SAMLRequest' in requestPayload)
+
+        if (!hasSamlPayload) {
+          const queryKeys =
+            typeof requestPayload === 'object' && requestPayload !== null
+              ? Object.keys(requestPayload as Record<string, unknown>)
+              : []
+
+          throw createError({
+            statusCode: 400,
+            statusMessage:
+              `SAML callback missing SAMLResponse/SAMLRequest on ${method} ${urlObj.pathname}. ` +
+              `Query keys: [${queryKeys.join(', ')}]. ` +
+              'Check IdP Reply URL/ACS and binding configuration.',
+          })
+        }
+
         return new Promise((resolve, reject) => {
-          sp.post_assert(
-            idp,
-            { request_body: requestBody },
-            async (err: Error | null, samlResponse: any) => {
-              if (err) {
-                return reject(
-                  createError({
-                    statusCode: 500,
-                    statusMessage: err.message,
-                  }),
-                )
-              }
-
-              // Save name_id and session_index for logout.
-              const {
-                name_id,
-                session_index,
-                attributes: samlUser,
-              } = samlResponse.user
-
-              for (const field in samlUser) {
-                if (
-                  Array.isArray(samlUser[field]) &&
-                  samlUser[field].length === 1
-                ) {
-                  samlUser[field] = samlUser[field][0]
-                }
-
-                if (field.substring(0, 7) === 'http://') {
-                  delete samlUser[field]
-                }
-              }
-
-              // Look up the user from Banner to get their Oracle username.
-              const username =
-                'oracleUser' in samlUser
-                  ? samlUser.oracleUser
-                  : lookupOracleUser(samlUser.email)
-              const roles = getRoles(username)
-
-              // Look up the user and create the session payload.
-              const user: Record<string, unknown> = {
-                ...samlUser,
-                username,
-                roles,
-                lastLogin: new Date(),
-                name_id,
-                session_index,
-              }
-
-              // See if this user exists in the Users collection.
-              const existingUser = await UsersCollection.findOne({
-                username: user.username,
-              })
-              if (!existingUser) {
-                const createdUser = await UsersCollection.create(user)
-                user._id = createdUser._id?.toString?.() || createdUser._id
-              } else {
-                user._id = existingUser._id?.toString?.() || existingUser._id
-                await UsersCollection.updateOne({ _id: existingUser._id }, user)
-              }
-
-              await setUserSession(event, {
-                user,
-                loggedInAt: Date.now(),
-              })
-
-              return resolve(
-                sendRedirect(event, process.env.SAML_REDIRECT_TO || '/'),
+          const onAssert = async (err: Error | null, samlResponse: any) => {
+            if (err) {
+              return reject(
+                createError({
+                  statusCode: 500,
+                  statusMessage: err.message,
+                }),
               )
-            },
+            }
+
+            // Save name_id and session_index for logout.
+            const {
+              name_id,
+              session_index,
+              attributes: samlUser,
+            } = samlResponse.user
+
+            for (const field in samlUser) {
+              if (
+                Array.isArray(samlUser[field]) &&
+                samlUser[field].length === 1
+              ) {
+                samlUser[field] = samlUser[field][0]
+              }
+
+              if (field.substring(0, 7) === 'http://') {
+                delete samlUser[field]
+              }
+            }
+
+            // Look up the user from Banner to get their Oracle username.
+            const username =
+              'oracleUser' in samlUser
+                ? samlUser.oracleUser
+                : lookupOracleUser(samlUser.email)
+            const roles = getRoles(username)
+
+            // Look up the user and create the session payload.
+            const user: Record<string, unknown> = {
+              ...samlUser,
+              username,
+              roles,
+              lastLogin: new Date(),
+              name_id,
+              session_index,
+            }
+
+            // See if this user exists in the Users collection.
+            const existingUser = await UsersCollection.findOne({
+              username: user.username,
+            })
+            if (!existingUser) {
+              const createdUser = await UsersCollection.create(user)
+              user._id = createdUser._id?.toString?.() || createdUser._id
+            } else {
+              user._id = existingUser._id?.toString?.() || existingUser._id
+              await UsersCollection.updateOne({ _id: existingUser._id }, user)
+            }
+
+            await setUserSession(event, {
+              user,
+              loggedInAt: Date.now(),
+            })
+
+            return resolve(
+              sendRedirect(event, process.env.SAML_REDIRECT_TO || '/'),
+            )
+          }
+
+          if (method === 'POST') {
+            return sp.post_assert(
+              idp,
+              { request_body: requestPayload },
+              onAssert,
+            )
+          }
+
+          return sp.redirect_assert(
+            idp,
+            { request_body: requestPayload },
+            onAssert,
           )
         })
       }
@@ -214,7 +261,7 @@ export default defineEventHandler(async (event: H3Event) => {
     }
   }
 
-  if (temp[0] === 'api' && urlObj.pathname !== '/api/_auth/session') {
+  if (apiIndex !== -1 && !urlObj.pathname.endsWith('/api/_auth/session')) {
     await requireUserSession(event)
   }
 })
