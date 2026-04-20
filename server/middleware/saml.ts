@@ -9,6 +9,7 @@ import {
   setResponseHeaders,
 } from 'h3'
 import fs from 'fs'
+// @ts-expect-error - saml2-js does not currently publish TypeScript definitions.
 import saml2 from 'saml2-js'
 
 import { Users } from '../models/user.model'
