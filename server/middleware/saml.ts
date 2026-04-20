@@ -23,9 +23,10 @@ let providers: SAMLProviders | null = null
 
 function readFileOrThrow(path: string, label: string) {
   if (!fs.existsSync(path)) {
+    console.error(`${label} file not found`, { path })
     throw createError({
       statusCode: 500,
-      statusMessage: `${label} file not found at ${path}`,
+      statusMessage: `${label} not configured`,
     })
   }
 
