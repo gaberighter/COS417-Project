@@ -167,7 +167,11 @@ export default defineEventHandler(async (event) => {
           },
         ],
       },
-      { _id: 1, covenantId: 1, preferences: 1 },
+      {
+        _id: 1,
+        covenantId: 1,
+        preferences: { $elemMatch: { term } },
+      },
     )
       .lean()
       .exec(),

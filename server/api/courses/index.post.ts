@@ -130,6 +130,42 @@ function mergeCourse(
   }
 }
 
+function validateCoursesOrThrow(courses: ICourse[]): void {
+  const issues: Array<{
+    courseId: string
+    field: string
+    message: string
+    kind: string
+  }> = []
+
+  for (const course of courses) {
+    const validationError = new CourseCatalog(course).validateSync()
+    if (!validationError) {
+      continue
+    }
+
+    for (const error of Object.values(validationError.errors)) {
+      issues.push({
+        courseId: course._id ?? 'unknown',
+        field: 'path' in error ? String(error.path) : 'unknown',
+        message: error.message,
+        kind: 'kind' in error ? String(error.kind) : 'validation',
+      })
+    }
+  }
+
+  if (issues.length > 0) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Invalid course data',
+      data: {
+        code: 'COURSE_VALIDATION_FAILED',
+        issues,
+      },
+    })
+  }
+}
+
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
   await connectDB()
@@ -170,6 +206,8 @@ export default defineEventHandler(async (event) => {
   const courses = keyed.map(({ raw, key }) =>
     mergeCourse(raw, existingById.get(key._id) ?? null, key),
   )
+
+  validateCoursesOrThrow(courses)
 
   await CourseCatalog.bulkWrite(
     courses.map((course) => ({

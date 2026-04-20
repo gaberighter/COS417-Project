@@ -125,6 +125,42 @@ function mergeProfessor(
   }
 }
 
+function validateProfessorsOrThrow(professors: IProfessor[]): void {
+  const issues: Array<{
+    professorId: string
+    field: string
+    message: string
+    kind: string
+  }> = []
+
+  for (const professor of professors) {
+    const validationError = new Professor(professor).validateSync()
+    if (!validationError) {
+      continue
+    }
+
+    for (const error of Object.values(validationError.errors)) {
+      issues.push({
+        professorId: professor._id ?? 'unknown',
+        field: 'path' in error ? String(error.path) : 'unknown',
+        message: error.message,
+        kind: 'kind' in error ? String(error.kind) : 'validation',
+      })
+    }
+  }
+
+  if (issues.length > 0) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Invalid professor data',
+      data: {
+        code: 'PROFESSOR_VALIDATION_FAILED',
+        issues,
+      },
+    })
+  }
+}
+
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
   await connectDB()
@@ -169,6 +205,8 @@ export default defineEventHandler(async (event) => {
   const professors = keyed.map(({ raw, key }) =>
     mergeProfessor(raw, existingById.get(key._id) ?? null),
   )
+
+  validateProfessorsOrThrow(professors)
 
   await Professor.bulkWrite(
     professors.map((professor) => ({
