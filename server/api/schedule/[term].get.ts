@@ -5,7 +5,9 @@
 import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
-import { db } from '../../models/index'
+import { Schedule } from '../../models/index'
+
+const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 
 export default defineEventHandler(async (event) => {
   requireAuth(event, ['Admin'])
@@ -15,10 +17,14 @@ export default defineEventHandler(async (event) => {
   if (!term) {
     throw createError({ statusCode: 400, statusMessage: 'term is required' })
   }
+  if (!TERM_PATTERN.test(term)) {
+    throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
+  }
 
-  const schedule = db.schedules
-    .filter((candidate) => candidate.term === term)
-    .sort((left, right) => right.runNumber - left.runNumber)[0]
+  const schedule = await Schedule.findOne({ term })
+    .sort({ runNumber: -1 })
+    .lean()
+    .exec()
 
   if (!schedule) {
     throw createError({

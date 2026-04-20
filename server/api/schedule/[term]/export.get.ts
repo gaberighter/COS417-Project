@@ -6,11 +6,11 @@ import { defineEventHandler, getRouterParam, createError, setHeader } from 'h3'
 import { requireAuth } from '../../../utils/auth'
 import { connectDB } from '../../../utils/db'
 import {
-  db,
+  CourseCatalog,
+  Professor,
+  Room,
+  Schedule,
   type IAssignment,
-  type ICourse,
-  type IProfessor,
-  type IRoom,
 } from '../../../models/index'
 import { logAction } from '../../../services/auditService'
 
@@ -39,54 +39,43 @@ function escapeCsv(value: string): string {
   return value
 }
 
-function findCourse(courseId: string): ICourse | undefined {
-  return db.courses.find((candidate) => candidate._id === courseId)
+function getBuildingCode(roomAbbreviation: string): string {
+  return roomAbbreviation.split(/\s+/)[0] ?? ''
 }
 
-function findProfessor(professorId: string): IProfessor | undefined {
-  return db.professors.find(
-    (candidate) =>
-      candidate._id === professorId || candidate.covenantId === professorId,
-  )
-}
-
-function findRoom(roomId: string): IRoom | undefined {
-  return db.rooms.find(
-    (candidate) =>
-      candidate._id === roomId ||
-      `${candidate.buildingCode}-${candidate.roomNumber}` === roomId,
-  )
-}
-
-function findEstimatedEnrollment(
+function buildBannerRows(
   term: string,
-  professorId: string,
-  courseId: string,
-): number | null {
-  const professor = findProfessor(professorId)
-  const submission = professor?.preferences.find(
-    (candidate) => candidate.term === term,
-  )
-  const coursePreference = submission?.courses.find(
-    (candidate) => candidate.courseId === courseId,
-  )
-
-  return coursePreference?.expectedEnrollment ?? null
-}
-
-function buildBannerRows(term: string, assignments: IAssignment[]): string[] {
+  assignments: IAssignment[],
+  lookups: {
+    coursesById: Map<
+      string,
+      {
+        deptCode: string
+        courseNumber: string
+        title: string
+        creditHours: number
+      }
+    >
+    professorsById: Map<string, { covenantId: string }>
+    roomsById: Map<string, { abbreviation: string; roomNumber: string }>
+    estimatedEnrollmentByKey: Map<string, number>
+  },
+): string[] {
   const rows: string[] = []
   const missingFields: string[] = []
 
   for (const assignment of assignments) {
-    const course = findCourse(assignment.courseId)
-    const professor = findProfessor(assignment.professorId)
-    const room = findRoom(assignment.roomId)
-    const estimatedEnrollment = findEstimatedEnrollment(
-      term,
-      assignment.professorId,
-      assignment.courseId,
-    )
+    const course = lookups.coursesById.get(assignment.courseId)
+    const professor =
+      lookups.professorsById.get(assignment.professorId) ??
+      lookups.professorsById.get(assignment.professorId.toLowerCase())
+    const room = lookups.roomsById.get(assignment.roomId)
+    const enrollmentKey = `${assignment.professorId}::${assignment.courseId}`
+    const estimatedEnrollment =
+      lookups.estimatedEnrollmentByKey.get(enrollmentKey) ??
+      lookups.estimatedEnrollmentByKey.get(
+        `${assignment.professorId.toLowerCase()}::${assignment.courseId}`,
+      )
 
     const values = [
       course?.deptCode ?? '',
@@ -98,9 +87,9 @@ function buildBannerRows(term: string, assignments: IAssignment[]): string[] {
       assignment.days ?? '',
       assignment.startTime ?? '',
       assignment.endTime ?? '',
-      room?.buildingCode ?? '',
+      room ? getBuildingCode(room.abbreviation) : '',
       room?.roomNumber ?? '',
-      estimatedEnrollment !== null ? String(estimatedEnrollment) : '',
+      estimatedEnrollment !== undefined ? String(estimatedEnrollment) : '',
     ]
 
     const rowMissing = bannerHeaders.filter((_, index) => values[index] === '')
@@ -137,9 +126,10 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const schedule = db.schedules
-    .filter((candidate) => candidate.term === term)
-    .sort((left, right) => right.runNumber - left.runNumber)[0]
+  const schedule = await Schedule.findOne({ term })
+    .sort({ runNumber: -1 })
+    .lean()
+    .exec()
   if (!schedule) {
     throw createError({
       statusCode: 404,
@@ -153,11 +143,107 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const rows = buildBannerRows(term, schedule.assignments)
+  const courseIds = [...new Set(schedule.assignments.map((a) => a.courseId))]
+  const professorIds = [
+    ...new Set(schedule.assignments.map((a) => a.professorId)),
+  ]
+  const roomIds = [...new Set(schedule.assignments.map((a) => a.roomId))]
+
+  const [courses, professors, rooms] = await Promise.all([
+    CourseCatalog.find(
+      { _id: { $in: courseIds } },
+      { _id: 1, deptCode: 1, courseNumber: 1, title: 1, creditHours: 1 },
+    )
+      .lean()
+      .exec(),
+    Professor.find(
+      {
+        $or: [
+          { _id: { $in: professorIds } },
+          {
+            covenantId: {
+              $in: professorIds.map((id) => id.toLowerCase()),
+            },
+          },
+        ],
+      },
+      {
+        _id: 1,
+        covenantId: 1,
+        preferences: { $elemMatch: { term } },
+      },
+    )
+      .lean()
+      .exec(),
+    Room.find(
+      { $or: [{ _id: { $in: roomIds } }, { abbreviation: { $in: roomIds } }] },
+      { _id: 1, abbreviation: 1, roomNumber: 1 },
+    )
+      .lean()
+      .exec(),
+  ])
+
+  const coursesById = new Map(
+    courses.map((course) => [
+      course._id,
+      {
+        deptCode: course.deptCode,
+        courseNumber: course.courseNumber,
+        title: course.title,
+        creditHours: course.creditHours,
+      },
+    ]),
+  )
+  const professorsById = new Map<string, { covenantId: string }>()
+  const estimatedEnrollmentByKey = new Map<string, number>()
+  for (const professor of professors) {
+    professorsById.set(professor._id, { covenantId: professor.covenantId })
+    professorsById.set(professor.covenantId, {
+      covenantId: professor.covenantId,
+    })
+
+    for (const submission of professor.preferences ?? []) {
+      if (submission.term !== term) continue
+      for (const coursePreference of submission.courses ?? []) {
+        estimatedEnrollmentByKey.set(
+          `${professor._id}::${coursePreference.courseId}`,
+          coursePreference.expectedEnrollment,
+        )
+        estimatedEnrollmentByKey.set(
+          `${professor.covenantId}::${coursePreference.courseId}`,
+          coursePreference.expectedEnrollment,
+        )
+      }
+    }
+  }
+
+  const roomsById = new Map<
+    string,
+    { abbreviation: string; roomNumber: string }
+  >()
+  for (const room of rooms) {
+    roomsById.set(room._id, {
+      abbreviation: room.abbreviation,
+      roomNumber: room.roomNumber,
+    })
+    roomsById.set(room.abbreviation, {
+      abbreviation: room.abbreviation,
+      roomNumber: room.roomNumber,
+    })
+  }
+
+  const rows = buildBannerRows(term, schedule.assignments, {
+    coursesById,
+    professorsById,
+    roomsById,
+    estimatedEnrollmentByKey,
+  })
   const csv = [bannerHeaders.join(','), ...rows].join('\n')
 
-  schedule.status = 'exported'
-  schedule.updatedAt = new Date()
+  await Schedule.updateOne(
+    { _id: schedule._id },
+    { $set: { status: 'exported' } },
+  ).exec()
 
   setHeader(event, 'Content-Type', 'text/csv; charset=utf-8')
   const encodedTerm = encodeURIComponent(term)

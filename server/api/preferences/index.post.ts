@@ -8,7 +8,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import {
-  db,
+  Professor,
   type ICoursePreference,
   type IPreferenceSubmission,
 } from '../../models/index'
@@ -45,10 +45,13 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const prof = db.professors.find(
-    (candidate) =>
-      candidate.covenantId === auth.userId || candidate._id === auth.userId,
-  )
+  const prof = await Professor.findOne({
+    $or: [
+      { covenantId: auth.userId.toLowerCase() },
+      { _id: auth.userId.toLowerCase() },
+      { _id: auth.userId },
+    ],
+  }).exec()
   if (!prof) {
     throw createError({
       statusCode: 404,
@@ -57,7 +60,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const now = new Date()
-  const submittedBy = prof._id ?? prof.covenantId
+  const submittedBy = prof._id
   const status = body.status ?? 'submitted'
   const submission: IPreferenceSubmission = {
     term: body.term,
@@ -77,8 +80,7 @@ export default defineEventHandler(async (event) => {
     prof.preferences.push(submission)
   }
 
-  prof.createdAt ??= now
-  prof.updatedAt = now
+  await prof.save()
 
   await logAction(
     auth,

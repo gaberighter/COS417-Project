@@ -6,8 +6,10 @@
 import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
 import { requireAuth } from '../../../utils/auth'
 import { connectDB } from '../../../utils/db'
-import { db, type IAssignment } from '../../../models/index'
+import { Professor, Schedule, type IAssignment } from '../../../models/index'
 import { logAction } from '../../../services/auditService'
+
+const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
@@ -16,6 +18,9 @@ export default defineEventHandler(async (event) => {
   const term = getRouterParam(event, 'term')
   if (!term) {
     throw createError({ statusCode: 400, statusMessage: 'term is required' })
+  }
+  if (!TERM_PATTERN.test(term)) {
+    throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
   }
 
   let body: Partial<IAssignment> & { courseId?: string }
@@ -30,16 +35,23 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (!body || typeof body !== 'object' || !body.courseId) {
+  if (!body || typeof body !== 'object' || typeof body.courseId !== 'string') {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'courseId is required to identify assignment',
+    })
+  }
+  const courseId = body.courseId.trim()
+  if (!courseId) {
     throw createError({
       statusCode: 400,
       statusMessage: 'courseId is required to identify assignment',
     })
   }
 
-  const schedule = db.schedules
-    .filter((candidate) => candidate.term === term)
-    .sort((left, right) => right.runNumber - left.runNumber)[0]
+  const schedule = await Schedule.findOne({ term })
+    .sort({ runNumber: -1 })
+    .exec()
   if (!schedule) {
     throw createError({
       statusCode: 404,
@@ -48,12 +60,12 @@ export default defineEventHandler(async (event) => {
   }
 
   const assignmentIndex = schedule.assignments.findIndex(
-    (assignment) => assignment.courseId === body.courseId,
+    (assignment) => assignment.courseId === courseId,
   )
   if (assignmentIndex < 0) {
     throw createError({
       statusCode: 404,
-      statusMessage: `Assignment not found: ${body.courseId}`,
+      statusMessage: `Assignment not found: ${courseId}`,
     })
   }
 
@@ -61,15 +73,21 @@ export default defineEventHandler(async (event) => {
   if (!current) {
     throw createError({
       statusCode: 404,
-      statusMessage: `Assignment not found: ${body.courseId}`,
+      statusMessage: `Assignment not found: ${courseId}`,
     })
   }
 
-  const adminProfessor = db.professors.find(
-    (candidate) =>
-      candidate.covenantId === auth.userId || candidate._id === auth.userId,
-  )
-  const now = new Date()
+  const adminProfessor = await Professor.findOne({
+    $or: [
+      { covenantId: auth.userId.toLowerCase() },
+      { _id: auth.userId.toLowerCase() },
+      { _id: auth.userId },
+    ],
+  })
+    .select({ _id: 1 })
+    .lean()
+    .exec()
+
   schedule.assignments[assignmentIndex] = {
     ...current,
     ...Object.fromEntries(
@@ -77,19 +95,18 @@ export default defineEventHandler(async (event) => {
         ([key, value]) => key !== 'courseId' && value !== undefined,
       ),
     ),
-    overrideBy: adminProfessor?._id ?? auth.userId,
-    createdAt: current.createdAt ?? now,
-    updatedAt: now,
+    overrideBy: adminProfessor?._id ?? auth.userId.toLowerCase(),
   }
   schedule.status = 'under_review'
-  schedule.updatedAt = now
+
+  await schedule.save()
 
   await logAction(
     auth,
     'SCHEDULE_OVERRIDE',
     'schedules',
     schedule._id,
-    `Manually overrode assignment for course ${body.courseId} in ${term}`,
+    `Manually overrode assignment for course ${courseId} in ${term}`,
   )
 
   return schedule.assignments[assignmentIndex]

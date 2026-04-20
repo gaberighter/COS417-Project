@@ -1,18 +1,10 @@
-// §5 — Mongoose schemas (stub — wire to real MongoDB via MONGODB_URI in .env)
-// Replace these in-memory stubs with real Mongoose models once DB is connected.
-// Each export mirrors the collection schema from SDD §5.2–§5.6.
+import mongoose, { type Model, Schema } from 'mongoose'
 
-export type DayPattern = 'MWF' | 'TR' | 'MW' | 'MTWF'
+export type DayPattern = 'MWF' | 'TR' | 'MW' | 'MTWF' | 'MWRF' | 'W' | 'T' | 'R'
 export type RoomType = 'classroom' | 'lab'
 export type PreferenceStatus = 'empty' | 'draft' | 'submitted' | 'approved'
 export type ScheduleStatus = 'draft' | 'under_review' | 'approved' | 'exported'
 
-export interface ITimestampedDocument {
-  createdAt?: Date
-  updatedAt?: Date
-}
-
-// ── rooms ────────────────────────────────────────────────────────────────────
 export interface IRoomEquipment {
   projector: boolean
   smartboard: boolean
@@ -23,19 +15,19 @@ export interface IRoomEquipment {
   outlets: boolean
 }
 
-export interface IRoom extends ITimestampedDocument {
+export interface IRoom {
   _id?: string
-  buildingCode: string
+  buildingName: string
   roomNumber: string
-  displayName?: string | null
+  displayName: string
   capacity: number
   roomType: RoomType
   available: boolean
   equipment: IRoomEquipment
+  abbreviation: string
 }
 
-// ── courseCatalog ─────────────────────────────────────────────────────────────
-export interface ICourse extends ITimestampedDocument {
+export interface ICourse {
   _id?: string
   deptCode: string
   courseNumber: string
@@ -52,7 +44,6 @@ export interface ICourse extends ITimestampedDocument {
   corequisites: string[]
 }
 
-// ── professors ────────────────────────────────────────────────────────────────
 export interface ICoursePreference {
   courseId: string
   title: string
@@ -78,7 +69,9 @@ export interface IPreferenceSubmission {
   courses: ICoursePreference[]
 }
 
-export interface IProfessor extends ITimestampedDocument {
+// Preferences are embedded in professor documents because submissions are
+// authored, updated, and read in professor context.
+export interface IProfessor {
   _id?: string
   covenantId: string
   displayName: string
@@ -90,8 +83,7 @@ export interface IProfessor extends ITimestampedDocument {
   preferences: IPreferenceSubmission[]
 }
 
-// ── schedules ─────────────────────────────────────────────────────────────────
-export interface IAssignment extends ITimestampedDocument {
+export interface IAssignment {
   courseId: string
   professorId: string
   roomId: string
@@ -101,14 +93,14 @@ export interface IAssignment extends ITimestampedDocument {
   overrideBy?: string | null
 }
 
-export interface IConflict extends ITimestampedDocument {
+export interface IConflict {
   courseId: string
   reason: string
   resolvedBy?: string | null
   resolvedAt?: Date | null
 }
 
-export interface ISchedule extends ITimestampedDocument {
+export interface ISchedule {
   _id?: string
   term: string
   runNumber: number
@@ -118,8 +110,7 @@ export interface ISchedule extends ITimestampedDocument {
   conflicts: IConflict[]
 }
 
-// ── auditLogs ─────────────────────────────────────────────────────────────────
-export interface IAuditLog extends ITimestampedDocument {
+export interface IAuditLog {
   _id?: string
   userId?: string | null
   covenantId?: string | null
@@ -131,13 +122,296 @@ export interface IAuditLog extends ITimestampedDocument {
   timestamp: Date
 }
 
-// ---------------------------------------------------------------------------
-// STUB in-memory stores — replace with Mongoose model calls
-// ---------------------------------------------------------------------------
-export const db = {
-  rooms: [] as IRoom[],
-  courses: [] as ICourse[],
-  professors: [] as IProfessor[],
-  schedules: [] as ISchedule[],
-  auditLogs: [] as IAuditLog[],
+function normalize(value: string): string {
+  return value.trim()
+}
+
+function buildRoomId(room: Pick<IRoom, 'abbreviation'>): string {
+  return normalize(room.abbreviation).toUpperCase()
+}
+
+function buildCourseId(
+  course: Pick<ICourse, 'deptCode' | 'courseNumber'>,
+): string {
+  return `${normalize(course.deptCode).toUpperCase()} ${normalize(course.courseNumber)}`
+}
+
+function buildProfessorId(professor: Pick<IProfessor, 'covenantId'>): string {
+  return normalize(professor.covenantId).toLowerCase()
+}
+
+function buildScheduleId(term: string, runNumber: number): string {
+  return `${normalize(term)}-${runNumber}`
+}
+
+const roomEquipmentSchema = new Schema<IRoomEquipment>(
+  {
+    projector: { type: Boolean, required: true, default: false },
+    smartboard: { type: Boolean, required: true, default: false },
+    whiteboard: { type: Boolean, required: true, default: false },
+    piano: { type: Boolean, required: true, default: false },
+    labStations: { type: Boolean, required: true, default: false },
+    computers: { type: Boolean, required: true, default: false },
+    outlets: { type: Boolean, required: true, default: true },
+  },
+  { _id: false },
+)
+
+const roomSchema = new Schema<IRoom>(
+  {
+    _id: { type: String },
+    buildingName: { type: String, required: true, trim: true },
+    roomNumber: { type: String, required: true, trim: true },
+    displayName: { type: String, required: true, trim: true },
+    capacity: { type: Number, required: true, min: 1 },
+    roomType: { type: String, required: true, enum: ['classroom', 'lab'] },
+    available: { type: Boolean, required: true, default: true },
+    equipment: { type: roomEquipmentSchema, required: true },
+    abbreviation: { type: String, required: true, trim: true, uppercase: true },
+  },
+  { collection: 'rooms', timestamps: true, versionKey: false },
+)
+
+roomSchema.pre('validate', function setRoomId() {
+  if (!this._id) {
+    this._id = buildRoomId(this)
+  }
+})
+
+const courseSchema = new Schema<ICourse>(
+  {
+    _id: { type: String },
+    deptCode: { type: String, required: true, trim: true, uppercase: true },
+    courseNumber: { type: String, required: true, trim: true },
+    title: { type: String, required: true, trim: true },
+    creditHours: { type: Number, required: true, min: 0 },
+    typicalEnrollment: { type: Number, default: null, min: 0 },
+    requiredEquipment: { type: [String], required: true, default: [] },
+    labComponent: { type: Boolean, required: true, default: false },
+    active: { type: Boolean, required: true, default: true },
+    typicalProfessor: { type: String, default: null, trim: true },
+    typicalDays: {
+      type: String,
+      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'W', 'T', 'R'],
+      default: null,
+    },
+    typicalTime: { type: String, default: null, trim: true },
+    prerequisites: { type: [String], required: true, default: [] },
+    corequisites: { type: [String], required: true, default: [] },
+  },
+  { collection: 'courseCatalog', timestamps: true, versionKey: false },
+)
+
+courseSchema.pre('validate', function setCourseId() {
+  if (!this._id) {
+    this._id = buildCourseId(this)
+  }
+})
+
+const coursePreferenceSchema = new Schema<ICoursePreference>(
+  {
+    courseId: { type: String, required: true, trim: true },
+    title: { type: String, required: true, trim: true },
+    expectedEnrollment: { type: Number, required: true, min: 0 },
+    maxCapacity: { type: Number, default: null, min: 0 },
+    creditHours: { type: Number, required: true, min: 0 },
+    preferredDays: {
+      type: [String],
+      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'W', 'T', 'R'],
+      default: [],
+    },
+    preferredTimes: { type: [String], default: [] },
+    avoidTimes: { type: [String], default: [] },
+    requiredEquipment: { type: [String], default: [] },
+    preferredBuilding: { type: String, default: null, trim: true },
+    preferredRoomId: { type: String, default: null, trim: true },
+    backToBackWith: { type: String, default: null, trim: true },
+    coreqWith: { type: [String], default: [] },
+  },
+  { _id: false },
+)
+
+const preferenceSubmissionSchema = new Schema<IPreferenceSubmission>(
+  {
+    term: { type: String, required: true, trim: true },
+    department: { type: String, required: true, trim: true, uppercase: true },
+    submittedBy: { type: String, required: true, trim: true },
+    submittedAt: { type: Date, default: null },
+    status: {
+      type: String,
+      required: true,
+      enum: ['empty', 'draft', 'submitted', 'approved'],
+      default: 'draft',
+    },
+    courses: { type: [coursePreferenceSchema], required: true, default: [] },
+  },
+  { _id: false },
+)
+
+const professorSchema = new Schema<IProfessor>(
+  {
+    _id: { type: String },
+    covenantId: { type: String, required: true, trim: true, lowercase: true },
+    displayName: { type: String, required: true, trim: true },
+    departmentCode: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+    },
+    officeBuilding: { type: String, default: null, trim: true },
+    officeRoom: { type: String, default: null, trim: true },
+    seniorityYear: { type: Number, default: null },
+    active: { type: Boolean, required: true, default: true },
+    preferences: {
+      type: [preferenceSubmissionSchema],
+      required: true,
+      default: [],
+    },
+  },
+  { collection: 'professors', timestamps: true, versionKey: false },
+)
+
+professorSchema.pre('validate', function setProfessorId() {
+  if (!this._id) {
+    this._id = buildProfessorId(this)
+  }
+})
+
+const assignmentSchema = new Schema<IAssignment>(
+  {
+    courseId: { type: String, required: true, trim: true },
+    professorId: { type: String, required: true, trim: true },
+    roomId: { type: String, required: true, trim: true },
+    days: {
+      type: String,
+      required: true,
+      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'W', 'T', 'R'],
+    },
+    startTime: { type: String, required: true, trim: true },
+    endTime: { type: String, required: true, trim: true },
+    overrideBy: { type: String, default: null, trim: true },
+  },
+  { _id: false },
+)
+
+const conflictSchema = new Schema<IConflict>(
+  {
+    courseId: { type: String, required: true, trim: true },
+    reason: { type: String, required: true, trim: true },
+    resolvedBy: { type: String, default: null, trim: true },
+    resolvedAt: { type: Date, default: null },
+  },
+  { _id: false },
+)
+
+const scheduleSchema = new Schema<ISchedule>(
+  {
+    _id: { type: String },
+    term: { type: String, required: true, trim: true },
+    runNumber: { type: Number, required: true, min: 1 },
+    status: {
+      type: String,
+      required: true,
+      enum: ['draft', 'under_review', 'approved', 'exported'],
+      default: 'draft',
+    },
+    createdBy: { type: String, required: true, trim: true },
+    assignments: { type: [assignmentSchema], required: true, default: [] },
+    conflicts: { type: [conflictSchema], required: true, default: [] },
+  },
+  { collection: 'schedules', timestamps: true, versionKey: false },
+)
+
+scheduleSchema.pre('validate', function setScheduleId() {
+  if (!this._id) {
+    this._id = buildScheduleId(this.term, this.runNumber)
+  }
+})
+
+const auditLogSchema = new Schema<IAuditLog>(
+  {
+    _id: { type: String },
+    userId: { type: String, default: null, trim: true },
+    covenantId: { type: String, default: null, trim: true },
+    action: { type: String, required: true, trim: true },
+    collection: { type: String, default: null, trim: true },
+    documentId: { type: String, default: null, trim: true },
+    detail: { type: String, required: true, trim: true },
+    ipAddress: { type: String, default: null, trim: true },
+    timestamp: { type: Date, required: true, default: () => new Date() },
+  },
+  { collection: 'auditLogs', timestamps: true, versionKey: false },
+)
+
+auditLogSchema.pre('validate', function setAuditId() {
+  if (!this._id) {
+    this._id = new mongoose.Types.ObjectId().toString()
+  }
+})
+
+roomSchema.index({ abbreviation: 1 }, { unique: true })
+courseSchema.index({ deptCode: 1, courseNumber: 1 }, { unique: true })
+professorSchema.index({ covenantId: 1 }, { unique: true })
+scheduleSchema.index({ term: 1, runNumber: -1 }, { unique: true })
+auditLogSchema.index({ timestamp: -1 })
+
+export const Room =
+  (mongoose.models.Room as Model<IRoom>) ??
+  mongoose.model<IRoom>('Room', roomSchema)
+
+export const CourseCatalog =
+  (mongoose.models.CourseCatalog as Model<ICourse>) ??
+  mongoose.model<ICourse>('CourseCatalog', courseSchema)
+
+export const Professor =
+  (mongoose.models.Professor as Model<IProfessor>) ??
+  mongoose.model<IProfessor>('Professor', professorSchema)
+
+export const Schedule =
+  (mongoose.models.Schedule as Model<ISchedule>) ??
+  mongoose.model<ISchedule>('Schedule', scheduleSchema)
+
+export const AuditLog =
+  (mongoose.models.AuditLog as Model<IAuditLog>) ??
+  mongoose.model<IAuditLog>('AuditLog', auditLogSchema)
+
+let indexesInitPromise: Promise<void> | null = null
+
+export async function initializeModelIndexes(): Promise<void> {
+  if (!indexesInitPromise) {
+    indexesInitPromise = Promise.all([
+      Room.init(),
+      CourseCatalog.init(),
+      Professor.init(),
+      Schedule.init(),
+      AuditLog.init(),
+    ]).then(() => undefined)
+
+    indexesInitPromise.catch(() => {
+      indexesInitPromise = null
+    })
+  }
+
+  await indexesInitPromise
+}
+
+export function roomCode(room: Pick<IRoom, 'abbreviation'>): string {
+  return buildRoomId(room)
+}
+
+export function courseCode(
+  course: Pick<ICourse, 'deptCode' | 'courseNumber'>,
+): string {
+  return buildCourseId(course)
+}
+
+export function professorCode(
+  professor: Pick<IProfessor, 'covenantId'>,
+): string {
+  return buildProfessorId(professor)
+}
+
+export function scheduleCode(term: string, runNumber: number): string {
+  return buildScheduleId(term, runNumber)
 }

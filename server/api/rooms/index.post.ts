@@ -1,11 +1,11 @@
 // server/api/rooms/index.post.ts
 // POST /api/rooms — §4.4.2
-// Role: Admin — create or update a room record (upsert on buildingCode+roomNumber).
+// Role: Admin — create or update a room record (upsert on room abbreviation/_id).
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
-import { db, type IRoom, type IRoomEquipment } from '../../models/index'
+import { Room, type IRoom, type IRoomEquipment } from '../../models/index'
 import { logAction } from '../../services/auditService'
 
 // Initiate to false for all except outlets for default arrangement
@@ -49,13 +49,23 @@ export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
   await connectDB()
 
-  // Return code and missing information??
-  let body: Partial<IRoom> & { features?: string[]; isActive?: boolean }
+  type RoomPayload = {
+    buildingCode?: string
+    buildingName?: string
+    roomNumber?: string
+    displayName?: string | null
+    abbreviation?: string
+    capacity?: number
+    roomType?: IRoom['roomType']
+    available?: boolean
+    isActive?: boolean
+    equipment?: Partial<IRoomEquipment>
+    features?: string[]
+  }
+
+  let body: RoomPayload
   try {
-    body =
-      (await readBody<
-        Partial<IRoom> & { features?: string[]; isActive?: boolean }
-      >(event)) ?? {}
+    body = (await readBody<RoomPayload>(event)) ?? {}
   } catch {
     throw createError({
       statusCode: 400,
@@ -64,15 +74,20 @@ export default defineEventHandler(async (event) => {
   }
 
   const buildingCode = body.buildingCode?.trim().toUpperCase()
+  const inferredBuildingCode = body.abbreviation
+    ?.trim()
+    .split(/\s+/)[0]
+    ?.toUpperCase()
+  const normalizedBuildingCode = buildingCode ?? inferredBuildingCode
   const roomNumber = body.roomNumber?.trim()
 
-  if (!buildingCode || !roomNumber) {
+  if (!normalizedBuildingCode || !roomNumber) {
     throw createError({
       statusCode: 400,
       statusMessage: 'buildingCode and roomNumber are required',
     })
   }
-  if (!/^[A-Z]{2,4}$/.test(buildingCode)) {
+  if (!/^[A-Z]{2,4}$/.test(normalizedBuildingCode)) {
     throw createError({
       statusCode: 400,
       statusMessage: 'buildingCode must be 2-4 uppercase letters',
@@ -93,60 +108,72 @@ export default defineEventHandler(async (event) => {
       statusMessage: "roomType must be 'classroom' or 'lab'",
     })
   }
+  if (
+    body.displayName !== undefined &&
+    body.displayName !== null &&
+    typeof body.displayName !== 'string'
+  ) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'displayName must be a string when provided',
+    })
+  }
 
-  // Check if room exists by buildingCode and roomNumber
-  const existing = db.rooms.findIndex(
-    (room) =>
-      room.buildingCode === buildingCode && room.roomNumber === roomNumber,
-  )
+  const abbreviation =
+    body.abbreviation?.trim().toUpperCase() ??
+    `${normalizedBuildingCode} ${roomNumber}`
 
-  // Merge existing record with new data, prioritizing new data
-  const current = existing >= 0 ? db.rooms[existing] : undefined
-  // Set createdAt to now if new record, otherwise keep existing createdAt and update updatedAt
-  const now = new Date()
-  // Generate _id as buildingCode-roomNumber if new record, otherwise keep existing _id
-  const room: IRoom = {
-    _id: current?._id ?? `${buildingCode}-${roomNumber}`,
-    buildingCode,
+  const existing = await Room.findOne({ _id: abbreviation }).lean().exec()
+  const requestedDisplayName =
+    typeof body.displayName === 'string' ? body.displayName.trim() : ''
+  const existingDisplayName = existing?.displayName?.trim() ?? ''
+  const resolvedDisplayName =
+    requestedDisplayName ||
+    existingDisplayName ||
+    `${normalizedBuildingCode} ${roomNumber}`
+
+  const room: Partial<IRoom> = {
+    _id: abbreviation,
+    abbreviation,
+    buildingName:
+      body.buildingName?.trim() ??
+      existing?.buildingName ??
+      normalizedBuildingCode,
     roomNumber,
-    displayName:
-      body.displayName !== undefined
-        ? body.displayName
-        : (current?.displayName ?? null),
-    capacity: body.capacity ?? current?.capacity ?? 1,
-    roomType: body.roomType ?? current?.roomType ?? 'classroom',
-    available: body.available ?? body.isActive ?? current?.available ?? true,
+    displayName: resolvedDisplayName,
+    capacity: body.capacity ?? existing?.capacity ?? 1,
+    roomType: body.roomType ?? existing?.roomType ?? 'classroom',
+    available: body.available ?? body.isActive ?? existing?.available ?? true,
     equipment: normalizeEquipment(
-      current?.equipment,
+      existing?.equipment,
       body.equipment,
       body.features,
     ),
-    createdAt: current?.createdAt ?? now,
-    updatedAt: now,
   }
 
-  // Validate that labStations can only be true if roomType is lab
-  if (room.equipment.labStations && room.roomType !== 'lab') {
+  if (room.equipment?.labStations && room.roomType !== 'lab') {
     throw createError({
       statusCode: 400,
       statusMessage: "labStations requires roomType 'lab'",
     })
   }
 
-  // Updates existing record if found, otherwise adds new record to db.rooms
-  if (existing >= 0) {
-    db.rooms[existing] = room
-  } else {
-    db.rooms.push(room)
-  }
+  const saved = await Room.findOneAndUpdate({ _id: abbreviation }, room, {
+    upsert: true,
+    new: true,
+    runValidators: true,
+    setDefaultsOnInsert: true,
+  })
+    .lean()
+    .exec()
 
-  // Log the upsert action for auditing
   await logAction(
     auth,
     'ROOM_UPSERT',
     'rooms',
-    room._id,
-    `Created or updated room ${room.buildingCode} ${room.roomNumber}`,
+    saved?._id,
+    `Created or updated room ${normalizedBuildingCode} ${roomNumber}`,
   )
-  return room
+
+  return saved
 })
