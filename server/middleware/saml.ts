@@ -1,4 +1,13 @@
-import { H3Event, sendRedirect } from 'h3'
+import {
+  H3Event,
+  sendRedirect,
+  defineEventHandler,
+  createError,
+  getRequestURL,
+  readBody,
+  getQuery,
+  setResponseHeaders,
+} from 'h3'
 import fs from 'fs'
 // @ts-expect-error - saml2-js does not currently publish TypeScript definitions.
 import saml2 from 'saml2-js'
