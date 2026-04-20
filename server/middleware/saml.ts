@@ -14,8 +14,8 @@ import saml2 from 'saml2-js'
 
 import { Users } from '../models/user.model'
 type SAMLProviders = {
-  sp: saml2.ServiceProvider
-  idp: saml2.IdentityProvider
+  sp: InstanceType<typeof saml2.ServiceProvider>
+  idp: InstanceType<typeof saml2.IdentityProvider>
 }
 
 const UsersCollection = Users as any
