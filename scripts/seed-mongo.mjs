@@ -97,6 +97,11 @@ function requireMongoConfig() {
     throw new Error('MONGO_URI must be a valid MongoDB connection string')
   }
 
+  if (parsed.protocol !== 'mongodb:' && parsed.protocol !== 'mongodb+srv:') {
+    throw new Error(
+      'MONGO_URI must use the "mongodb://" or "mongodb+srv://" protocol.',
+    )
+  }
   const dbNameFromUri = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''))
   const dbNameFromEnv = getEnvDbName()
 
