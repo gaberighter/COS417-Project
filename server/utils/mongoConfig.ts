@@ -61,10 +61,6 @@ export function resolveMongoConnectionConfig(): MongoConnectionConfig {
 
   const fallbackDbName = dbNameFromEnv ?? DEFAULT_MONGO_DB_NAME
 
-  if (!dbNameFromUri && !fallbackDbName) {
-    throw new Error('MONGO_URI must include a database name')
-  }
-
   return {
     uri,
     dbName: dbNameFromUri ?? fallbackDbName,
