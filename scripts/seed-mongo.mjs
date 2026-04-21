@@ -6,6 +6,7 @@ import mongoose from 'mongoose'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const repoRoot = path.resolve(__dirname, '..')
+const DEFAULT_MONGO_DB_NAME = 'COS417'
 
 const DEFAULT_EQUIPMENT = {
   projector: false,
@@ -64,15 +65,51 @@ async function loadDotEnv() {
   }
 }
 
-function requireMongoUri() {
-  const uri = process.env.MONGO_URI
+function getEnvDbName() {
+  const candidates = [
+    process.env.MONGO_DB_NAME,
+    process.env.MONGODB_DB_NAME,
+    process.env.MONGO_DB,
+  ]
+
+  for (const candidate of candidates) {
+    const value = String(candidate ?? '').trim()
+    if (value) {
+      return value
+    }
+  }
+
+  return undefined
+}
+
+function requireMongoConfig() {
+  const uri = String(process.env.MONGO_URI ?? '').trim()
   if (!uri) {
     throw new Error(
       'MONGO_URI is required. Set it in environment or .env file.',
     )
   }
 
-  return uri
+  let parsed
+  try {
+    parsed = new URL(uri)
+  } catch {
+    throw new Error('MONGO_URI must be a valid MongoDB connection string')
+  }
+
+  const dbNameFromUri = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''))
+  const dbNameFromEnv = getEnvDbName()
+
+  const dbName = dbNameFromUri || dbNameFromEnv || DEFAULT_MONGO_DB_NAME
+
+  if (!dbNameFromUri && !dbName) {
+    throw new Error('MONGO_URI must include a database name.')
+  }
+
+  return {
+    uri,
+    dbName,
+  }
 }
 
 function normalizeRoom(input) {
@@ -524,7 +561,7 @@ async function run() {
   }
 
   await loadDotEnv()
-  const mongoUri = requireMongoUri()
+  const { uri: mongoUri, dbName } = requireMongoConfig()
 
   let dataset
   if (args.minimal) {
@@ -541,7 +578,7 @@ async function run() {
 
   const normalized = normalizeDataset(dataset)
 
-  await mongoose.connect(mongoUri)
+  await mongoose.connect(mongoUri, { dbName })
   const db = mongoose.connection.db
 
   if (args.wipe) {

@@ -14,19 +14,19 @@ Use this script to test every route from an environment where MongoDB is reachab
 
 ```bash
 chmod +x ./scripts/test-api-routes.sh
-BASE_URL=http://localhost:3000 ./scripts/test-api-routes.sh
+BASE_URL=http://localhost:3000/COS170 ./scripts/test-api-routes.sh
 ```
 
 Read-only check only:
 
 ```bash
-RUN_MUTATIONS=0 BASE_URL=http://localhost:3000 ./scripts/test-api-routes.sh
+RUN_MUTATIONS=0 BASE_URL=http://localhost:3000/COS170 ./scripts/test-api-routes.sh
 ```
 
 Verbose responses:
 
 ```bash
-VERBOSE=1 BASE_URL=http://localhost:3000 ./scripts/test-api-routes.sh
+VERBOSE=1 BASE_URL=http://localhost:3000/COS170 ./scripts/test-api-routes.sh
 ```
 
 ## Routes Covered
@@ -58,6 +58,23 @@ The script labels a response with CONNECTION_ISSUE when response text matches co
 - DNS/network issues: ENOTFOUND, ECONNREFUSED, ETIMEDOUT
 - Driver/selection issues: MongoNetworkError, server selection timed out
 - Other transport issues: failed to connect, buffering timed out
+
+## Environment Examples
+
+Local with database name in the URI:
+
+```bash
+export MONGO_URI=mongodb://127.0.0.1:27017/cos417_dev
+```
+
+Local or production with an explicit fallback name:
+
+```bash
+export MONGO_URI=mongodb://user:pass@mongo.example.edu:27017/?authSource=admin
+export MONGO_DB_NAME=cos417_prod
+```
+
+The app does not silently fall back to Mongo's `test` database. If the URI has no database name, the runtime uses the hardcoded `COS417` database name unless `MONGO_DB_NAME` overrides it.
 
 ## Code-Level Connection Risks Found
 
