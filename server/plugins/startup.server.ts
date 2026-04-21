@@ -12,20 +12,20 @@ function describeError(error: unknown): string {
 }
 
 export default defineNitroPlugin(async () => {
-  const diagnostics = getMongoDiagnostics()
-
-  console.info(
-    `[startup] appBasePath=${APP_BASE_PATH} mongoDb=${diagnostics.dbName} dbNameSource=${diagnostics.dbNameSource}`,
-  )
-
   try {
+    const diagnostics = getMongoDiagnostics()
+
+    console.info(
+      `[startup] appBasePath=${APP_BASE_PATH} mongoDb=${diagnostics.dbName} dbNameSource=${diagnostics.dbNameSource}`,
+    )
+
     await connectDB()
     console.info(
       `[startup] mongoConnection=success mongoDb=${diagnostics.dbName}`,
     )
   } catch (error) {
     console.error(
-      `[startup] mongoConnection=failure mongoDb=${diagnostics.dbName} reason=${describeError(error)}`,
+      `[startup] mongoConnection=failure reason=${describeError(error)}`,
     )
     throw error
   }
