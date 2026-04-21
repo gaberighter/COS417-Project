@@ -107,10 +107,6 @@ function requireMongoConfig() {
 
   const dbName = dbNameFromUri || dbNameFromEnv || DEFAULT_MONGO_DB_NAME
 
-  if (!dbNameFromUri && !dbName) {
-    throw new Error('MONGO_URI must include a database name.')
-  }
-
   return {
     uri,
     dbName,
