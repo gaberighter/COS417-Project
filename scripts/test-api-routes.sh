@@ -17,8 +17,8 @@ set -euo pipefail
 #   RUN_MUTATIONS=1      # 0 = only GET routes, 1 = all routes
 #   VERBOSE=1            # print response body for every request
 
-API_BASE_PATH="${API_BASE_PATH:-/COS417}"
-BASE_URL="${BASE_URL:-http://localhost:3000${API_BASE_PATH}}"
+API_BASE_PATH="${API_BASE_PATH:-/COS170}"
+BASE_URL="${BASE_URL:-http://localhost:3000}"
 ADMIN_USER="${ADMIN_USER:-admin-user-001}"
 FACULTY_USER="${FACULTY_USER:-faculty-user-001}"
 TERM="${TERM:-2026FA}"
@@ -125,7 +125,7 @@ run_case() {
 }
 
 echo "Testing API routes against: ${BASE_URL}"
-echo "API base path: ${API_BASE_PATH}"
+echo "App base path: ${API_BASE_PATH}"
 echo "Mutation routes enabled: ${RUN_MUTATIONS}"
 echo
 

@@ -14,19 +14,19 @@ Use this script to test every route from an environment where MongoDB is reachab
 
 ```bash
 chmod +x ./scripts/test-api-routes.sh
-BASE_URL=http://localhost:3000/COS417 ./scripts/test-api-routes.sh
+BASE_URL=http://localhost:3000 ./scripts/test-api-routes.sh
 ```
 
 Read-only check only:
 
 ```bash
-RUN_MUTATIONS=0 BASE_URL=http://localhost:3000/COS417 ./scripts/test-api-routes.sh
+RUN_MUTATIONS=0 BASE_URL=http://localhost:3000 ./scripts/test-api-routes.sh
 ```
 
 Verbose responses:
 
 ```bash
-VERBOSE=1 BASE_URL=http://localhost:3000/COS417 ./scripts/test-api-routes.sh
+VERBOSE=1 BASE_URL=http://localhost:3000 ./scripts/test-api-routes.sh
 ```
 
 ## Routes Covered
