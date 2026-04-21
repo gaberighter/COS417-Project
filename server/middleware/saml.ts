@@ -252,7 +252,7 @@ export default defineEventHandler(async (event: H3Event) => {
       }
       case 'manifest.xml':
         setResponseHeaders(event, {
-          'Content-Disposition': 'attachment; filename=test.xml',
+          'Content-Disposition': 'attachment; filename=manifest.xml',
           'Content-Type': 'text/xml; charset=latin1',
         })
         return sp.create_metadata()
