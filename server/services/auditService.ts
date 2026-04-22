@@ -44,7 +44,7 @@ export async function logAction(
     userId: professor?._id ?? null,
     covenantId: professor?.covenantId ?? actor.userId.toLowerCase(),
     action,
-    collection: targetCollection,
+    collectionName: targetCollection,
     documentId: targetId ?? null,
     detail: toDetailText(action, targetCollection, detail),
     ipAddress: null,

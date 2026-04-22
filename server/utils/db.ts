@@ -7,6 +7,7 @@
 
 import mongoose from 'mongoose'
 import { initializeModelIndexes } from '../models/index'
+import { resolveMongoConnectionConfig } from './mongoConfig'
 
 type MongoCache = {
   connection: typeof mongoose | null
@@ -28,18 +29,6 @@ const mongoCache: MongoCache = globalForMongo.__mongoCache ?? {
 
 globalForMongo.__mongoCache = mongoCache
 
-function getMongoUri(): string {
-  const uri = process.env.MONGO_URI
-  if (uri) return uri
-
-  const message = 'MONGO_URI is required to connect to MongoDB'
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(message)
-  }
-
-  throw new Error(`${message} in this environment`)
-}
-
 export async function connectDB(): Promise<typeof mongoose> {
   if (mongoose.connection.readyState !== 1) {
     mongoCache.connection = null
@@ -50,10 +39,13 @@ export async function connectDB(): Promise<typeof mongoose> {
   }
 
   if (!mongoCache.promise) {
-    const uri = getMongoUri()
+    const { uri, dbName } = resolveMongoConnectionConfig()
     mongoCache.promise = mongoose
       .connect(uri, {
+        dbName,
         bufferCommands: false,
+        connectTimeoutMS: 10000,
+        serverSelectionTimeoutMS: 10000,
       })
       .catch((error) => {
         mongoCache.promise = null

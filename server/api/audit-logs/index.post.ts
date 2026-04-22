@@ -9,6 +9,7 @@ import { AuditLog, Professor, type IAuditLog } from '../../models/index'
 
 type AuditInput = {
   action?: unknown
+  collectionName?: unknown
   collection?: unknown
   documentId?: unknown
   detail?: unknown
@@ -133,7 +134,7 @@ function normalizeAudit(
     userId: actor.userId,
     covenantId: actor.covenantId,
     action,
-    collection: toNullableText(input.collection),
+    collectionName: toNullableText(input.collectionName ?? input.collection),
     documentId: toNullableText(input.documentId),
     detail,
     ipAddress,
