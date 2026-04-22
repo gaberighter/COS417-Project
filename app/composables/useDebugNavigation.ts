@@ -1,5 +1,6 @@
 export const useDebugNavigation = () => {
   const redirectToAdmin = async () => {
+    console.log("Trying to go to Admin!!")
     await navigateTo('/admin/admin_dashboard')
   }
 
