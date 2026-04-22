@@ -398,6 +398,8 @@ const resetFilters = () => {
 
 .table-container {
     overflow-x: auto;
+    overflow-y: auto;
+    max-height: 600px;
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 10px;
@@ -417,6 +419,8 @@ td {
 
 thead {
     background-color: var(--color-surface-elevated);
+    position: sticky;
+    top: 0;
 }
 
 .error-state {
