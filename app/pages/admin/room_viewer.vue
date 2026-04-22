@@ -96,6 +96,7 @@
                 </label>
             </div>
             <div class="filter-actions">
+                <button @click="applyFilters">Apply Filters</button>
                 <button @click="resetFilters">Clear Filters</button>
                 <p class="filter-results">Showing {{ filteredRooms.length }} of {{ rooms.length }} rooms</p>
             </div>
@@ -239,6 +240,7 @@ const createDefaultFilters = (): RoomFilters => ({
 })
 
 const filters = reactive<RoomFilters>(createDefaultFilters())
+const appliedFilters = reactive<RoomFilters>(createDefaultFilters())
 
 const roomTypeOptions = computed(() => {
     const uniqueTypes = new Set(
@@ -264,59 +266,59 @@ const matchesBooleanFilter = (value: boolean, filter: BooleanFilter) => {
 
 const filteredRooms = computed(() => {
     return rooms.value.filter((room) => {
-        if (filters.buildingCode && !includesInsensitive(room.buildingCode, filters.buildingCode)) {
+        if (appliedFilters.buildingCode && !includesInsensitive(room.buildingCode, appliedFilters.buildingCode)) {
             return false
         }
 
-        if (filters.roomNumber && !includesInsensitive(room.roomNumber, filters.roomNumber)) {
+        if (appliedFilters.roomNumber && !includesInsensitive(room.roomNumber, appliedFilters.roomNumber)) {
             return false
         }
 
-        if (filters.displayName && !includesInsensitive(room.displayName ?? '', filters.displayName)) {
+        if (appliedFilters.displayName && !includesInsensitive(room.displayName ?? '', appliedFilters.displayName)) {
             return false
         }
 
-        if (filters.roomType && room.roomType !== filters.roomType) {
+        if (appliedFilters.roomType && room.roomType !== appliedFilters.roomType) {
             return false
         }
 
-        if (filters.capacityMin !== null && room.capacity < filters.capacityMin) {
+        if (appliedFilters.capacityMin !== null && room.capacity < appliedFilters.capacityMin) {
             return false
         }
 
-        if (filters.capacityMax !== null && room.capacity > filters.capacityMax) {
+        if (appliedFilters.capacityMax !== null && room.capacity > appliedFilters.capacityMax) {
             return false
         }
 
-        if (!matchesBooleanFilter(room.available, filters.available)) {
+        if (!matchesBooleanFilter(room.available, appliedFilters.available)) {
             return false
         }
 
-        if (!matchesBooleanFilter(room.equipment.projector, filters.projector)) {
+        if (!matchesBooleanFilter(room.equipment.projector, appliedFilters.projector)) {
             return false
         }
 
-        if (!matchesBooleanFilter(room.equipment.smartboard, filters.smartboard)) {
+        if (!matchesBooleanFilter(room.equipment.smartboard, appliedFilters.smartboard)) {
             return false
         }
 
-        if (!matchesBooleanFilter(room.equipment.whiteboard, filters.whiteboard)) {
+        if (!matchesBooleanFilter(room.equipment.whiteboard, appliedFilters.whiteboard)) {
             return false
         }
 
-        if (!matchesBooleanFilter(room.equipment.piano, filters.piano)) {
+        if (!matchesBooleanFilter(room.equipment.piano, appliedFilters.piano)) {
             return false
         }
 
-        if (!matchesBooleanFilter(room.equipment.labStations, filters.labStations)) {
+        if (!matchesBooleanFilter(room.equipment.labStations, appliedFilters.labStations)) {
             return false
         }
 
-        if (!matchesBooleanFilter(room.equipment.computers, filters.computers)) {
+        if (!matchesBooleanFilter(room.equipment.computers, appliedFilters.computers)) {
             return false
         }
 
-        if (!matchesBooleanFilter(room.equipment.outlets, filters.outlets)) {
+        if (!matchesBooleanFilter(room.equipment.outlets, appliedFilters.outlets)) {
             return false
         }
 
@@ -326,8 +328,12 @@ const filteredRooms = computed(() => {
 
 const formatBoolean = (value: boolean) => (value ? 'Yes' : 'No')
 const retryLoad = () => loadRooms()
+const applyFilters = () => {
+    Object.assign(appliedFilters, filters)
+}
 const resetFilters = () => {
     Object.assign(filters, createDefaultFilters())
+    Object.assign(appliedFilters, createDefaultFilters())
 }
 </script>
 
