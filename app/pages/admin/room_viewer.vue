@@ -199,12 +199,25 @@ interface RoomFilters {
     outlets: BooleanFilter
 }
 
-const { data: rooms, pending, error, refresh } = await useFetch<Room[]>('/api/rooms', {
-    default: () => [],
-    headers: {
-        'x-dev-role': 'Admin'
+const rooms = ref<Room[]>([])
+const pending = ref(false)
+const error = ref<Error | null>(null)
+
+const loadRooms = async () => {
+    pending.value = true
+    error.value = null
+    try {
+        rooms.value = await $fetch<Room[]>('/api/rooms', {
+            headers: { 'x-dev-role': 'Admin' }
+        })
+    } catch (e) {
+        error.value = e as Error
+    } finally {
+        pending.value = false
     }
-})
+}
+
+onMounted(loadRooms)
 
 const { redirectToLogin, redirectToAdmin } = useDebugNavigation()
 
@@ -312,7 +325,7 @@ const filteredRooms = computed(() => {
 })
 
 const formatBoolean = (value: boolean) => (value ? 'Yes' : 'No')
-const retryLoad = () => refresh()
+const retryLoad = () => loadRooms()
 const resetFilters = () => {
     Object.assign(filters, createDefaultFilters())
 }
