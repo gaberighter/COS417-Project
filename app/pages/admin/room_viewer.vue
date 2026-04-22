@@ -340,6 +340,7 @@ const resetFilters = () => {
 <style scoped>
 .room-viewer {
     display: grid;
+    grid-template-columns: 300px 1fr;
     gap: 1rem;
 }
 
@@ -348,6 +349,7 @@ const resetFilters = () => {
     border: 1px solid var(--color-border);
     border-radius: 10px;
     padding: 1rem;
+    height: fit-content;
 }
 
 .room-search h2 {
@@ -356,7 +358,7 @@ const resetFilters = () => {
 
 .filter-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    grid-template-columns: 1fr;
     gap: 0.75rem;
 }
 
@@ -386,14 +388,18 @@ const resetFilters = () => {
 .filter-actions {
     margin-top: 0.75rem;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
     gap: 0.75rem;
 }
 
 .filter-results {
     margin: 0;
     color: var(--color-text-secondary);
+    font-size: 0.9rem;
+}
+
+.filter-actions button {
+    width: 100%;
 }
 
 .table-container {
@@ -429,10 +435,9 @@ thead {
     gap: 0.75rem;
 }
 
-@media (max-width: 700px) {
-    .filter-actions {
-        flex-direction: column;
-        align-items: flex-start;
+@media (max-width: 900px) {
+    .room-viewer {
+        grid-template-columns: 1fr;
     }
 }
 </style>
