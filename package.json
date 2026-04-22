@@ -11,7 +11,9 @@
     "postinstall": "nuxt prepare",
     "seed:inmemory": "node scripts/seed-mongo.mjs --inmemory-file ./inmemory-export.json --wipe",
     "seed:minimal": "node scripts/seed-mongo.mjs --minimal --wipe",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "test:api": "node scripts/test-api-runner.mjs",
+    "test:api:only": "node scripts/test-api-endpoints.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.18.12",
