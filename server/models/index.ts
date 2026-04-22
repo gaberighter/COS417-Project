@@ -115,7 +115,7 @@ export interface IAuditLog {
   userId?: string | null
   covenantId?: string | null
   action: string
-  collection?: string | null
+  collectionName?: string | null
   documentId?: string | null
   detail: string
   ipAddress?: string | null
@@ -335,7 +335,7 @@ const auditLogSchema = new Schema<IAuditLog>(
     userId: { type: String, default: null, trim: true },
     covenantId: { type: String, default: null, trim: true },
     action: { type: String, required: true, trim: true },
-    collection: { type: String, default: null, trim: true },
+    collectionName: { type: String, default: null, trim: true },
     documentId: { type: String, default: null, trim: true },
     detail: { type: String, required: true, trim: true },
     ipAddress: { type: String, default: null, trim: true },
