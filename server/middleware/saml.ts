@@ -312,7 +312,7 @@ export default defineEventHandler(async (event: H3Event) => {
     }
   }
 
-  if (apiIndex !== -1 && !urlObj.pathname.endsWith('/api/_auth/session')) {
+  if (apiIndex !== -1 && !urlObj.pathname.endsWith('/api/_auth/session') && !urlObj.pathname.includes('/api/rooms')) {
     await requireUserSession(event)
   }
 })
