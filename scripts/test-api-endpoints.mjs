@@ -23,9 +23,9 @@ function loadEnv() {
   if (fs.existsSync(envPath)) {
     const content = fs.readFileSync(envPath, 'utf-8')
     content.split('\n').forEach((line) => {
-      const [key, value] = line.split('=')
-      if (key && value) {
-        process.env[key.trim()] = value.trim()
+      const [key, ...valueParts] = line.split('=')
+      if (key && valueParts.length > 0) {
+        process.env[key.trim()] = valueParts.join('=').trim()
       }
     })
   }
