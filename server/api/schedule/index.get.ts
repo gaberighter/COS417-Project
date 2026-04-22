@@ -11,15 +11,8 @@ export default defineEventHandler(async (event) => {
   requireAuth(event, ['Admin'])
   await connectDB()
 
-  // Get all distinct terms from schedules collection
-  const terms = await Schedule.distinct('term').lean().exec()
-
-  // Sort terms for consistent ordering
-  const sortedTerms = terms.sort()
-
-  return {
-    ok: true,
-    count: sortedTerms.length,
-    terms: sortedTerms,
-  }
+  return Schedule.find({})
+    .sort({ term: -1, runNumber: -1 })
+    .lean()
+    .exec()
 })
