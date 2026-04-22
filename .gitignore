@@ -23,3 +23,7 @@ logs
 .env.*
 !.env.example
 .env
+
+# Local SAML signing key/cert files
+*.key
+*.pem
