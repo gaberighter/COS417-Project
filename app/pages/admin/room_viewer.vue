@@ -200,7 +200,10 @@ interface RoomFilters {
 }
 
 const { data: rooms, pending, error, refresh } = await useFetch<Room[]>('/api/rooms', {
-    default: () => []
+    default: () => [],
+    headers: {
+        'x-dev-role': 'Admin'
+    }
 })
 
 const { redirectToLogin, redirectToAdmin } = useDebugNavigation()
