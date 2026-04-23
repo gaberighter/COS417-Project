@@ -1,7 +1,11 @@
 <template>
     <div class="room-viewer">
-        <div class="room-search">
-            <h2>Filter Rooms</h2>
+        <div class="top-bar">
+            <h1>Room Viewer</h1>
+        </div>
+        <div class="main-content">
+            <div class="room-search">
+                <h2>Filter Rooms</h2>
             <div class="filter-grid">
                 <label>
                     Building Code
@@ -339,9 +343,31 @@ const resetFilters = () => {
 
 <style scoped>
 .room-viewer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.top-bar {
+    width: 100%;
+    padding: 1.5rem;
+    background-color: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 1rem;
+}
+
+.top-bar h1 {
+    margin: 0;
+    font-size: 1.75rem;
+}
+
+.main-content {
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 25% 75%;
     gap: 1rem;
+    padding: 0 1rem 1rem 1rem;
+    flex: 1;
+    overflow: hidden;
 }
 
 .room-search {
@@ -436,8 +462,12 @@ thead {
 }
 
 @media (max-width: 900px) {
-    .room-viewer {
+    .main-content {
         grid-template-columns: 1fr;
+    }
+
+    .top-bar {
+        padding: 1rem;
     }
 }
 </style>
