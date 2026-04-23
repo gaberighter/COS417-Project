@@ -104,7 +104,7 @@
                 <button @click="resetFilters">Clear Filters</button>
                 <p class="filter-results">Showing {{ filteredRooms.length }} of {{ rooms.length }} rooms</p>
             </div>
-        </div>
+            </div>
         <div class="room-content">
             <p v-if="pending">Loading rooms...</p>
             <div v-else-if="error" class="error-state">

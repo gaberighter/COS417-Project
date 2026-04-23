@@ -54,7 +54,7 @@
                 <button @click="resetFilters">Clear Filters</button>
                 <p class="filter-results">Showing {{ filteredAssignments.length }} of {{ allAssignments.length }} assignments</p>
             </div>
-        </div>
+            </div>
         <div class="schedule-content">
             <p v-if="pending">Loading schedule...</p>
             <div v-else-if="error" class="error-state">
@@ -117,7 +117,6 @@
                     </div>
                 </div>
             </div>
-        </div>
         </div>
     </div>
     <div class="temporary-debug-buttons">
