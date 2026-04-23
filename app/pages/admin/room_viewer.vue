@@ -112,7 +112,6 @@
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>Room #</th>
                             <th>Capacity</th>
                             <th>Type</th>
                             <th>Available</th>
@@ -128,7 +127,6 @@
                     <tbody>
                         <tr v-for="room in filteredRooms" :key="`${room.buildingCode}-${room.roomNumber}`">
                             <td>{{ room.displayName }}</td>
-                            <td>{{ room.roomNumber }}</td>
                             <td>{{ room.capacity }}</td>
                             <td>{{ room.roomType }}</td>
                             <td>{{ formatBoolean(room.available) }}</td>
@@ -141,7 +139,7 @@
                             <td>{{ formatBoolean(room.equipment.outlets) }}</td>
                         </tr>
                         <tr v-if="filteredRooms.length === 0">
-                            <td colspan="12">No rooms found.</td>
+                            <td colspan="11">No rooms found.</td>
                         </tr>
                     </tbody>
                 </table>
