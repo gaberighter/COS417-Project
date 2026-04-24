@@ -114,7 +114,7 @@
                             <th>Name</th>
                             <th>Capacity</th>
                             <th>Type</th>
-                            <th>Available</th>
+                            <th>Status</th>
                             <th>Projector</th>
                             <th>Smartboard</th>
                             <th>Whiteboard</th>
@@ -122,6 +122,7 @@
                             <th>Lab Stations</th>
                             <th>Computers</th>
                             <th>Outlets</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -129,7 +130,9 @@
                             <td>{{ room.displayName }}</td>
                             <td>{{ room.capacity }}</td>
                             <td>{{ room.roomType }}</td>
-                            <td>{{ formatBoolean(room.available) }}</td>
+                            <td>
+                                <span :class="getStatusClass(room.available)">{{ getStatusText(room.available) }}</span>
+                            </td>
                             <td>{{ formatBoolean(room.equipment.projector) }}</td>
                             <td>{{ formatBoolean(room.equipment.smartboard) }}</td>
                             <td>{{ formatBoolean(room.equipment.whiteboard) }}</td>
@@ -137,20 +140,25 @@
                             <td>{{ formatBoolean(room.equipment.labStations) }}</td>
                             <td>{{ formatBoolean(room.equipment.computers) }}</td>
                             <td>{{ formatBoolean(room.equipment.outlets) }}</td>
+                            <td class="row-actions">
+                                <button type="button" class="action-btn action-btn--edit" @click="openEditRoomModal(room)">Edit</button>
+                                <button type="button" class="action-btn action-btn--delete" @click="deleteRoom(room)">Delete</button>
+                            </td>
                         </tr>
                         <tr v-if="filteredRooms.length === 0">
-                            <td colspan="11">No rooms found.</td>
+                            <td colspan="12">No rooms found.</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+            <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
         </div>
     </div>
     <button class="add-room-fab" @click="openAddRoomModal" title="Add New Room">+</button>
     <div v-if="showAddRoomModal" class="modal-overlay" @click.self="closeAddRoomModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Add New Room</h2>
+                <h2>{{ isEditMode ? 'Edit Room' : 'Add New Room' }}</h2>
                 <button class="close-btn" @click="closeAddRoomModal">✕</button>
             </div>
             <form @submit.prevent="submitNewRoom" class="room-form">
@@ -162,6 +170,7 @@
                         type="text"
                         placeholder="e.g. SCI"
                         maxlength="4"
+                        :disabled="isEditMode"
                         required
                     />
                     <span v-if="buildingCodeError" class="error-text">{{ buildingCodeError }}</span>
@@ -173,6 +182,7 @@
                         v-model="newRoomForm.roomNumber"
                         type="text"
                         placeholder="e.g. 101"
+                        :disabled="isEditMode"
                         required
                     />
                 </div>
@@ -249,7 +259,7 @@
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn-secondary" @click="closeAddRoomModal">Cancel</button>
-                    <button type="submit" class="btn-primary">Create Room</button>
+                    <button type="submit" class="btn-primary">{{ isEditMode ? 'Save Changes' : 'Create Room' }}</button>
                 </div>
             </form>
         </div>
@@ -442,8 +452,10 @@ const resetFilters = () => {
 
 // Room creation form state
 const showAddRoomModal = ref(false)
+const isEditMode = ref(false)
 const buildingCodeError = ref('')
 const roomTypeValidationError = ref('')
+const actionMessage = ref('')
 
 interface NewRoomForm {
     buildingCode: string
@@ -476,14 +488,58 @@ const createEmptyRoomForm = (): NewRoomForm => ({
 const newRoomForm = reactive<NewRoomForm>(createEmptyRoomForm())
 
 const openAddRoomModal = () => {
+    isEditMode.value = false
+    Object.assign(newRoomForm, createEmptyRoomForm())
+    buildingCodeError.value = ''
+    roomTypeValidationError.value = ''
+    actionMessage.value = ''
+    showAddRoomModal.value = true
+}
+
+const openEditRoomModal = (room: Room) => {
+    isEditMode.value = true
+    actionMessage.value = ''
+    Object.assign(newRoomForm, {
+        buildingCode: room.buildingCode,
+        roomNumber: room.roomNumber,
+        displayName: room.displayName,
+        capacity: room.capacity,
+        roomType: room.roomType,
+        available: room.available,
+        equipment: {
+            projector: room.equipment.projector,
+            smartboard: room.equipment.smartboard,
+            whiteboard: room.equipment.whiteboard,
+            piano: room.equipment.piano,
+            labStations: room.equipment.labStations,
+            computers: room.equipment.computers,
+            outlets: room.equipment.outlets,
+        },
+    })
     showAddRoomModal.value = true
 }
 
 const closeAddRoomModal = () => {
     showAddRoomModal.value = false
+    isEditMode.value = false
     Object.assign(newRoomForm, createEmptyRoomForm())
     buildingCodeError.value = ''
     roomTypeValidationError.value = ''
+}
+
+const getStatusText = (available: boolean) => (available ? 'Available' : 'Unavailable')
+
+const getStatusClass = (available: boolean) => {
+    return available ? 'status-badge status-badge--available' : 'status-badge status-badge--unavailable'
+}
+
+const deleteRoom = async (room: Room) => {
+    const shouldDelete = window.confirm(`Delete room ${room.buildingCode} ${room.roomNumber}?`)
+    if (!shouldDelete) {
+        return
+    }
+
+    actionMessage.value = 'Delete is not available yet on the backend. Add a DELETE /api/rooms route to enable it.'
 }
 
 const validateBuildingCode = (): boolean => {
@@ -530,6 +586,7 @@ const submitNewRoom = async () => {
             },
             headers: { 'x-dev-role': 'Admin' },
         })
+        actionMessage.value = isEditMode.value ? 'Room updated.' : 'Room created.'
         await loadRooms()
         closeAddRoomModal()
     } catch (e) {
@@ -627,6 +684,59 @@ const submitNewRoom = async () => {
 
 .filter-actions button {
     width: 100%;
+}
+
+.action-message {
+    margin: 0.6rem 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 88px;
+    padding: 0.2rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.status-badge--available {
+    background-color: rgba(34, 197, 94, 0.16);
+    color: #16a34a;
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+.status-badge--unavailable {
+    background-color: rgba(239, 68, 68, 0.16);
+    color: #dc2626;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.row-actions {
+    white-space: nowrap;
+}
+
+.action-btn {
+    border-radius: 6px;
+    border: 1px solid var(--color-action-secondary-border);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    background: var(--color-action-secondary-bg);
+    color: var(--color-action-secondary-text);
+}
+
+.action-btn + .action-btn {
+    margin-left: 0.4rem;
+}
+
+.action-btn--edit:hover,
+.action-btn--delete:hover {
+    background: var(--color-action-secondary-bg-hover);
 }
 
 .add-room-fab {
