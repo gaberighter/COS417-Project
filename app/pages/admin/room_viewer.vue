@@ -430,6 +430,8 @@ const resetFilters = () => {
     border: 1px solid var(--color-border);
     border-radius: 10px;
     min-height: 0;
+    margin-right: 1rem;
+    margin-bottom: 1rem;
 }
 
 table {
