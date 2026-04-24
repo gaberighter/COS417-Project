@@ -338,13 +338,20 @@ const resetFilters = () => {
     width: 100%;
     margin: 0;
     padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+    min-height: 0;
 }
 
 .room-viewer {
     display: grid;
     grid-template-columns: 350px 1fr;
     gap: 1rem;
-    max-height: 100vh;
+    height: 100%;
     width: 100vw;
     margin-left: calc(-50vw + 50%);
     padding: 1rem;
@@ -430,6 +437,7 @@ const resetFilters = () => {
     border: 1px solid var(--color-border);
     border-radius: 10px;
     min-height: 0;
+    padding-right: 1rem;
 }
 
 table {
