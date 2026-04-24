@@ -11,7 +11,7 @@ import {
   type IProfessor,
   type IRoom,
 } from '../../models/index'
-import { runSchedulingAlgorithm } from '../../services/scheduling'
+import { runSchedulingAlgorithm, runSchedulingPlan } from '../../services/scheduling'
 
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
@@ -21,6 +21,8 @@ interface Payload {
   status?: 'empty' | 'draft' | 'submitted' | 'approved'
   overwriteEmpty?: boolean
   dryRun?: boolean
+  dumpOnly?: boolean
+  includeSchedulePlan?: boolean
 }
 
 function normalizeTerm(term: unknown): string {
@@ -192,6 +194,8 @@ export default defineEventHandler(async (event) => {
   const targetStatus = body.status ?? 'submitted'
   const overwriteEmpty = body.overwriteEmpty ?? true
   const dryRun = body.dryRun ?? false
+  const dumpOnly = body.dumpOnly ?? false
+  const includeSchedulePlan = body.includeSchedulePlan ?? false
 
   const [courses, professors, rooms] = await Promise.all([
     CourseCatalog.find({ active: true }).lean<ICourse[]>().exec(),
@@ -211,6 +215,19 @@ export default defineEventHandler(async (event) => {
   )
 
   const updatedProfessors: string[] = []
+  const generatedDump: Array<{
+    professorId: string
+    displayName: string
+    departmentCode: string
+    submission: {
+      term: string
+      department: string
+      submittedBy: string
+      submittedAt: Date | null
+      status: 'empty' | 'draft' | 'submitted' | 'approved'
+      courses: ICoursePreference[]
+    }
+  }> = []
   let createdSubmissions = 0
   let replacedEmptySubmissions = 0
 
@@ -247,6 +264,13 @@ export default defineEventHandler(async (event) => {
       courses: professorCourses,
     }
 
+    generatedDump.push({
+      professorId,
+      displayName: professorDoc.displayName,
+      departmentCode: professorDoc.departmentCode,
+      submission: generatedSubmission,
+    })
+
     let needsSave = false
 
     if (existingIndex === -1) {
@@ -275,15 +299,26 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  if (dryRun) {
+  if (dryRun || dumpOnly) {
+    const schedulePlan = includeSchedulePlan
+      ? await runSchedulingPlan(term)
+      : null
+
     return {
       ok: true,
       term,
       dryRun: true,
+      dumpOnly,
+      includeSchedulePlan,
+      schedulePlanSource: includeSchedulePlan
+        ? 'databaseCurrentState'
+        : null,
       updatedProfessorCount: updatedProfessors.length,
       createdSubmissions,
       replacedEmptySubmissions,
+      generatedPreferences: generatedDump,
       schedule: null,
+      schedulePlan,
     }
   }
 
