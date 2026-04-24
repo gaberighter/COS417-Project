@@ -10,6 +10,17 @@ import { collectPlacementFlags, evaluatePlacementOptions } from './phases/phase3
 import { optimizeCandidatePlacement } from './phases/phase4-optimize'
 import { persistAndReturn } from './phases/phase5-output'
 
+function makeAssignment(workItem: Parameters<typeof evaluatePlacementOptions>[0], chosen: { room: { _id: string }; slot: { days: ScheduleAssignment['days']; startTime: string; endTime: string } }): ScheduleAssignment {
+  return {
+    courseId: workItem.course._id,
+    professorId: workItem.professor._id,
+    roomId: chosen.room._id,
+    days: chosen.slot.days,
+    startTime: chosen.slot.startTime,
+    endTime: chosen.slot.endTime,
+  }
+}
+
 async function buildPlan(term: string): Promise<{
   assignments: ScheduleAssignment[]
   conflicts: ScheduleConflict[]
@@ -18,11 +29,51 @@ async function buildPlan(term: string): Promise<{
 }> {
   const collected = await collectInputs(term)
   const orderedWorkItems = sortByDifficulty(collected.workItems)
+  const pending = [...orderedWorkItems]
   const assignments: ScheduleAssignment[] = []
   const conflicts: ScheduleConflict[] = []
   const nearHardFlags: NearHardFlag[] = []
 
-  for (const workItem of orderedWorkItems) {
+  // Repeatedly place classes that have exactly one valid hard-constraint option.
+  let madeProgress = true
+  while (madeProgress) {
+    madeProgress = false
+
+    for (let index = 0; index < pending.length; ) {
+      const workItem = pending[index]
+      if (workItem === undefined) {
+        index += 1
+        continue
+      }
+
+      const evaluation = evaluatePlacementOptions(workItem, collected.rooms, assignments)
+
+      if (evaluation.conflict !== null) {
+        conflicts.push(evaluation.conflict)
+        pending.splice(index, 1)
+        madeProgress = true
+        continue
+      }
+
+      if (evaluation.candidates.length === 1) {
+        const chosen = evaluation.candidates[0]
+        if (chosen === undefined) {
+          index += 1
+          continue
+        }
+
+        assignments.push(makeAssignment(workItem, chosen))
+        nearHardFlags.push(...collectPlacementFlags(workItem, chosen, assignments.slice(0, -1)))
+        pending.splice(index, 1)
+        madeProgress = true
+        continue
+      }
+
+      index += 1
+    }
+  }
+
+  for (const workItem of pending) {
     const evaluation = evaluatePlacementOptions(workItem, collected.rooms, assignments)
 
     if (evaluation.conflict !== null) {
@@ -40,14 +91,7 @@ async function buildPlan(term: string): Promise<{
       continue
     }
 
-    const assignment: ScheduleAssignment = {
-      courseId: workItem.course._id,
-      professorId: workItem.professor._id,
-      roomId: chosen.room._id,
-      days: chosen.slot.days,
-      startTime: chosen.slot.startTime,
-      endTime: chosen.slot.endTime,
-    }
+    const assignment = makeAssignment(workItem, chosen)
 
     assignments.push(assignment)
     nearHardFlags.push(...collectPlacementFlags(workItem, chosen, assignments.slice(0, -1)))

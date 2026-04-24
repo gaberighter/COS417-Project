@@ -1,4 +1,5 @@
-import { db } from '../../../models/index'
+import { Schedule } from '../../../models/index'
+import { connectDB } from '../../../utils/db'
 import type {
   NearHardFlag,
   ScheduleAssignment,
@@ -19,11 +20,14 @@ function computeStatus(conflicts: ScheduleConflict[], assignments: ScheduleAssig
   return 'approved'
 }
 
-function nextRunNumber(term: string): number {
-  const existingRuns = db.schedules.filter((schedule) => schedule.term === term)
-  return (
-    existingRuns.reduce((highest, schedule) => Math.max(highest, schedule.runNumber), 0) + 1
-  )
+async function nextRunNumber(term: string): Promise<number> {
+  const latest = await Schedule.findOne({ term })
+    .sort({ runNumber: -1 })
+    .select({ runNumber: 1 })
+    .lean<{ runNumber?: number }>()
+    .exec()
+
+  return (latest?.runNumber ?? 0) + 1
 }
 
 /**
@@ -43,7 +47,8 @@ export async function persistAndReturn(
   conflicts: ScheduleConflict[],
   nearHardFlags: NearHardFlag[] = [],
 ): Promise<ScheduleResult> {
-  const runNumber = nextRunNumber(term)
+  await connectDB()
+  const runNumber = await nextRunNumber(term)
   const status = computeStatus(conflicts, assignments, nearHardFlags)
 
   const schedule: ScheduleResult = {
@@ -55,12 +60,7 @@ export async function persistAndReturn(
     conflicts,
   }
 
-  db.schedules.push({
-    ...schedule,
-    _id: `${term}-${runNumber}`,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  })
+  await Schedule.create(schedule)
 
   return schedule
 }

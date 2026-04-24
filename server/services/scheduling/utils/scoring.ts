@@ -36,6 +36,41 @@ function computeBackToBackScore(candidate: CandidateSlot): number {
   return candidate.avoidsBackToBackSameCourse === false ? 0 : 10
 }
 
+function computeHistoricalScore(candidate: CandidateSlot, workItem: CourseWorkItem): number {
+  if (workItem.historicalAssignments.length === 0) {
+    return 0
+  }
+
+  let score = 0
+
+  for (const historical of workItem.historicalAssignments.slice(0, 16)) {
+    const exactRoom = candidate.room._id === historical.roomId
+    const exactTime =
+      candidate.slot.days === historical.days && candidate.slot.startTime === historical.startTime
+    const buildingMatch =
+      historical.buildingCode !== null && candidate.room.buildingCode === historical.buildingCode
+
+    if (exactRoom && exactTime) {
+      score += 40
+      continue
+    }
+
+    if (exactTime) {
+      score += 22
+    }
+
+    if (exactRoom) {
+      score += 14
+    }
+
+    if (buildingMatch) {
+      score += 6
+    }
+  }
+
+  return Math.min(80, score)
+}
+
 /**
  * Scores a single room and slot combination for a work item.
  *
@@ -52,14 +87,16 @@ export function scoreCandidateSlot(
   let score = 0
 
   if (workItem.preferredDays.includes(candidate.slot.days)) {
-    score += 20
+    score += 25
   }
 
   if (workItem.preferredTimes.includes(candidate.slot.startTime)) {
-    score += 20
+    score += 25
   }
 
-  if (!workItem.avoidTimes.includes(candidate.slot.startTime)) {
+  if (workItem.avoidTimes.includes(candidate.slot.startTime)) {
+    score -= 40
+  } else {
     score += 10
   }
 
@@ -68,15 +105,16 @@ export function scoreCandidateSlot(
   }
 
   if (workItem.preferredBuilding !== null && candidate.room.buildingCode === workItem.preferredBuilding) {
-    score += 15
+    score += 18
   }
 
   if (professor.officeBuilding !== null && candidate.room.buildingCode === professor.officeBuilding) {
-    score += 10
+    score += 20
   }
 
   score += computeCapacityScore(candidate.room, workItem.expectedEnrollment)
   score += computeBackToBackScore(candidate)
+  score += computeHistoricalScore(candidate, workItem)
 
   return {
     score,

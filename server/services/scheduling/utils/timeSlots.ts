@@ -1,6 +1,28 @@
 import type { DayPattern, TimeSlot } from '../types'
 
-const START_TIMES = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'] as const
+const START_TIMES = [
+  '08:00',
+  '08:30',
+  '09:00',
+  '09:30',
+  '10:00',
+  '11:00',
+  '11:45',
+  '12:00',
+  '12:30',
+  '13:00',
+  '13:30',
+  '14:00',
+  '14:30',
+  '15:00',
+  '16:00',
+  '16:10',
+  '17:00',
+  '17:30',
+  '18:00',
+  '19:00',
+  '19:30',
+] as const
 
 function parseTime(value: string): number {
   const [hoursText, minutesText] = value.split(':')
@@ -16,18 +38,30 @@ function formatTime(totalMinutes: number): string {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
 }
 
-function patternDuration(days: DayPattern): number {
-  switch (days) {
-    case 'TR':
-      return 75
-    case 'MW':
-      return 110
-    case 'MWF':
-    case 'MTWF':
-      return 50
-    default:
-      return 50
+function patternDuration(days: DayPattern, creditHours = 3): number {
+  const baseDuration = (() => {
+    switch (days) {
+      case 'TR':
+        return 75
+      case 'MW':
+        return 110
+      case 'MWF':
+      case 'MTWF':
+        return 50
+      default:
+        return 50
+    }
+  })()
+
+  if (creditHours <= 1) {
+    return Math.max(25, Math.floor(baseDuration / 2))
   }
+
+  if (creditHours >= 4) {
+    return baseDuration + 25
+  }
+
+  return baseDuration
 }
 
 function sharedDays(left: DayPattern, right: DayPattern): string[] {
@@ -37,9 +71,10 @@ function sharedDays(left: DayPattern, right: DayPattern): string[] {
 /**
  * Generates the standard set of start and end times for the college timetable.
  *
+ * @param creditHours - Course credit hours used for duration adjustments.
  * @returns All valid term slots across the supported day patterns.
  */
-export function generateAllSlots(): TimeSlot[] {
+export function generateAllSlots(creditHours = 3): TimeSlot[] {
   const patterns: DayPattern[] = ['MWF', 'TR', 'MW', 'MTWF']
   const slots: TimeSlot[] = []
 
@@ -48,7 +83,7 @@ export function generateAllSlots(): TimeSlot[] {
       slots.push({
         days,
         startTime,
-        endTime: formatTime(parseTime(startTime) + patternDuration(days)),
+        endTime: formatTime(parseTime(startTime) + patternDuration(days, creditHours)),
       })
     }
   }
@@ -61,12 +96,11 @@ export function generateAllSlots(): TimeSlot[] {
  *
  * @param startTime - Slot start in HH:MM format.
  * @param days - Meeting pattern for the class.
- * @param creditHours - Course credit hours; retained for API compatibility.
+ * @param creditHours - Course credit hours; higher values stretch slot length.
  * @returns The computed end time in HH:MM format.
  */
 export function computeEndTime(startTime: string, days: DayPattern, creditHours: number): string {
-  void creditHours
-  return formatTime(parseTime(startTime) + patternDuration(days))
+  return formatTime(parseTime(startTime) + patternDuration(days, creditHours))
 }
 
 /**

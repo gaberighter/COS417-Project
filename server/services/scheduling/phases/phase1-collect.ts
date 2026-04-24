@@ -1,6 +1,19 @@
-import type { CollectedInputs, CoursePreference, CourseWorkItem, Professor, PreferenceRecord } from '../types'
+import type {
+  CollectedInputs,
+  CoursePreference,
+  CourseWorkItem,
+  HistoricalAssignment,
+  Professor,
+  PreferenceRecord,
+} from '../types'
 import { SchedulingInputError } from '../types'
-import { fetchCourses, fetchPreferences, fetchProfessors, fetchRooms } from '../utils/dataFetchers'
+import {
+  fetchCourses,
+  fetchHistoricalAssignments,
+  fetchPreferences,
+  fetchProfessors,
+  fetchRooms,
+} from '../utils/dataFetchers'
 
 function findProfessorForId(professors: Professor[], identifier: string | null): Professor | null {
   if (identifier === null) {
@@ -8,7 +21,12 @@ function findProfessorForId(professors: Professor[], identifier: string | null):
   }
 
   return (
-    professors.find((professor) => professor._id === identifier || professor.covenantId === identifier) ??
+    professors.find(
+      (professor) =>
+        professor._id === identifier ||
+        professor.covenantId === identifier ||
+        professor.displayName === identifier,
+    ) ??
     null
   )
 }
@@ -18,6 +36,10 @@ function resolveProfessor(
   preference: PreferenceRecord | null,
   professors: Professor[],
 ): Professor {
+  if (professors.length === 0) {
+    throw new SchedulingInputError(['No active professors available'])
+  }
+
   const preferredProfessor = findProfessorForId(professors, preference?.professorId ?? null)
   if (preferredProfessor !== null) {
     return preferredProfessor
@@ -33,7 +55,7 @@ function resolveProfessor(
     return departmentProfessor
   }
 
-  return professors[0]
+  return professors[0]!
 }
 
 function buildPreferenceLookup(preferences: PreferenceRecord[]): Map<string, PreferenceRecord> {
@@ -88,6 +110,7 @@ function buildWorkItem(
   course: Awaited<ReturnType<typeof fetchCourses>>[number],
   professor: Professor,
   preference: PreferenceRecord | null,
+  historicalAssignments: HistoricalAssignment[],
   warnings: string[],
 ): CourseWorkItem {
   const preferenceCourses = preference ?? null
@@ -108,6 +131,7 @@ function buildWorkItem(
     course,
     professor,
     preference: preferenceCourses,
+    historicalAssignments,
     expectedEnrollment,
     preferredDays: effectivePreference?.preferredDays ?? (course.typicalDays !== null ? [course.typicalDays] : []),
     preferredTimes: effectivePreference?.preferredTimes ?? (course.typicalTime !== null ? [course.typicalTime] : []),
@@ -150,12 +174,17 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
   }
 
   const preferenceLookup = buildPreferenceLookup(preferences)
+  const historyByCourse = await fetchHistoricalAssignments(
+    courses.map((course) => course._id),
+    term,
+  )
 
   const workItems = courses.map((course) => {
     const preference = preferenceLookup.get(course._id) ?? null
     const professor = resolveProfessor(course, preference, professors)
+    const historicalAssignments = historyByCourse.get(course._id) ?? []
 
-    return buildWorkItem(course, professor, preference, warnings)
+    return buildWorkItem(course, professor, preference, historicalAssignments, warnings)
   })
 
   return {

@@ -90,6 +90,7 @@ export interface CourseWorkItem {
   course: Course
   professor: Professor
   preference: PreferenceRecord | null
+  historicalAssignments: HistoricalAssignment[]
   expectedEnrollment: number | null
   preferredDays: DayPattern[]
   preferredTimes: string[]
@@ -105,6 +106,18 @@ export interface TimeSlot {
   days: DayPattern
   startTime: string
   endTime: string
+}
+
+export interface HistoricalAssignment {
+  term: string
+  runNumber: number
+  courseId: string
+  professorId: string
+  roomId: string
+  days: DayPattern
+  startTime: string
+  endTime: string
+  buildingCode: string | null
 }
 
 export interface ScheduleAssignment {

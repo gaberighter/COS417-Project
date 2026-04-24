@@ -80,6 +80,33 @@ function buildCandidatePairs(
   return candidates
 }
 
+function applyPreferenceGates(workItem: CourseWorkItem, candidates: CandidateSlot[]): CandidateSlot[] {
+  let gated = candidates
+
+  if (workItem.preferredDays.length > 0) {
+    const dayMatched = gated.filter((candidate) => workItem.preferredDays.includes(candidate.slot.days))
+    if (dayMatched.length > 0) {
+      gated = dayMatched
+    }
+  }
+
+  if (workItem.preferredTimes.length > 0) {
+    const timeMatched = gated.filter((candidate) => workItem.preferredTimes.includes(candidate.slot.startTime))
+    if (timeMatched.length > 0) {
+      gated = timeMatched
+    }
+  }
+
+  if (workItem.avoidTimes.length > 0) {
+    const nonAvoided = gated.filter((candidate) => !workItem.avoidTimes.includes(candidate.slot.startTime))
+    if (nonAvoided.length > 0) {
+      gated = nonAvoided
+    }
+  }
+
+  return gated
+}
+
 function resolveConflictReason(
   workItem: CourseWorkItem,
   rooms: Room[],
@@ -128,7 +155,7 @@ export function evaluatePlacementOptions(
   currentAssignments: ScheduleAssignment[],
 ): ConstraintEvaluation {
   const candidateRooms = filterRooms(workItem, rooms)
-  const allSlots = generateAllSlots()
+  const allSlots = generateAllSlots(workItem.course.creditHours)
   const candidateSlots = allSlots.filter((slot) => {
     if (professorIsBusy(workItem.professor._id, slot, currentAssignments)) {
       return false
@@ -151,7 +178,10 @@ export function evaluatePlacementOptions(
     }
   }
 
-  const candidates = buildCandidatePairs(workItem, candidateRooms, candidateSlots, currentAssignments)
+  const candidates = applyPreferenceGates(
+    workItem,
+    buildCandidatePairs(workItem, candidateRooms, candidateSlots, currentAssignments),
+  )
 
   if (candidates.length === 0) {
     return {

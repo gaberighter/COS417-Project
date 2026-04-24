@@ -1,47 +1,124 @@
-import { db } from '../../../models/index'
+import {
+  CourseCatalog,
+  Professor as ProfessorModel,
+  Room as RoomModel,
+  Schedule,
+  type IAssignment,
+  type ICourse,
+  type IPreferenceSubmission,
+  type IProfessor,
+  type IRoom,
+} from '../../../models/index'
 import { connectDB } from '../../../utils/db'
 import type {
   Course,
+  DayPattern,
+  HistoricalAssignment,
   PreferenceRecord,
   PreferenceSubmission,
   Professor,
   Room,
 } from '../types'
 
-function cloneRoom(room: Room): Room {
+function normalizeDayPattern(value: string): DayPattern {
+  if (value === 'MWF' || value === 'TR' || value === 'MW' || value === 'MTWF') {
+    return value
+  }
+
+  return 'MWF'
+}
+
+function deriveBuildingCode(abbreviation: string | null | undefined, buildingName: string | null | undefined): string {
+  if (abbreviation !== null && abbreviation !== undefined) {
+    const trimmedAbbreviation = abbreviation.trim()
+    if (trimmedAbbreviation.length > 0) {
+      return (trimmedAbbreviation.split(/\s+/)[0] ?? 'UNKNOWN').toUpperCase()
+    }
+  }
+
+  if (buildingName !== null && buildingName !== undefined) {
+    const initials = buildingName
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((word) => word[0] ?? '')
+      .join('')
+
+    if (initials.length > 0) {
+      return initials.toUpperCase()
+    }
+  }
+
+  return 'UNKNOWN'
+}
+
+function cloneRoom(room: IRoom): Room {
   return {
-    ...room,
+    _id: String(room._id ?? room.abbreviation ?? ''),
+    buildingCode: deriveBuildingCode(room.abbreviation, room.buildingName),
+    roomNumber: room.roomNumber,
+    displayName: room.displayName ?? null,
+    capacity: room.capacity,
+    roomType: room.roomType,
+    available: room.available,
     equipment: { ...room.equipment },
   }
 }
 
-function cloneCourse(course: Course): Course {
+function cloneCourse(course: ICourse): Course {
   return {
-    ...course,
+    _id: String(course._id ?? ''),
+    deptCode: course.deptCode,
+    courseNumber: course.courseNumber,
+    title: course.title,
+    creditHours: course.creditHours,
+    typicalEnrollment: course.typicalEnrollment ?? null,
+    labComponent: course.labComponent,
+    active: course.active,
+    typicalProfessor: course.typicalProfessor ?? null,
+    typicalDays: course.typicalDays ? normalizeDayPattern(course.typicalDays) : null,
+    typicalTime: course.typicalTime ?? null,
     requiredEquipment: [...course.requiredEquipment],
     prerequisites: [...course.prerequisites],
     corequisites: [...course.corequisites],
   }
 }
 
-function clonePreferenceSubmission(submission: PreferenceSubmission): PreferenceSubmission {
+function clonePreferenceSubmission(submission: IPreferenceSubmission): PreferenceSubmission {
   return {
-    ...submission,
+    term: submission.term,
+    department: submission.department,
+    submittedBy: submission.submittedBy,
     submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : null,
+    status: submission.status,
     courses: submission.courses.map((course) => ({
-      ...course,
-      preferredDays: [...course.preferredDays],
-      preferredTimes: [...course.preferredTimes],
-      avoidTimes: [...course.avoidTimes],
-      requiredEquipment: [...course.requiredEquipment],
-      coreqWith: [...course.coreqWith],
+      courseId: course.courseId,
+      title: course.title,
+      expectedEnrollment: course.expectedEnrollment,
+      maxCapacity: course.maxCapacity ?? null,
+      creditHours: course.creditHours,
+      preferredDays: [...(course.preferredDays ?? [])].map((days) => normalizeDayPattern(days)),
+      preferredTimes: [...(course.preferredTimes ?? [])],
+      avoidTimes: [...(course.avoidTimes ?? [])],
+      requiredEquipment: [...(course.requiredEquipment ?? [])],
+      preferredBuilding: course.preferredBuilding ?? null,
+      preferredRoomId: course.preferredRoomId ?? null,
+      backToBackWith: course.backToBackWith ?? null,
+      coreqWith: [...(course.coreqWith ?? [])],
     })),
   }
 }
 
-function cloneProfessor(professor: Professor): Professor {
+function cloneProfessor(professor: IProfessor): Professor {
   return {
-    ...professor,
+    _id: String(professor._id ?? professor.covenantId),
+    covenantId: professor.covenantId,
+    displayName: professor.displayName,
+    departmentCode: professor.departmentCode,
+    officeBuilding: professor.officeBuilding ?? null,
+    officeRoom: professor.officeRoom ?? null,
+    seniorityYear: professor.seniorityYear ?? null,
+    active: professor.active,
     preferences: professor.preferences.map(clonePreferenceSubmission),
   }
 }
@@ -53,7 +130,8 @@ function cloneProfessor(professor: Professor): Professor {
  */
 export async function fetchRooms(): Promise<Room[]> {
   await connectDB()
-  return db.rooms.map((room) => cloneRoom(room as Room))
+  const rooms = await RoomModel.find({ available: true }).lean<IRoom[]>().exec()
+  return rooms.map((room) => cloneRoom(room))
 }
 
 /**
@@ -63,7 +141,8 @@ export async function fetchRooms(): Promise<Room[]> {
  */
 export async function fetchCourses(): Promise<Course[]> {
   await connectDB()
-  return db.courses.filter((course) => course.active).map((course) => cloneCourse(course as Course))
+  const courses = await CourseCatalog.find({ active: true }).lean<ICourse[]>().exec()
+  return courses.map((course) => cloneCourse(course))
 }
 
 /**
@@ -73,7 +152,8 @@ export async function fetchCourses(): Promise<Course[]> {
  */
 export async function fetchProfessors(): Promise<Professor[]> {
   await connectDB()
-  return db.professors.filter((professor) => professor.active).map((professor) => cloneProfessor(professor as Professor))
+  const professors = await ProfessorModel.find({ active: true }).lean<IProfessor[]>().exec()
+  return professors.map((professor) => cloneProfessor(professor))
 }
 
 /**
@@ -85,14 +165,28 @@ export async function fetchProfessors(): Promise<Professor[]> {
 export async function fetchPreferences(term: string): Promise<PreferenceRecord[]> {
   await connectDB()
 
-  return db.professors
+  const professors = await ProfessorModel.find({ active: true }).lean<IProfessor[]>().exec()
+
+  return professors
     .filter((professor) => professor.active)
     .flatMap((professor) =>
       professor.preferences
         .filter((submission) => submission.term === term)
         .flatMap((submission) =>
           submission.courses.map((course) => ({
-            ...course,
+            courseId: course.courseId,
+            title: course.title,
+            expectedEnrollment: course.expectedEnrollment,
+            maxCapacity: course.maxCapacity ?? null,
+            creditHours: course.creditHours,
+            preferredDays: [...(course.preferredDays ?? [])].map((days) => normalizeDayPattern(days)),
+            preferredTimes: [...(course.preferredTimes ?? [])],
+            avoidTimes: [...(course.avoidTimes ?? [])],
+            requiredEquipment: [...(course.requiredEquipment ?? [])],
+            preferredBuilding: course.preferredBuilding ?? null,
+            preferredRoomId: course.preferredRoomId ?? null,
+            backToBackWith: course.backToBackWith ?? null,
+            coreqWith: [...(course.coreqWith ?? [])],
             professorId: professor._id ?? professor.covenantId,
             professorName: professor.displayName,
             departmentCode: professor.departmentCode,
@@ -102,4 +196,80 @@ export async function fetchPreferences(term: string): Promise<PreferenceRecord[]
           })),
         ),
     )
+}
+
+/**
+ * Loads recent historical assignments for the provided courses across prior terms.
+ *
+ * @param courseIds - Course IDs to include in the historical query.
+ * @param termToExclude - Current term, excluded from history.
+ * @param maxRuns - Maximum number of prior schedule runs to scan.
+ * @returns A map keyed by course ID with newest-first historical assignments.
+ */
+export async function fetchHistoricalAssignments(
+  courseIds: string[],
+  termToExclude: string,
+  maxRuns = 24,
+): Promise<Map<string, HistoricalAssignment[]>> {
+  await connectDB()
+
+  const targetCourseIds = new Set(courseIds)
+  const [rooms, schedules] = await Promise.all([
+    RoomModel.find({}).lean<IRoom[]>().exec(),
+    Schedule.find({ term: { $ne: termToExclude } })
+      .sort({ updatedAt: -1, runNumber: -1 })
+      .limit(maxRuns)
+      .lean<Array<{ term: string; runNumber: number; assignments: IAssignment[] }>>()
+      .exec(),
+  ])
+
+  const roomBuildingById = new Map<string, string | null>(
+    rooms.map((room) => [String(room._id ?? room.abbreviation ?? ''), deriveBuildingCode(room.abbreviation, room.buildingName)]),
+  )
+
+  const recentSchedules = schedules
+
+  const historyByCourse = new Map<string, HistoricalAssignment[]>()
+  const seenAssignments = new Set<string>()
+
+  for (const schedule of recentSchedules) {
+    for (const assignment of schedule.assignments ?? []) {
+      if (!targetCourseIds.has(assignment.courseId)) {
+        continue
+      }
+
+      const dedupeKey = [
+        schedule.term,
+        schedule.runNumber,
+        assignment.courseId,
+        assignment.professorId,
+        assignment.roomId,
+        assignment.days,
+        assignment.startTime,
+        assignment.endTime,
+      ].join('|')
+
+      if (seenAssignments.has(dedupeKey)) {
+        continue
+      }
+
+      seenAssignments.add(dedupeKey)
+
+      const existing = historyByCourse.get(assignment.courseId) ?? []
+      existing.push({
+        term: schedule.term,
+        runNumber: schedule.runNumber,
+        courseId: assignment.courseId,
+        professorId: assignment.professorId,
+        roomId: assignment.roomId,
+        days: normalizeDayPattern(assignment.days),
+        startTime: assignment.startTime,
+        endTime: assignment.endTime,
+        buildingCode: roomBuildingById.get(assignment.roomId) ?? null,
+      })
+      historyByCourse.set(assignment.courseId, existing)
+    }
+  }
+
+  return historyByCourse
 }
