@@ -8,6 +8,7 @@ import {
   readBody,
   getQuery,
   setResponseHeaders,
+  getHeader,
 } from 'h3'
 import fs from 'fs'
 // @ts-expect-error - saml2-js does not currently publish TypeScript definitions.
@@ -22,6 +23,28 @@ type SAMLProviders = {
 const UsersCollection = Users as any
 
 let providers: SAMLProviders | null = null
+
+/**
+ * Extract client IP address from H3 event headers.
+ * Checks X-Forwarded-For, X-Real-IP in sequence.
+ * TODO: Log authentication events using this IP in future integration
+ */
+function getClientIp(event: H3Event): string | null {
+  const forwardedFor = getHeader(event, 'x-forwarded-for')
+  if (forwardedFor) {
+    const first = forwardedFor.split(',')[0]?.trim()
+    if (first) {
+      return first
+    }
+  }
+
+  const realIp = getHeader(event, 'x-real-ip')
+  if (realIp?.trim()) {
+    return realIp.trim()
+  }
+
+  return null
+}
 
 function readFileOrThrow(path: string, label: string) {
   if (!fs.existsSync(path)) {
@@ -147,6 +170,13 @@ export default defineEventHandler(async (event: H3Event) => {
         return new Promise((resolve, reject) => {
           const onAssert = async (err: Error | null, samlResponse: any) => {
             if (err) {
+              // TODO: §4.7 Log authentication event - LOGIN_FAILURE
+              // Integrate with auditService.logAuthEvent() to capture:
+              // - userId: extracted from request if possible
+              // - action: LOGIN_FAILURE
+              // - ipAddress: getClientIp(event)
+              // - detail: err.message
+
               return reject(
                 createError({
                   statusCode: 500,
@@ -208,6 +238,13 @@ export default defineEventHandler(async (event: H3Event) => {
               user,
               loggedInAt: Date.now(),
             })
+
+            // TODO: §4.7 Log authentication event - LOGIN_SUCCESS
+            // Integrate with auditService.logAuthEvent() to capture:
+            // - userId: user.username or email
+            // - action: LOGIN_SUCCESS
+            // - ipAddress: getClientIp(event)
+            // - detail: optional user metadata
 
             return resolve(
               sendRedirect(event, process.env.SAML_REDIRECT_TO || '/'),

@@ -332,22 +332,47 @@ scheduleSchema.pre('validate', function setScheduleId() {
 const auditLogSchema = new Schema<IAuditLog>(
   {
     _id: { type: String },
-    userId: { type: String, default: null, trim: true },
-    covenantId: { type: String, default: null, trim: true },
-    action: { type: String, required: true, trim: true },
-    collectionName: { type: String, default: null, trim: true },
-    documentId: { type: String, default: null, trim: true },
-    detail: { type: String, required: true, trim: true },
-    ipAddress: { type: String, default: null, trim: true },
-    timestamp: { type: Date, required: true, default: () => new Date() },
+    userId: { type: String, default: null, trim: true, immutable: true },
+    covenantId: { type: String, default: null, trim: true, immutable: true },
+    action: { type: String, required: true, trim: true, immutable: true },
+    collectionName: { type: String, default: null, trim: true, immutable: true },
+    documentId: { type: String, default: null, trim: true, immutable: true },
+    detail: { type: String, required: true, trim: true, immutable: true },
+    ipAddress: { type: String, default: null, trim: true, immutable: true },
+    timestamp: { type: Date, required: true, default: () => new Date(), immutable: true },
   },
-  { collection: 'auditLogs', timestamps: true, versionKey: false },
+  { collection: 'auditLogs', timestamps: false, versionKey: false },
 )
 
 auditLogSchema.pre('validate', function setAuditId() {
   if (!this._id) {
     this._id = new mongoose.Types.ObjectId().toString()
   }
+})
+
+// Prevent deletion of audit logs (write-once enforcement)
+auditLogSchema.pre('deleteOne', function preventDelete() {
+  throw new Error('Audit logs cannot be deleted')
+})
+
+auditLogSchema.pre('findOneAndDelete', function preventDelete() {
+  throw new Error('Audit logs cannot be deleted')
+})
+
+auditLogSchema.pre('deleteMany', function preventDelete() {
+  throw new Error('Audit logs cannot be deleted')
+})
+
+auditLogSchema.pre('updateOne', function preventUpdate() {
+  throw new Error('Audit logs are immutable and cannot be updated')
+})
+
+auditLogSchema.pre('findOneAndUpdate', function preventUpdate() {
+  throw new Error('Audit logs are immutable and cannot be updated')
+})
+
+auditLogSchema.pre('updateMany', function preventUpdate() {
+  throw new Error('Audit logs are immutable and cannot be updated')
 })
 
 roomSchema.index({ abbreviation: 1 }, { unique: true })

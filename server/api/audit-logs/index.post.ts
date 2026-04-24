@@ -36,6 +36,8 @@ const ALLOWED_ACTIONS = new Set([
   'SCHEDULE_OVERRIDE',
   'SCHEDULE_EXPORT',
   'AUDIT_IMPORT',
+  'LOGIN_SUCCESS',
+  'LOGIN_FAILURE',
 ])
 
 function isObject(value: unknown): value is Record<string, unknown> {
