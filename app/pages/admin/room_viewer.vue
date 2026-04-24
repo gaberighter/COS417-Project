@@ -146,6 +146,114 @@
             </div>
         </div>
     </div>
+    <button class="add-room-fab" @click="openAddRoomModal" title="Add New Room">+</button>
+    <div v-if="showAddRoomModal" class="modal-overlay" @click.self="closeAddRoomModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Room</h2>
+                <button class="close-btn" @click="closeAddRoomModal">✕</button>
+            </div>
+            <form @submit.prevent="submitNewRoom" class="room-form">
+                <div class="form-group">
+                    <label for="buildingCode">Building Code *</label>
+                    <input
+                        id="buildingCode"
+                        v-model="newRoomForm.buildingCode"
+                        type="text"
+                        placeholder="e.g. SCI"
+                        maxlength="4"
+                        required
+                    />
+                    <span v-if="buildingCodeError" class="error-text">{{ buildingCodeError }}</span>
+                </div>
+                <div class="form-group">
+                    <label for="roomNumber">Room Number *</label>
+                    <input
+                        id="roomNumber"
+                        v-model="newRoomForm.roomNumber"
+                        type="text"
+                        placeholder="e.g. 101"
+                        required
+                    />
+                </div>
+                <div class="form-group">
+                    <label for="displayName">Display Name</label>
+                    <input
+                        id="displayName"
+                        v-model="newRoomForm.displayName"
+                        type="text"
+                        placeholder="e.g. Physics Lab"
+                    />
+                </div>
+                <div class="form-group">
+                    <label for="capacity">Capacity *</label>
+                    <input
+                        id="capacity"
+                        v-model.number="newRoomForm.capacity"
+                        type="number"
+                        min="1"
+                        required
+                    />
+                </div>
+                <div class="form-group">
+                    <label for="roomType">Room Type *</label>
+                    <select id="roomType" v-model="newRoomForm.roomType" required>
+                        <option value="">-- Select --</option>
+                        <option value="classroom">Classroom</option>
+                        <option value="lab">Lab</option>
+                    </select>
+                    <span v-if="roomTypeValidationError" class="error-text">{{ roomTypeValidationError }}</span>
+                </div>
+                <div class="form-group checkbox-group">
+                    <label>Equipment</label>
+                    <div class="equipment-grid">
+                        <label class="checkbox-label">
+                            <input v-model="newRoomForm.equipment.projector" type="checkbox" />
+                            Projector
+                        </label>
+                        <label class="checkbox-label">
+                            <input v-model="newRoomForm.equipment.smartboard" type="checkbox" />
+                            Smartboard
+                        </label>
+                        <label class="checkbox-label">
+                            <input v-model="newRoomForm.equipment.whiteboard" type="checkbox" />
+                            Whiteboard
+                        </label>
+                        <label class="checkbox-label">
+                            <input v-model="newRoomForm.equipment.piano" type="checkbox" />
+                            Piano
+                        </label>
+                        <label class="checkbox-label">
+                            <input
+                                v-model="newRoomForm.equipment.labStations"
+                                type="checkbox"
+                                @change="validateRoomTypeForLabStations"
+                            />
+                            Lab Stations
+                        </label>
+                        <label class="checkbox-label">
+                            <input v-model="newRoomForm.equipment.computers" type="checkbox" />
+                            Computers
+                        </label>
+                        <label class="checkbox-label">
+                            <input v-model="newRoomForm.equipment.outlets" type="checkbox" />
+                            Outlets
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input v-model="newRoomForm.available" type="checkbox" />
+                        Available
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" @click="closeAddRoomModal">Cancel</button>
+                    <button type="submit" class="btn-primary">Create Room</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <div class="temporary-debug-buttons">
         <button @click="redirectToLogin">Login Page</button>
         <button @click="redirectToAdmin">Admin Page</button>
@@ -331,6 +439,104 @@ const resetFilters = () => {
     Object.assign(filters, createDefaultFilters())
     Object.assign(appliedFilters, createDefaultFilters())
 }
+
+// Room creation form state
+const showAddRoomModal = ref(false)
+const buildingCodeError = ref('')
+const roomTypeValidationError = ref('')
+
+interface NewRoomForm {
+    buildingCode: string
+    roomNumber: string
+    displayName: string
+    capacity: number | null
+    roomType: string
+    available: boolean
+    equipment: RoomEquipment
+}
+
+const createEmptyRoomForm = (): NewRoomForm => ({
+    buildingCode: '',
+    roomNumber: '',
+    displayName: '',
+    capacity: null,
+    roomType: '',
+    available: true,
+    equipment: {
+        projector: false,
+        smartboard: false,
+        whiteboard: false,
+        piano: false,
+        labStations: false,
+        computers: false,
+        outlets: true,
+    },
+})
+
+const newRoomForm = reactive<NewRoomForm>(createEmptyRoomForm())
+
+const openAddRoomModal = () => {
+    showAddRoomModal.value = true
+}
+
+const closeAddRoomModal = () => {
+    showAddRoomModal.value = false
+    Object.assign(newRoomForm, createEmptyRoomForm())
+    buildingCodeError.value = ''
+    roomTypeValidationError.value = ''
+}
+
+const validateBuildingCode = (): boolean => {
+    const regex = /^[A-Z]{2,4}$/
+    if (!regex.test(newRoomForm.buildingCode)) {
+        buildingCodeError.value = 'Building code must be 2-4 uppercase letters'
+        return false
+    }
+    buildingCodeError.value = ''
+    return true
+}
+
+const validateRoomTypeForLabStations = () => {
+    if (newRoomForm.equipment.labStations && newRoomForm.roomType !== 'lab') {
+        roomTypeValidationError.value = 'Lab stations require room type to be "Lab"'
+    } else {
+        roomTypeValidationError.value = ''
+    }
+}
+
+const submitNewRoom = async () => {
+    // Validate building code
+    if (!validateBuildingCode()) {
+        return
+    }
+
+    // Validate room type if lab stations selected
+    if (newRoomForm.equipment.labStations && newRoomForm.roomType !== 'lab') {
+        roomTypeValidationError.value = 'Lab stations require room type to be "Lab"'
+        return
+    }
+
+    try {
+        await $fetch('/api/rooms', {
+            method: 'POST',
+            body: {
+                buildingCode: newRoomForm.buildingCode.toUpperCase(),
+                roomNumber: newRoomForm.roomNumber,
+                displayName: newRoomForm.displayName,
+                capacity: newRoomForm.capacity,
+                roomType: newRoomForm.roomType,
+                available: newRoomForm.available,
+                equipment: newRoomForm.equipment,
+            },
+            headers: { 'x-dev-role': 'Admin' },
+        })
+        await loadRooms()
+        closeAddRoomModal()
+    } catch (e) {
+        console.error('Failed to create room:', e)
+        error.value = e as Error
+    }
+}
 </script>
 
 <style scoped>
@@ -421,6 +627,194 @@ const resetFilters = () => {
 
 .filter-actions button {
     width: 100%;
+}
+
+.add-room-fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: var(--color-action-primary-bg);
+    color: var(--color-action-primary-text);
+    border: none;
+    font-size: 2rem;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+    z-index: 40;
+}
+
+.add-room-fab:hover {
+    background-color: var(--color-action-primary-bg-hover);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.add-room-fab:active {
+    transform: scale(0.95);
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+}
+
+.modal-content {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--color-text-primary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-btn:hover {
+    color: var(--color-text-secondary);
+}
+
+.room-form {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--color-text-primary);
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group select {
+    background-color: var(--color-surface-elevated);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    border-radius: 6px;
+    padding: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
+.form-group select:focus {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+}
+
+.error-text {
+    color: var(--color-text-danger);
+    font-size: 0.85rem;
+}
+
+.checkbox-group {
+    padding: 0.5rem 0;
+}
+
+.equipment-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 0.5rem 1.5rem;
+    border-radius: 6px;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background-color: var(--color-action-primary-bg);
+    color: var(--color-action-primary-text);
+}
+
+.btn-primary:hover {
+    background-color: var(--color-action-primary-bg-hover);
+}
+
+.btn-secondary {
+    background-color: var(--color-action-secondary-bg);
+    color: var(--color-action-secondary-text);
+    border: 1px solid var(--color-action-secondary-border);
+}
+
+.btn-secondary:hover {
+    background-color: var(--color-action-secondary-bg-hover);
 }
 
 .table-container {
