@@ -334,11 +334,20 @@ const resetFilters = () => {
 </script>
 
 <style scoped>
+:deep(.app-content) {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
 .room-viewer {
     display: grid;
     grid-template-columns: 350px 1fr;
     gap: 1rem;
-    height: 100vh;
+    max-height: 100vh;
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    padding: 1rem;
 }
 
 .room-search {
@@ -346,10 +355,11 @@ const resetFilters = () => {
     border: 1px solid var(--color-border);
     border-radius: 10px;
     padding: 1rem;
-    height: 100%;
+    max-height: 100%;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    min-height: 0;
 }
 
 .room-search h2 {
@@ -360,7 +370,8 @@ const resetFilters = () => {
 .room-content {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    max-height: 100%;
+    min-height: 0;
 }
 
 .filter-grid {
@@ -414,10 +425,11 @@ const resetFilters = () => {
 .table-container {
     overflow-x: auto;
     overflow-y: auto;
-    height: 100%;
+    max-height: 100%;
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 10px;
+    min-height: 0;
 }
 
 table {
