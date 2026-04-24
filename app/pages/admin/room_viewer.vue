@@ -360,6 +360,7 @@ const resetFilters = () => {
     flex-direction: column;
     overflow-y: auto;
     min-height: 0;
+    margin-bottom: 3rem;
 }
 
 .room-search h2 {
@@ -430,8 +431,8 @@ const resetFilters = () => {
     border: 1px solid var(--color-border);
     border-radius: 10px;
     min-height: 0;
-    margin-right: 10rem;
-    margin-bottom: 10rem;
+    margin-right: 3rem;
+    margin-bottom: 3rem;
 }
 
 table {
