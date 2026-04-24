@@ -336,8 +336,9 @@ const resetFilters = () => {
 <style scoped>
 .room-viewer {
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 350px 1fr;
     gap: 1rem;
+    height: 100vh;
 }
 
 .room-search {
@@ -345,17 +346,28 @@ const resetFilters = () => {
     border: 1px solid var(--color-border);
     border-radius: 10px;
     padding: 1rem;
-    height: fit-content;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
 }
 
 .room-search h2 {
     margin-top: 0;
+    flex-shrink: 0;
+}
+
+.room-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .filter-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
+    flex: 1;
 }
 
 .filter-grid label {
@@ -386,6 +398,7 @@ const resetFilters = () => {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    flex-shrink: 0;
 }
 
 .filter-results {
@@ -401,7 +414,7 @@ const resetFilters = () => {
 .table-container {
     overflow-x: auto;
     overflow-y: auto;
-    max-height: 600px;
+    height: 100%;
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 10px;
