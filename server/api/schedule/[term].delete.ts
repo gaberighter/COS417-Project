@@ -26,9 +26,7 @@ export default defineEventHandler(async (event) => {
   const clientIp = getClientIp(event)
 
   // Build filter: if runNumber provided, delete specific run; otherwise delete latest
-  const filter = runNumber
-    ? { term, runNumber: Number(runNumber) }
-    : { term }
+  const filter = runNumber ? { term, runNumber: Number(runNumber) } : { term }
 
   const deleted = await Schedule.findOneAndDelete(filter)
     .sort(runNumber ? undefined : { runNumber: -1 })
@@ -37,7 +35,9 @@ export default defineEventHandler(async (event) => {
 
   if (!deleted) {
     const detail =
-      runNumber !== undefined ? `${term} run ${runNumber}` : `latest schedule for ${term}`
+      runNumber !== undefined
+        ? `${term} run ${runNumber}`
+        : `latest schedule for ${term}`
     throw new Error(`Schedule not found: ${detail}`)
   }
 

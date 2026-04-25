@@ -335,11 +335,21 @@ const auditLogSchema = new Schema<IAuditLog>(
     userId: { type: String, default: null, trim: true, immutable: true },
     covenantId: { type: String, default: null, trim: true, immutable: true },
     action: { type: String, required: true, trim: true, immutable: true },
-    collectionName: { type: String, default: null, trim: true, immutable: true },
+    collectionName: {
+      type: String,
+      default: null,
+      trim: true,
+      immutable: true,
+    },
     documentId: { type: String, default: null, trim: true, immutable: true },
     detail: { type: String, required: true, trim: true, immutable: true },
     ipAddress: { type: String, default: null, trim: true, immutable: true },
-    timestamp: { type: Date, required: true, default: () => new Date(), immutable: true },
+    timestamp: {
+      type: Date,
+      required: true,
+      default: () => new Date(),
+      immutable: true,
+    },
   },
   { collection: 'auditLogs', timestamps: false, versionKey: false },
 )

@@ -24,11 +24,14 @@ function toDetailText(
  * Extract client IP address from request headers.
  * Checks X-Forwarded-For, X-Real-IP, and falls back to null.
  */
-export function getClientIpFromHeaders(headers: Record<string, string | string[] | undefined>): string | null {
+export function getClientIpFromHeaders(
+  headers: Record<string, string | string[] | undefined>,
+): string | null {
   const forwardedFor = headers['x-forwarded-for']
   if (forwardedFor) {
     const first = (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)
-      ?.split(',')[0]?.trim()
+      ?.split(',')[0]
+      ?.trim()
     if (first) {
       return first
     }

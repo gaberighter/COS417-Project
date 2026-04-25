@@ -1,6 +1,7 @@
 # COS417 Project vs SDD v1.0 - Compliance Checklist
 
 ## ARCHITECTURE & TECH STACK ✅ (Mostly Complete)
+
 - [x] Nuxt 3 + Vue.js SSR framework
 - [x] Node.js server routes API layer
 - [x] MongoDB database with Mongoose ODM
@@ -13,6 +14,7 @@
 ## CORE COMPONENTS 🟡 (Partially Implemented)
 
 ### Auth Module (§4.1) 🟡
+
 - [x] SAML 2.0 integration (`server/middleware/saml.ts`)
 - [ ] ⚠️ Using dev stub with X-Dev-Role header - NOT production ready
 - [ ] ⚠️ No real JWT validation from SSO cookie
@@ -21,13 +23,15 @@
 - [ ] Missing: Production SSO configuration documentation
 
 ### Faculty UI - Preference Submission (§4.2) ❌
+
 - [ ] Preference form page NOT implemented
-- [ ] Spreadsheet upload (XLSX/CSV) NOT implemented  
+- [ ] Spreadsheet upload (XLSX/CSV) NOT implemented
 - [ ] Form validation with inline errors NOT visible
 - [ ] Drag-and-drop file upload NOT implemented
 - [ ] Only stub dashboard exists (`faculty_dashboard.vue`)
 
 ### Admin UI - Scheduling Control Panel (§4.3) ❌
+
 - [ ] Schedule viewer grid layout NOT implemented
 - [ ] Conflict resolution panel NOT implemented
 - [ ] Room management interface NOT implemented
@@ -36,6 +40,7 @@
 - [ ] Only placeholder dashboard exists
 
 ### API Layer (§4.5) 🟡
+
 - [x] Core endpoints implemented:
   - [x] GET/POST /api/rooms
   - [x] GET/POST /api/courses
@@ -53,6 +58,7 @@
 - [ ] Missing: API rate limiting
 
 ### Scheduling Engine (§4.6 / §6) ❌ **CRITICAL**
+
 - [ ] Algorithm stub only - NOT IMPLEMENTED
 - [ ] Phase 1: Input Collection - TODO
 - [ ] Phase 2: Tentative Schedule Generation - TODO
@@ -66,6 +72,7 @@
 - [ ] Difficult/hard-to-place course prioritization NOT implemented
 
 ### Audit Service (§4.7) 🟡 → ✅ (Mostly Complete)
+
 - [x] Basic audit logging exists (`auditService.ts`)
 - [x] Action logging on mutations
 - [x] User tracking (userId/covenantId)
@@ -76,6 +83,7 @@
 - [x] ✅ Deletion prevention at DB level (pre-hooks throw on delete/update)
 
 ### Export Service (§4.8) 🟡
+
 - [x] Banner CSV export implemented
 - [x] Column header mapping exists
 - [ ] ⚠️ Missing: Verification against actual Banner import template
@@ -88,6 +96,7 @@
 ## USER EXPERIENCE & ACCESSIBILITY (§4.4) ❌ **CRITICAL**
 
 ### Accessibility Compliance (WCAG 2.1 AA) ❌
+
 - [ ] No ARIA labels found in components
 - [ ] No keyboard navigation indicators
 - [ ] No focus management visible
@@ -99,6 +108,7 @@
 - [ ] Missing: Accessibility audit tools integrated
 
 ### Form UX & Validation ❌
+
 - [ ] Real-time field validation NOT visible
 - [ ] Inline error messages NOT implemented
 - [ ] Required field indicators NOT visible
@@ -109,12 +119,14 @@
 - [ ] Failed submission summary NOT visible
 
 ### Status Feedback & Loading States ❌
+
 - [ ] Algorithm execution progress indicator NOT visible
 - [ ] Upload progress NOT visible
 - [ ] Auto-refresh dashboard status NOT implemented
 - [ ] Loading state animations NOT visible
 
 ### UI Components ❌
+
 - [ ] No component library/design system found
 - [ ] Only stub `.vue` files exist (.gitkeep placeholders)
 - [ ] Composables structure exists but minimal implementation
@@ -124,23 +136,33 @@
 ## DATA DESIGN (§5) 🟡
 
 ### Collections ✅
+
 - [x] Room schema implemented with equipment flags
 - [x] CourseCatalog schema with typical defaults
 - [x] Professor schema with embedded preferences
 - [x] Schedule schema with assignments and conflicts
 - [x] AuditLog schema
 
-### Database Configuration 🟡
+### Database Configuration �
+
 - [x] MongoDB 6.x Mongoose setup
 - [x] Connection pooling with singleton pattern
 - [x] Index definitions on key collections
 - [x] Schema validation in Mongoose
+- [x] ✅ Encryption at rest (AES-256) - Implemented, NOT YET ACTIVE
+  - [x] AES-256-GCM field-level encryption utilities
+  - [x] Master key management and configuration
+  - [x] Mongoose middleware for automatic encryption/decryption
+  - [x] Migration script for existing data
+  - [x] Documentation and usage examples
+  - [ ] Schema middleware registration (ready to enable)
+  - [ ] Production KMS integration (recommended)
 - [ ] ⚠️ Replica set configuration NOT documented
 - [ ] Missing: Backup/recovery procedures
 - [ ] Missing: Connection monitoring
-- [ ] Missing: Encryption at rest (AES-256)
 
 ### Data Integrity ❌
+
 - [ ] No transaction support for multi-doc operations
 - [ ] Audit write rollback NOT implemented
 - [ ] No write-once enforcement on auditLogs
@@ -151,6 +173,7 @@
 ## SECURITY (§10) 🟡
 
 ### Authentication ⚠️
+
 - [x] SAML 2.0 framework selected
 - [ ] Production implementation NOT complete
 - [ ] Dev stub in use (X-Dev-Role header) - REMOVE BEFORE PRODUCTION
@@ -158,6 +181,7 @@
 - [ ] Token lifetime NOT specified
 
 ### Authorization ⚠️
+
 - [x] Role enum (Admin/Faculty) defined
 - [x] requireAuth() guard exists
 - [ ] Incomplete: RBAC not enforced consistently on all endpoints
@@ -165,11 +189,13 @@
 - [ ] Missing: Admin-only endpoint list validation
 
 ### Encryption ❌
+
 - [ ] TLS 1.2+ enforcement NOT visible (likely reverse proxy)
 - [ ] AES-256 at rest NOT configured
 - [ ] Sensitive data fields NOT encrypted in code
 
 ### Threat Model ❌
+
 - [ ] No NoSQL injection prevention visible
 - [ ] No XSS protection validation
 - [ ] No CSRF token implementation
@@ -177,6 +203,7 @@
 - [ ] No input sanitization middleware
 
 ### Security Audit ❌ **MANDATORY**
+
 - [ ] §10.5: Formal security review NOT COMPLETED
 - [ ] No pre-release audit documentation
 
@@ -185,12 +212,14 @@
 ## DEPLOYMENT (§11) ❌
 
 ### Environments ❌
+
 - [ ] Development environment setup documented
 - [ ] Staging (Kepler) environment NOT configured
 - [ ] Production environment NOT configured
 - [ ] .env configuration example exists but incomplete
 
 ### Deployment Pipeline ❌
+
 - [x] CI workflow exists (`.github/workflows/ci.yml`)
   - [x] Linting (Prettier)
   - [x] TypeScript checking
@@ -203,6 +232,7 @@
 - [ ] Production promotion process NOT documented
 
 ### Infrastructure ❌
+
 - [ ] Node.js LTS (18.x+) requirement documented but not enforced
 - [ ] MongoDB replica set configuration NOT documented
 - [ ] Reverse proxy TLS configuration NOT visible
@@ -215,6 +245,7 @@
 ## TESTING & QUALITY ❌
 
 ### Unit Tests ❌
+
 - [ ] No test files visible in project
 - [ ] No test runner (Jest/Vitest) configured
 - [ ] Missing: Scheduling engine algorithm tests
@@ -222,16 +253,19 @@
 - [ ] Missing: Audit service tests
 
 ### Integration Tests ❌
+
 - [ ] No API integration tests
 - [ ] No database tests
 - [ ] No end-to-end tests visible
 
 ### Accessibility Testing ❌
+
 - [ ] No axe-core or Pa11y integration
 - [ ] No automated a11y CI checks
 - [ ] No manual audit checkpoints
 
 ### Performance Testing ❌
+
 - [ ] No load testing configuration
 - [ ] Algorithm performance benchmarks NOT visible
 - [ ] CSV export performance NOT tested (target: <5 seconds)
@@ -241,6 +275,7 @@
 ## DOCUMENTATION ❌
 
 ### Code Documentation ❌
+
 - [ ] README.md is EMPTY
 - [ ] No JSDoc comments on functions
 - [ ] No inline code comments (except TODOs)
@@ -248,6 +283,7 @@
 - [ ] No data model diagrams
 
 ### Operational Documentation ❌
+
 - [ ] No deployment runbook
 - [ ] No troubleshooting guide
 - [ ] No environment setup guide
@@ -255,6 +291,7 @@
 - [ ] No disaster recovery procedures
 
 ### API Documentation ❌
+
 - [ ] No OpenAPI/Swagger documentation
 - [ ] No API endpoint listing with examples
 - [ ] No error code reference
@@ -264,6 +301,7 @@
 ## ERROR HANDLING (§9) 🟡
 
 ### Error Responses 🟡
+
 - [x] Try-catch blocks exist on endpoints
 - [ ] Inconsistent error message format
 - [ ] Not following §9.2 principles:
@@ -274,6 +312,7 @@
   - [ ] Internal errors may expose details
 
 ### Failure Modes ❌
+
 - [ ] SSO unavailable handling NOT clear
 - [ ] Database connection loss NOT documented
 - [ ] Algorithm failure modes NOT specified
