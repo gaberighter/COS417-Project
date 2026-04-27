@@ -43,6 +43,10 @@ export default defineEventHandler(async (event) => {
   }
 
   const removed = prof.preferences[submissionIndex]
+  if (!removed) {
+    throw new Error(`No preferences found for term: ${term}`)
+  }
+
   prof.preferences.splice(submissionIndex, 1)
 
   await prof.save()
