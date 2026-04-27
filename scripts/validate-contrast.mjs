@@ -40,16 +40,32 @@ const checks = [
   ['Secondary text on surface', 'colorTextSecondary', 'colorSurface'],
   ['Danger text on page', 'colorTextDanger', 'colorBg'],
   ['Primary button text', 'colorActionPrimaryText', 'colorActionPrimaryBg'],
-  ['Primary button text hover', 'colorActionPrimaryText', 'colorActionPrimaryBgHover'],
-  ['Secondary button text', 'colorActionSecondaryText', 'colorActionSecondaryBg'],
-  ['Secondary button text hover', 'colorActionSecondaryText', 'colorActionSecondaryBgHover'],
+  [
+    'Primary button text hover',
+    'colorActionPrimaryText',
+    'colorActionPrimaryBgHover',
+  ],
+  [
+    'Secondary button text',
+    'colorActionSecondaryText',
+    'colorActionSecondaryBg',
+  ],
+  [
+    'Secondary button text hover',
+    'colorActionSecondaryText',
+    'colorActionSecondaryBgHover',
+  ],
 ]
 
 const toRgb = (hex) => {
   const normalized = hex.replace('#', '')
-  const full = normalized.length === 3
-    ? normalized.split('').map((part) => part + part).join('')
-    : normalized
+  const full =
+    normalized.length === 3
+      ? normalized
+          .split('')
+          .map((part) => part + part)
+          .join('')
+      : normalized
 
   return [
     Number.parseInt(full.slice(0, 2), 16),
@@ -100,7 +116,9 @@ for (const [paletteName, palette] of Object.entries(palettes)) {
 }
 
 if (hasFailures) {
-  console.error(`\nContrast validation failed. All text + interactive checks must be at least ${MIN_CONTRAST}:1.`)
+  console.error(
+    `\nContrast validation failed. All text + interactive checks must be at least ${MIN_CONTRAST}:1.`,
+  )
   process.exit(1)
 }
 

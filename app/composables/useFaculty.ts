@@ -1,11 +1,7 @@
 export const useFaculty = () => {
-    const viewChangePreferences = async () => {
+  const viewChangePreferences = async () => {}
 
-    }
+  const addNewPreference = async () => {}
 
-    const addNewPreference = async () => {
-
-    }
-
-    return { viewChangePreferences, addNewPreference}
+  return { viewChangePreferences, addNewPreference }
 }

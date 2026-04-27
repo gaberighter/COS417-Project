@@ -10,7 +10,9 @@
         >
           {{ themeToggleLabel }}
         </button>
-        <span v-if="isLoggedIn" class="site-top-bar__auth-context">{{ authContextLabel }}</span>
+        <span v-if="isLoggedIn" class="site-top-bar__auth-context">{{
+          authContextLabel
+        }}</span>
         <button
           v-if="!isLoggedIn"
           class="site-top-bar__auth-btn"
@@ -89,7 +91,7 @@ const normalizeRoleLabel = (roleValue: string) => {
 }
 
 const getFunction = (candidate: unknown) => {
-  return typeof candidate === 'function' ? candidate as () => unknown : null
+  return typeof candidate === 'function' ? (candidate as () => unknown) : null
 }
 
 const isTopBarVisible = computed(() => {
@@ -109,7 +111,7 @@ const isLoggedIn = computed(() => {
 const userData = computed(() => {
   const userCandidate = unwrapMaybeRef(auth.user)
   return userCandidate && typeof userCandidate === 'object'
-    ? userCandidate as Record<string, unknown>
+    ? (userCandidate as Record<string, unknown>)
     : null
 })
 
@@ -127,7 +129,9 @@ const userRole = computed(() => {
   }
 
   if (Array.isArray(user.roles) && user.roles.length > 0) {
-    const firstRole = user.roles.find((role) => typeof role === 'string' && role.trim().length > 0)
+    const firstRole = user.roles.find(
+      (role) => typeof role === 'string' && role.trim().length > 0,
+    )
 
     if (typeof firstRole === 'string') {
       return normalizeRoleLabel(firstRole)
@@ -155,10 +159,10 @@ const canShowProfileAction = computed(() => {
   }
 
   return Boolean(
-    getFunction(auth.goToProfile)
-    || getFunction(auth.navigateToProfile)
-    || getFunction(auth.openProfile)
-    || typeof auth.profileRoute === 'string'
+    getFunction(auth.goToProfile) ||
+    getFunction(auth.navigateToProfile) ||
+    getFunction(auth.openProfile) ||
+    typeof auth.profileRoute === 'string',
   )
 })
 
@@ -173,9 +177,10 @@ const currentPageTitle = computed(() => {
     return metaTitle
   }
 
-  const fallbackSource = typeof route.name === 'string' && route.name.length > 0
-    ? route.name
-    : route.path
+  const fallbackSource =
+    typeof route.name === 'string' && route.name.length > 0
+      ? route.name
+      : route.path
 
   return fallbackSource
     .toString()
@@ -203,9 +208,10 @@ const handleLogout = async () => {
 }
 
 const handleProfileAction = async () => {
-  const profileAction = getFunction(auth.goToProfile)
-    ?? getFunction(auth.navigateToProfile)
-    ?? getFunction(auth.openProfile)
+  const profileAction =
+    getFunction(auth.goToProfile) ??
+    getFunction(auth.navigateToProfile) ??
+    getFunction(auth.openProfile)
 
   if (profileAction) {
     await profileAction()

@@ -1,15 +1,13 @@
 export const useAdmin = () => {
-    const viewExistingSchedule = async () => {
-        await navigateTo('/admin/schedule_viewer')
-    }
+  const viewExistingSchedule = async () => {
+    await navigateTo('/admin/schedule_viewer')
+  }
 
-    const createNewSchedule = () => {
+  const createNewSchedule = () => {}
 
-    }
+  const viewRoomData = async () => {
+    await navigateTo('/admin/room_viewer')
+  }
 
-    const viewRoomData = async () => {
-        await navigateTo('/admin/room_viewer')
-    }
-
-    return { viewExistingSchedule, createNewSchedule, viewRoomData }
+  return { viewExistingSchedule, createNewSchedule, viewRoomData }
 }
