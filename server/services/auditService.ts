@@ -3,6 +3,7 @@
 
 import type { AuthContext } from '../utils/auth'
 import { AuditLog, Professor, type IAuditLog } from '../models/index'
+export { getClientIpFromHeaders } from '../utils/ip'
 
 function toDetailText(
   action: string,
@@ -20,33 +21,8 @@ function toDetailText(
   return collection ? `${action} on ${collection}` : action
 }
 
-/**
- * Extract client IP address from request headers.
- * Checks X-Forwarded-For, X-Real-IP, and falls back to null.
- */
-export function getClientIpFromHeaders(
-  headers: Record<string, string | string[] | undefined>,
-): string | null {
-  const forwardedFor = headers['x-forwarded-for']
-  if (forwardedFor) {
-    const first = (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)
-      ?.split(',')[0]
-      ?.trim()
-    if (first) {
-      return first
-    }
-  }
-
-  const realIp = headers['x-real-ip']
-  if (realIp) {
-    const ip = Array.isArray(realIp) ? realIp[0] : realIp
-    if (ip?.trim()) {
-      return ip.trim()
-    }
-  }
-
-  return null
-}
+// `getClientIpFromHeaders` is provided by `server/utils/ip.ts` and re-exported
+// here to keep the audit service API stable while avoiding duplicate logic.
 
 export async function logAction(
   actor: AuthContext,

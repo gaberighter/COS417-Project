@@ -28,3 +28,32 @@ export function getClientIp(event: H3Event): string | null {
   // In production, rely on reverse proxy headers above
   return null
 }
+
+/**
+ * Extract client IP address from plain headers map.
+ * Accepts header values as `string | string[] | undefined`.
+ * Returns the first IP from `x-forwarded-for` or the value of `x-real-ip`.
+ */
+export function getClientIpFromHeaders(
+  headers: Record<string, string | string[] | undefined>,
+): string | null {
+  const forwardedFor = headers['x-forwarded-for']
+  if (forwardedFor) {
+    const first = (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)
+      ?.split(',')[0]
+      ?.trim()
+    if (first) {
+      return first
+    }
+  }
+
+  const realIp = headers['x-real-ip']
+  if (realIp) {
+    const ip = Array.isArray(realIp) ? realIp[0] : realIp
+    if (ip?.trim()) {
+      return ip.trim()
+    }
+  }
+
+  return null
+}

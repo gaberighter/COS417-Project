@@ -8,7 +8,6 @@ import {
   readBody,
   getQuery,
   setResponseHeaders,
-  getHeader,
 } from 'h3'
 import fs from 'fs'
 // @ts-expect-error - saml2-js does not currently publish TypeScript definitions.
@@ -24,27 +23,9 @@ const UsersCollection = Users as any
 
 let providers: SAMLProviders | null = null
 
-/**
- * Extract client IP address from H3 event headers.
- * Checks X-Forwarded-For, X-Real-IP in sequence.
- * TODO: Log authentication events using this IP in future integration
- */
-function getClientIp(event: H3Event): string | null {
-  const forwardedFor = getHeader(event, 'x-forwarded-for')
-  if (forwardedFor) {
-    const first = forwardedFor.split(',')[0]?.trim()
-    if (first) {
-      return first
-    }
-  }
-
-  const realIp = getHeader(event, 'x-real-ip')
-  if (realIp?.trim()) {
-    return realIp.trim()
-  }
-
-  return null
-}
+// Reuse shared helper for client IP extraction to avoid duplication
+// and ensure a single source of truth for header parsing.
+import { getClientIp } from '../utils/ip'
 
 function readFileOrThrow(path: string, label: string) {
   if (!fs.existsSync(path)) {

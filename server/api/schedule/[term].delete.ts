@@ -16,11 +16,8 @@ export default defineEventHandler(async (event) => {
   await connectDB()
 
   const term = getRouterParam(event, 'term')
-  if (!term) {
-    throw createError({ statusCode: 400, statusMessage: 'term is required' })
-  }
-  if (!TERM_PATTERN.test(term)) {
-    throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
+  if (!term || !TERM_PATTERN.test(term)) {
+    throw new Error('Invalid term format')
   }
 
   const query = getQuery(event)
@@ -53,10 +50,7 @@ export default defineEventHandler(async (event) => {
       runNumber !== undefined
         ? `${term} run ${runNumber}`
         : `latest schedule for ${term}`
-    throw createError({
-      statusCode: 404,
-      statusMessage: `Schedule not found: ${detail}`,
-    })
+    throw new Error(`Schedule not found: ${detail}`)
   }
 
   await logAction(

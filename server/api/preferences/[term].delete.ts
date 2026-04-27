@@ -2,7 +2,7 @@
 // DELETE /api/preferences/:term — remove all preferences for current user for a term.
 // Role: Faculty — removes their own preferences only
 
-import { defineEventHandler, getRouterParam } from 'h3'
+import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Professor } from '../../models/index'
@@ -15,7 +15,8 @@ export default defineEventHandler(async (event) => {
 
   const term = getRouterParam(event, 'term')
   if (!term || !term.trim()) {
-    throw new Error('Term is required')
+    // Missing or empty term is a client error — return 400 instead of a 500.
+    throw createError({ statusCode: 400, statusMessage: 'Term is required' })
   }
 
   const clientIp = getClientIp(event)
@@ -30,7 +31,8 @@ export default defineEventHandler(async (event) => {
   }).exec()
 
   if (!prof) {
-    throw new Error('Professor record not found')
+    // The requesting professor must exist in the DB — return 404 when not found.
+    throw createError({ statusCode: 404, statusMessage: 'Professor record not found' })
   }
 
   // Find and remove the preference submission for this term
@@ -39,12 +41,14 @@ export default defineEventHandler(async (event) => {
   )
 
   if (submissionIndex < 0) {
-    throw new Error(`No preferences found for term: ${term}`)
+    // No preferences submitted for this term — return 404 to the client.
+    throw createError({ statusCode: 404, statusMessage: `No preferences found for term: ${term}` })
   }
 
   const removed = prof.preferences[submissionIndex]
   if (!removed) {
-    throw new Error(`No preferences found for term: ${term}`)
+    // Defensive: if slice index exists but item missing, treat as not found.
+    throw createError({ statusCode: 404, statusMessage: `No preferences found for term: ${term}` })
   }
 
   prof.preferences.splice(submissionIndex, 1)

@@ -2,7 +2,7 @@
 // DELETE /api/professors/:id — remove a professor by _id or covenantId.
 // Role: Admin
 
-import { defineEventHandler, getRouterParam } from 'h3'
+import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Professor } from '../../models/index'
@@ -15,7 +15,8 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')
   if (!id || !id.trim()) {
-    throw new Error('Professor id is required')
+    // Missing or empty id is a client error — return 400 instead of a 500.
+    throw createError({ statusCode: 400, statusMessage: 'Professor id is required' })
   }
 
   const clientIp = getClientIp(event)
@@ -29,7 +30,8 @@ export default defineEventHandler(async (event) => {
     .exec()
 
   if (!deleted) {
-    throw new Error(`Professor not found: ${professorId}`)
+    // Return 404 when the requested professor doesn't exist.
+    throw createError({ statusCode: 404, statusMessage: `Professor not found: ${professorId}` })
   }
 
   await logAction(

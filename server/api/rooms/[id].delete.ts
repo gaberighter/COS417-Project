@@ -2,7 +2,7 @@
 // DELETE /api/rooms/:id — remove a room by abbreviation/_id.
 // Role: Admin
 
-import { defineEventHandler, getRouterParam } from 'h3'
+import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Room } from '../../models/index'
@@ -15,7 +15,8 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')
   if (!id || !id.trim()) {
-    throw new Error('Room id is required')
+    // Missing or empty id is a client error — return 400 instead of a 500.
+    throw createError({ statusCode: 400, statusMessage: 'Room id is required' })
   }
 
   const clientIp = getClientIp(event)
@@ -25,7 +26,8 @@ export default defineEventHandler(async (event) => {
   const deleted = await Room.findOneAndDelete({ _id: roomId }).lean().exec()
 
   if (!deleted) {
-    throw new Error(`Room not found: ${roomId}`)
+    // Return 404 when the requested room doesn't exist.
+    throw createError({ statusCode: 404, statusMessage: `Room not found: ${roomId}` })
   }
 
   await logAction(

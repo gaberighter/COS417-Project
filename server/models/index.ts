@@ -360,29 +360,55 @@ auditLogSchema.pre('validate', function setAuditId() {
   }
 })
 
-// Prevent deletion of audit logs (write-once enforcement)
-auditLogSchema.pre('deleteOne', function preventDelete() {
+// Prevent deletion and mutation of audit logs (write-once enforcement)
+function preventAuditLogDelete() {
   throw new Error('Audit logs cannot be deleted')
-})
+}
 
-auditLogSchema.pre('findOneAndDelete', function preventDelete() {
-  throw new Error('Audit logs cannot be deleted')
-})
-
-auditLogSchema.pre('deleteMany', function preventDelete() {
-  throw new Error('Audit logs cannot be deleted')
-})
-
-auditLogSchema.pre('updateOne', function preventUpdate() {
+function preventAuditLogUpdate() {
   throw new Error('Audit logs are immutable and cannot be updated')
+}
+
+// Register both query and document middleware where supported so the
+// prevention runs for calls like `Model.deleteOne()` and document method
+// calls like `doc.deleteOne()`.
+auditLogSchema.pre(
+  'deleteOne',
+  { query: true, document: true },
+  function preventDeleteOne() {
+    preventAuditLogDelete()
+  },
+)
+auditLogSchema.pre('findOneAndDelete', function preventFindOneAndDelete() {
+  preventAuditLogDelete()
+})
+auditLogSchema.pre('deleteMany', function preventDeleteMany() {
+  preventAuditLogDelete()
 })
 
-auditLogSchema.pre('findOneAndUpdate', function preventUpdate() {
-  throw new Error('Audit logs are immutable and cannot be updated')
+auditLogSchema.pre(
+  'updateOne',
+  { query: true, document: true },
+  function preventUpdateOne() {
+    preventAuditLogUpdate()
+  },
+)
+auditLogSchema.pre('findOneAndUpdate', function preventFindOneAndUpdate() {
+  preventAuditLogUpdate()
+})
+auditLogSchema.pre('updateMany', function preventUpdateMany() {
+  preventAuditLogUpdate()
 })
 
-auditLogSchema.pre('updateMany', function preventUpdate() {
-  throw new Error('Audit logs are immutable and cannot be updated')
+// Cover replacements and bulk operations as well
+auditLogSchema.pre('replaceOne', function preventReplaceOne() {
+  preventAuditLogUpdate()
+})
+auditLogSchema.pre('findOneAndReplace', function preventFindOneAndReplace() {
+  preventAuditLogUpdate()
+})
+auditLogSchema.pre('bulkWrite', function preventBulkWrite() {
+  preventAuditLogUpdate()
 })
 
 roomSchema.index({ abbreviation: 1 }, { unique: true })
