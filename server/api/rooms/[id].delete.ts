@@ -27,7 +27,10 @@ export default defineEventHandler(async (event) => {
 
   if (!deleted) {
     // Return 404 when the requested room doesn't exist.
-    throw createError({ statusCode: 404, statusMessage: `Room not found: ${roomId}` })
+    throw createError({
+      statusCode: 404,
+      statusMessage: `Room not found: ${roomId}`,
+    })
   }
 
   await logAction(

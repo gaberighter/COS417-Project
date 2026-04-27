@@ -16,7 +16,10 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   if (!id || !id.trim()) {
     // Missing or empty id is a client error — return 400 instead of a 500.
-    throw createError({ statusCode: 400, statusMessage: 'Course id is required' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Course id is required',
+    })
   }
 
   const clientIp = getClientIp(event)
@@ -29,7 +32,10 @@ export default defineEventHandler(async (event) => {
 
   if (!deleted) {
     // Return 404 when the requested course _id doesn't exist.
-    throw createError({ statusCode: 404, statusMessage: `Course not found: ${courseId}` })
+    throw createError({
+      statusCode: 404,
+      statusMessage: `Course not found: ${courseId}`,
+    })
   }
 
   await logAction(

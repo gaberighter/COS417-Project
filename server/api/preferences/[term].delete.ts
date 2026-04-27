@@ -32,7 +32,10 @@ export default defineEventHandler(async (event) => {
 
   if (!prof) {
     // The requesting professor must exist in the DB — return 404 when not found.
-    throw createError({ statusCode: 404, statusMessage: 'Professor record not found' })
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Professor record not found',
+    })
   }
 
   // Find and remove the preference submission for this term
@@ -42,13 +45,19 @@ export default defineEventHandler(async (event) => {
 
   if (submissionIndex < 0) {
     // No preferences submitted for this term — return 404 to the client.
-    throw createError({ statusCode: 404, statusMessage: `No preferences found for term: ${term}` })
+    throw createError({
+      statusCode: 404,
+      statusMessage: `No preferences found for term: ${term}`,
+    })
   }
 
   const removed = prof.preferences[submissionIndex]
   if (!removed) {
     // Defensive: if slice index exists but item missing, treat as not found.
-    throw createError({ statusCode: 404, statusMessage: `No preferences found for term: ${term}` })
+    throw createError({
+      statusCode: 404,
+      statusMessage: `No preferences found for term: ${term}`,
+    })
   }
 
   prof.preferences.splice(submissionIndex, 1)

@@ -16,7 +16,10 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   if (!id || !id.trim()) {
     // Missing or empty id is a client error — return 400 instead of a 500.
-    throw createError({ statusCode: 400, statusMessage: 'Professor id is required' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Professor id is required',
+    })
   }
 
   const clientIp = getClientIp(event)
@@ -31,7 +34,10 @@ export default defineEventHandler(async (event) => {
 
   if (!deleted) {
     // Return 404 when the requested professor doesn't exist.
-    throw createError({ statusCode: 404, statusMessage: `Professor not found: ${professorId}` })
+    throw createError({
+      statusCode: 404,
+      statusMessage: `Professor not found: ${professorId}`,
+    })
   }
 
   await logAction(
