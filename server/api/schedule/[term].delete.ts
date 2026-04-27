@@ -2,7 +2,7 @@
 // DELETE /api/schedule/:term — remove a schedule run by term (and optional runNumber query param).
 // Role: Admin
 
-import { defineEventHandler, getRouterParam, getQuery } from 'h3'
+import { defineEventHandler, getRouterParam, getQuery, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Schedule } from '../../models/index'
@@ -16,20 +16,35 @@ export default defineEventHandler(async (event) => {
   await connectDB()
 
   const term = getRouterParam(event, 'term')
-  if (!term || !TERM_PATTERN.test(term)) {
-    throw new Error('Invalid term format')
+  if (!term) {
+    throw createError({ statusCode: 400, statusMessage: 'term is required' })
+  }
+  if (!TERM_PATTERN.test(term)) {
+    throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
   }
 
   const query = getQuery(event)
-  const runNumber = query.runNumber ? Number(query.runNumber) : undefined
+
+  // Treat "param present" separately from "valid number"
+  let runNumber: number | undefined
+  if (query.runNumber !== undefined) {
+    const parsed = Number(query.runNumber)
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'runNumber must be a positive integer',
+      })
+    }
+    runNumber = parsed
+  }
 
   const clientIp = getClientIp(event)
 
   // Build filter: if runNumber provided, delete specific run; otherwise delete latest
-  const filter = runNumber ? { term, runNumber: Number(runNumber) } : { term }
+  const filter = runNumber !== undefined ? { term, runNumber } : { term }
 
   const deleted = await Schedule.findOneAndDelete(filter)
-    .sort(runNumber ? undefined : { runNumber: -1 })
+    .sort(runNumber !== undefined ? undefined : { runNumber: -1 })
     .lean()
     .exec()
 
@@ -38,7 +53,10 @@ export default defineEventHandler(async (event) => {
       runNumber !== undefined
         ? `${term} run ${runNumber}`
         : `latest schedule for ${term}`
-    throw new Error(`Schedule not found: ${detail}`)
+    throw createError({
+      statusCode: 404,
+      statusMessage: `Schedule not found: ${detail}`,
+    })
   }
 
   await logAction(
