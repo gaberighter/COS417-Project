@@ -271,328 +271,44 @@
 </template>
 
 <script setup lang="ts">
+import { useRoomCRUD } from '~/composables/useRoomCRUD'
+import { useRoomFilters } from '~/composables/useRoomFilters'
+import { useRoomForm } from '~/composables/useRoomForm'
+
 definePageMeta({
     pageTitle: 'Room Viewer',
 })
 
-interface RoomEquipment {
-    projector: boolean
-    smartboard: boolean
-    whiteboard: boolean
-    piano: boolean
-    labStations: boolean
-    computers: boolean
-    outlets: boolean
-}
+// Composables
+const { rooms, pending, error, loadRooms, retryLoad, deleteRoom } = useRoomCRUD()
+const { filters, appliedFilters, filteredRooms, roomTypeOptions, applyFilters, resetFilters } = useRoomFilters(rooms)
+const {
+    showAddRoomModal,
+    isEditMode,
+    buildingCodeError,
+    roomTypeValidationError,
+    actionMessage,
+    newRoomForm,
+    openAddRoomModal,
+    openEditRoomModal,
+    closeAddRoomModal,
+    submitNewRoom,
+    validateRoomTypeForLabStations,
+} = useRoomForm(loadRooms)
 
-interface Room {
-    buildingCode: string
-    roomNumber: string
-    displayName: string
-    capacity: number
-    roomType: string
-    available: boolean
-    equipment: RoomEquipment
-}
-
-type BooleanFilter = 'any' | 'true' | 'false'
-
-interface RoomFilters {
-    buildingCode: string
-    roomNumber: string
-    displayName: string
-    roomType: string
-    capacityMin: number | null
-    capacityMax: number | null
-    available: BooleanFilter
-    projector: BooleanFilter
-    smartboard: BooleanFilter
-    whiteboard: BooleanFilter
-    piano: BooleanFilter
-    labStations: BooleanFilter
-    computers: BooleanFilter
-    outlets: BooleanFilter
-}
-
-const rooms = ref<Room[]>([])
-const pending = ref(false)
-const error = ref<Error | null>(null)
-
-const loadRooms = async () => {
-    pending.value = true
-    error.value = null
-    try {
-        rooms.value = await $fetch<Room[]>('/api/rooms', {
-            headers: { 'x-dev-role': 'Admin' }
-        })
-    } catch (e) {
-        error.value = e as Error
-    } finally {
-        pending.value = false
-    }
-}
-
-onMounted(loadRooms)
-
+// Navigation
 const { redirectToLogin, redirectToAdmin } = useDebugNavigation()
 
-const createDefaultFilters = (): RoomFilters => ({
-    buildingCode: '',
-    roomNumber: '',
-    displayName: '',
-    roomType: '',
-    capacityMin: null,
-    capacityMax: null,
-    available: 'any',
-    projector: 'any',
-    smartboard: 'any',
-    whiteboard: 'any',
-    piano: 'any',
-    labStations: 'any',
-    computers: 'any',
-    outlets: 'any',
-})
+// Lifecycle
+onMounted(loadRooms)
 
-const filters = reactive<RoomFilters>(createDefaultFilters())
-const appliedFilters = reactive<RoomFilters>(createDefaultFilters())
-
-const roomTypeOptions = computed(() => {
-    const uniqueTypes = new Set(
-        rooms.value
-            .map((room) => room.roomType)
-            .filter((roomType) => roomType && roomType.trim().length > 0)
-    )
-
-    return Array.from(uniqueTypes).sort((left, right) => left.localeCompare(right))
-})
-
-const includesInsensitive = (value: string, query: string) => {
-    return value.toLowerCase().includes(query.trim().toLowerCase())
-}
-
-const matchesBooleanFilter = (value: boolean, filter: BooleanFilter) => {
-    if (filter === 'any') {
-        return true
-    }
-
-    return filter === 'true' ? value : !value
-}
-
-const filteredRooms = computed(() => {
-    return rooms.value.filter((room) => {
-        if (appliedFilters.buildingCode && !includesInsensitive(room.buildingCode, appliedFilters.buildingCode)) {
-            return false
-        }
-
-        if (appliedFilters.roomNumber && !includesInsensitive(room.roomNumber, appliedFilters.roomNumber)) {
-            return false
-        }
-
-        if (appliedFilters.displayName && !includesInsensitive(room.displayName ?? '', appliedFilters.displayName)) {
-            return false
-        }
-
-        if (appliedFilters.roomType && room.roomType !== appliedFilters.roomType) {
-            return false
-        }
-
-        if (appliedFilters.capacityMin !== null && room.capacity < appliedFilters.capacityMin) {
-            return false
-        }
-
-        if (appliedFilters.capacityMax !== null && room.capacity > appliedFilters.capacityMax) {
-            return false
-        }
-
-        if (!matchesBooleanFilter(room.available, appliedFilters.available)) {
-            return false
-        }
-
-        if (!matchesBooleanFilter(room.equipment.projector, appliedFilters.projector)) {
-            return false
-        }
-
-        if (!matchesBooleanFilter(room.equipment.smartboard, appliedFilters.smartboard)) {
-            return false
-        }
-
-        if (!matchesBooleanFilter(room.equipment.whiteboard, appliedFilters.whiteboard)) {
-            return false
-        }
-
-        if (!matchesBooleanFilter(room.equipment.piano, appliedFilters.piano)) {
-            return false
-        }
-
-        if (!matchesBooleanFilter(room.equipment.labStations, appliedFilters.labStations)) {
-            return false
-        }
-
-        if (!matchesBooleanFilter(room.equipment.computers, appliedFilters.computers)) {
-            return false
-        }
-
-        if (!matchesBooleanFilter(room.equipment.outlets, appliedFilters.outlets)) {
-            return false
-        }
-
-        return true
-    })
-})
-
+// Utilities
 const formatBoolean = (value: boolean) => (value ? 'Yes' : 'No')
-const retryLoad = () => loadRooms()
-const applyFilters = () => {
-    Object.assign(appliedFilters, filters)
-}
-const resetFilters = () => {
-    Object.assign(filters, createDefaultFilters())
-    Object.assign(appliedFilters, createDefaultFilters())
-}
-
-// Room creation form state
-const showAddRoomModal = ref(false)
-const isEditMode = ref(false)
-const buildingCodeError = ref('')
-const roomTypeValidationError = ref('')
-const actionMessage = ref('')
-
-interface NewRoomForm {
-    buildingCode: string
-    roomNumber: string
-    displayName: string
-    capacity: number | null
-    roomType: string
-    available: boolean
-    equipment: RoomEquipment
-}
-
-const createEmptyRoomForm = (): NewRoomForm => ({
-    buildingCode: '',
-    roomNumber: '',
-    displayName: '',
-    capacity: null,
-    roomType: '',
-    available: true,
-    equipment: {
-        projector: false,
-        smartboard: false,
-        whiteboard: false,
-        piano: false,
-        labStations: false,
-        computers: false,
-        outlets: true,
-    },
-})
-
-const newRoomForm = reactive<NewRoomForm>(createEmptyRoomForm())
-
-const openAddRoomModal = () => {
-    isEditMode.value = false
-    Object.assign(newRoomForm, createEmptyRoomForm())
-    buildingCodeError.value = ''
-    roomTypeValidationError.value = ''
-    actionMessage.value = ''
-    showAddRoomModal.value = true
-}
-
-const openEditRoomModal = (room: Room) => {
-    isEditMode.value = true
-    actionMessage.value = ''
-    Object.assign(newRoomForm, {
-        buildingCode: room.buildingCode,
-        roomNumber: room.roomNumber,
-        displayName: room.displayName,
-        capacity: room.capacity,
-        roomType: room.roomType,
-        available: room.available,
-        equipment: {
-            projector: room.equipment.projector,
-            smartboard: room.equipment.smartboard,
-            whiteboard: room.equipment.whiteboard,
-            piano: room.equipment.piano,
-            labStations: room.equipment.labStations,
-            computers: room.equipment.computers,
-            outlets: room.equipment.outlets,
-        },
-    })
-    showAddRoomModal.value = true
-}
-
-const closeAddRoomModal = () => {
-    showAddRoomModal.value = false
-    isEditMode.value = false
-    Object.assign(newRoomForm, createEmptyRoomForm())
-    buildingCodeError.value = ''
-    roomTypeValidationError.value = ''
-}
 
 const getStatusText = (available: boolean) => (available ? 'Available' : 'Unavailable')
 
 const getStatusClass = (available: boolean) => {
     return available ? 'status-badge status-badge--available' : 'status-badge status-badge--unavailable'
-}
-
-const deleteRoom = async (room: Room) => {
-    const shouldDelete = window.confirm(`Delete room ${room.buildingCode} ${room.roomNumber}?`)
-    if (!shouldDelete) {
-        return
-    }
-
-    actionMessage.value = 'Delete is not available yet on the backend. Add a DELETE /api/rooms route to enable it.'
-}
-
-const validateBuildingCode = (): boolean => {
-    const regex = /^[A-Z]{2,4}$/
-    if (!regex.test(newRoomForm.buildingCode)) {
-        buildingCodeError.value = 'Building code must be 2-4 uppercase letters'
-        return false
-    }
-    buildingCodeError.value = ''
-    return true
-}
-
-const validateRoomTypeForLabStations = () => {
-    if (newRoomForm.equipment.labStations && newRoomForm.roomType !== 'lab') {
-        roomTypeValidationError.value = 'Lab stations require room type to be "Lab"'
-    } else {
-        roomTypeValidationError.value = ''
-    }
-}
-
-const submitNewRoom = async () => {
-    // Validate building code
-    if (!validateBuildingCode()) {
-        return
-    }
-
-    // Validate room type if lab stations selected
-    if (newRoomForm.equipment.labStations && newRoomForm.roomType !== 'lab') {
-        roomTypeValidationError.value = 'Lab stations require room type to be "Lab"'
-        return
-    }
-
-    try {
-        await $fetch('/api/rooms', {
-            method: 'POST',
-            body: {
-                buildingCode: newRoomForm.buildingCode.toUpperCase(),
-                roomNumber: newRoomForm.roomNumber,
-                displayName: newRoomForm.displayName,
-                capacity: newRoomForm.capacity,
-                roomType: newRoomForm.roomType,
-                available: newRoomForm.available,
-                equipment: newRoomForm.equipment,
-            },
-            headers: { 'x-dev-role': 'Admin' },
-        })
-        actionMessage.value = isEditMode.value ? 'Room updated.' : 'Room created.'
-        await loadRooms()
-        closeAddRoomModal()
-    } catch (e) {
-        console.error('Failed to create room:', e)
-        error.value = e as Error
-    }
 }
 </script>
 
