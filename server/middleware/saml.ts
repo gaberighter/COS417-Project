@@ -10,6 +10,7 @@ import {
   setResponseHeaders,
 } from 'h3'
 import fs from 'fs'
+import mongoose from 'mongoose'
 // @ts-expect-error - saml2-js does not currently publish TypeScript definitions.
 import saml2 from 'saml2-js'
 
@@ -180,7 +181,7 @@ export default defineEventHandler(async (event: H3Event) => {
               'oracleUser' in samlUser
                 ? samlUser.oracleUser
                 : lookupOracleUser(samlUser.email)
-            const roles = getRoles(username)
+            const roles = await getRoles(username, samlUser.email)
 
             // Look up the user and create the session payload.
             const user: Record<string, unknown> = {
@@ -262,7 +263,23 @@ export default defineEventHandler(async (event: H3Event) => {
   }
 
   if (apiIndex !== -1 && !urlObj.pathname.endsWith('/api/_auth/session')) {
-    await requireUserSession(event)
+    const session = await requireUserSession(event)
+    const roles: string[] = session.user.roles as string[]
+
+    const isAdminRoute = urlObj.pathname.startsWith('/api/admin')
+    const isFacultyRoute = urlObj.pathname.startsWith('/api/faculty')
+
+    if (isAdminRoute && !roles.includes('REGISTRAR')) {
+      throw createError({ statusCode: 403, statusMessage: 'Access denied' })
+    }
+
+    if (
+      isFacultyRoute &&
+      !roles.includes('FACULTY') &&
+      !roles.includes('REGISTRAR')
+    ) {
+      throw createError({ statusCode: 403, statusMessage: 'Access denied' })
+    }
   }
 })
 
@@ -274,7 +291,32 @@ function lookupOracleUser(email: string) {
   ).toUpperCase()
 }
 
-// Just a list of role names. Oracle roles are all-caps.
-function getRoles(_user: string) {
-  return ['REGISTRAR']
+// Temporary hardcoded list of registrar covenantIds until we have a proper Registrar collection in the database.
+const REGISTRAR_USERNAMES = [
+  'maximus.mueller',
+  'jacob.eldridge',
+  'grant.widener',
+  'graham.widener',
+  'gabe.righter',
+  'jon.moon',
+]
+
+async function getRoles(username: string, email: string): Promise<string[]> {
+  const roles: string[] = []
+
+  const covenantId = email.substring(0, email.indexOf('@'))
+
+  if (REGISTRAR_USERNAMES.includes(covenantId)) {
+    roles.push('REGISTRAR')
+  }
+
+  const professor = await mongoose.connection.db
+    .collection('professors')
+    .findOne({ covenantId })
+
+  if (professor) {
+    roles.push('FACULTY')
+  }
+
+  return roles
 }
