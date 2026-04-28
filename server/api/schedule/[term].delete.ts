@@ -17,7 +17,10 @@ export default defineEventHandler(async (event) => {
 
   const term = getRouterParam(event, 'term')
   if (!term || !TERM_PATTERN.test(term)) {
-    throw new Error('Invalid term format')
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Invalid term format',
+    })
   }
 
   const query = getQuery(event)
@@ -40,17 +43,21 @@ export default defineEventHandler(async (event) => {
   // Build filter: if runNumber provided, delete specific run; otherwise delete latest
   const filter = runNumber !== undefined ? { term, runNumber } : { term }
 
-  const deleted = await Schedule.findOneAndDelete(filter)
-    .sort(runNumber !== undefined ? undefined : { runNumber: -1 })
-    .lean()
-    .exec()
+  let deleteQuery = Schedule.findOneAndDelete(filter)
+  if (runNumber === undefined) {
+    deleteQuery = deleteQuery.sort({ runNumber: -1 })
+  }
+  const deleted = await deleteQuery.lean().exec()
 
   if (!deleted) {
     const detail =
       runNumber !== undefined
         ? `${term} run ${runNumber}`
         : `latest schedule for ${term}`
-    throw new Error(`Schedule not found: ${detail}`)
+    throw createError({
+      statusCode: 404,
+      statusMessage: `Schedule not found: ${detail}`,
+    })
   }
 
   await logAction(

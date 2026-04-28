@@ -23,10 +23,6 @@ const UsersCollection = Users as any
 
 let providers: SAMLProviders | null = null
 
-// Reuse shared helper for client IP extraction to avoid duplication
-// and ensure a single source of truth for header parsing.
-import { getClientIp } from '../utils/ip'
-
 function readFileOrThrow(path: string, label: string) {
   if (!fs.existsSync(path)) {
     console.error(`${label} file not found`, { path })
