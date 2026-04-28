@@ -174,7 +174,10 @@ export default defineEventHandler(async (event: H3Event) => {
 
               // Log only attribute keys by default to avoid leaking PII in logs.
               const samlAttributeKeys = Object.keys(samlUser || {})
-              console.log('[SAML] attribute keys:', samlAttributeKeys.join(', '))
+              console.log(
+                '[SAML] attribute keys:',
+                samlAttributeKeys.join(', '),
+              )
 
               // Allow full attribute logging only when explicitly enabled for debugging.
               if (process.env.SAML_DEBUG_ATTRIBUTES === 'true') {
