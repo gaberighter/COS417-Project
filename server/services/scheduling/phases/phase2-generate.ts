@@ -1,14 +1,21 @@
 import type { CourseWorkItem } from '../types'
 
-function difficultyScore(workItem: CourseWorkItem, maxEnrollment: number): number {
+function difficultyScore(
+  workItem: CourseWorkItem,
+  maxEnrollment: number,
+): number {
   const enrollmentScore =
     workItem.expectedEnrollment === null || maxEnrollment === 0
       ? 0
-      : Math.min(20, Math.round((workItem.expectedEnrollment / maxEnrollment) * 20))
+      : Math.min(
+          20,
+          Math.round((workItem.expectedEnrollment / maxEnrollment) * 20),
+        )
 
   const preferredDayScore = workItem.preferredDays.length === 1 ? 10 : 0
   const preferredTimeScore = workItem.preferredTimes.length === 1 ? 10 : 0
-  const corequisiteScore = workItem.coreqWith.length > 0 ? workItem.coreqWith.length * 5 : 0
+  const corequisiteScore =
+    workItem.coreqWith.length > 0 ? workItem.coreqWith.length * 5 : 0
 
   return (
     (workItem.course.labComponent ? 30 : 0) +
@@ -27,7 +34,9 @@ function difficultyScore(workItem: CourseWorkItem, maxEnrollment: number): numbe
  * @param workItems - Unordered work items produced by input collection.
  * @returns A new array ordered by descending difficulty.
  */
-export function sortByDifficulty(workItems: CourseWorkItem[]): CourseWorkItem[] {
+export function sortByDifficulty(
+  workItems: CourseWorkItem[],
+): CourseWorkItem[] {
   const maxEnrollment = workItems.reduce((highest, item) => {
     if (item.expectedEnrollment === null) {
       return highest

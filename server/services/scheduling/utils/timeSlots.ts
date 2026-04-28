@@ -83,7 +83,9 @@ export function generateAllSlots(creditHours = 3): TimeSlot[] {
       slots.push({
         days,
         startTime,
-        endTime: formatTime(parseTime(startTime) + patternDuration(days, creditHours)),
+        endTime: formatTime(
+          parseTime(startTime) + patternDuration(days, creditHours),
+        ),
       })
     }
   }
@@ -99,7 +101,11 @@ export function generateAllSlots(creditHours = 3): TimeSlot[] {
  * @param creditHours - Course credit hours; higher values stretch slot length.
  * @returns The computed end time in HH:MM format.
  */
-export function computeEndTime(startTime: string, days: DayPattern, creditHours: number): string {
+export function computeEndTime(
+  startTime: string,
+  days: DayPattern,
+  creditHours: number,
+): string {
   return formatTime(parseTime(startTime) + patternDuration(days, creditHours))
 }
 

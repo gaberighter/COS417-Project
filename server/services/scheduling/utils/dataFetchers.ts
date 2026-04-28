@@ -28,7 +28,10 @@ function normalizeDayPattern(value: string): DayPattern {
   return 'MWF'
 }
 
-function deriveBuildingCode(abbreviation: string | null | undefined, buildingName: string | null | undefined): string {
+function deriveBuildingCode(
+  abbreviation: string | null | undefined,
+  buildingName: string | null | undefined,
+): string {
   if (abbreviation !== null && abbreviation !== undefined) {
     const trimmedAbbreviation = abbreviation.trim()
     if (trimmedAbbreviation.length > 0) {
@@ -76,7 +79,9 @@ function cloneCourse(course: ICourse): Course {
     labComponent: course.labComponent,
     active: course.active,
     typicalProfessor: course.typicalProfessor ?? null,
-    typicalDays: course.typicalDays ? normalizeDayPattern(course.typicalDays) : null,
+    typicalDays: course.typicalDays
+      ? normalizeDayPattern(course.typicalDays)
+      : null,
     typicalTime: course.typicalTime ?? null,
     requiredEquipment: [...course.requiredEquipment],
     prerequisites: [...course.prerequisites],
@@ -84,12 +89,16 @@ function cloneCourse(course: ICourse): Course {
   }
 }
 
-function clonePreferenceSubmission(submission: IPreferenceSubmission): PreferenceSubmission {
+function clonePreferenceSubmission(
+  submission: IPreferenceSubmission,
+): PreferenceSubmission {
   return {
     term: submission.term,
     department: submission.department,
     submittedBy: submission.submittedBy,
-    submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : null,
+    submittedAt: submission.submittedAt
+      ? new Date(submission.submittedAt)
+      : null,
     status: submission.status,
     courses: submission.courses.map((course) => ({
       courseId: course.courseId,
@@ -97,7 +106,9 @@ function clonePreferenceSubmission(submission: IPreferenceSubmission): Preferenc
       expectedEnrollment: course.expectedEnrollment,
       maxCapacity: course.maxCapacity ?? null,
       creditHours: course.creditHours,
-      preferredDays: [...(course.preferredDays ?? [])].map((days) => normalizeDayPattern(days)),
+      preferredDays: [...(course.preferredDays ?? [])].map((days) =>
+        normalizeDayPattern(days),
+      ),
       preferredTimes: [...(course.preferredTimes ?? [])],
       avoidTimes: [...(course.avoidTimes ?? [])],
       requiredEquipment: [...(course.requiredEquipment ?? [])],
@@ -141,7 +152,9 @@ export async function fetchRooms(): Promise<Room[]> {
  */
 export async function fetchCourses(): Promise<Course[]> {
   await connectDB()
-  const courses = await CourseCatalog.find({ active: true }).lean<ICourse[]>().exec()
+  const courses = await CourseCatalog.find({ active: true })
+    .lean<ICourse[]>()
+    .exec()
   return courses.map((course) => cloneCourse(course))
 }
 
@@ -152,7 +165,9 @@ export async function fetchCourses(): Promise<Course[]> {
  */
 export async function fetchProfessors(): Promise<Professor[]> {
   await connectDB()
-  const professors = await ProfessorModel.find({ active: true }).lean<IProfessor[]>().exec()
+  const professors = await ProfessorModel.find({ active: true })
+    .lean<IProfessor[]>()
+    .exec()
   return professors.map((professor) => cloneProfessor(professor))
 }
 
@@ -162,10 +177,14 @@ export async function fetchProfessors(): Promise<Professor[]> {
  * @param term - Academic term identifier.
  * @returns Flattened preference records for the requested term.
  */
-export async function fetchPreferences(term: string): Promise<PreferenceRecord[]> {
+export async function fetchPreferences(
+  term: string,
+): Promise<PreferenceRecord[]> {
   await connectDB()
 
-  const professors = await ProfessorModel.find({ active: true }).lean<IProfessor[]>().exec()
+  const professors = await ProfessorModel.find({ active: true })
+    .lean<IProfessor[]>()
+    .exec()
 
   return professors
     .filter((professor) => professor.active)
@@ -179,7 +198,9 @@ export async function fetchPreferences(term: string): Promise<PreferenceRecord[]
             expectedEnrollment: course.expectedEnrollment,
             maxCapacity: course.maxCapacity ?? null,
             creditHours: course.creditHours,
-            preferredDays: [...(course.preferredDays ?? [])].map((days) => normalizeDayPattern(days)),
+            preferredDays: [...(course.preferredDays ?? [])].map((days) =>
+              normalizeDayPattern(days),
+            ),
             preferredTimes: [...(course.preferredTimes ?? [])],
             avoidTimes: [...(course.avoidTimes ?? [])],
             requiredEquipment: [...(course.requiredEquipment ?? [])],
@@ -190,7 +211,9 @@ export async function fetchPreferences(term: string): Promise<PreferenceRecord[]
             professorId: professor._id ?? professor.covenantId,
             professorName: professor.displayName,
             departmentCode: professor.departmentCode,
-            submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : null,
+            submittedAt: submission.submittedAt
+              ? new Date(submission.submittedAt)
+              : null,
             status: submission.status,
             term: submission.term,
           })),
@@ -204,10 +227,14 @@ export async function fetchPreferences(term: string): Promise<PreferenceRecord[]
  * @param term - Academic term identifier to exclude.
  * @returns Flattened preference records for prior terms.
  */
-export async function fetchHistoricalPreferences(term: string): Promise<PreferenceRecord[]> {
+export async function fetchHistoricalPreferences(
+  term: string,
+): Promise<PreferenceRecord[]> {
   await connectDB()
 
-  const professors = await ProfessorModel.find({ active: true }).lean<IProfessor[]>().exec()
+  const professors = await ProfessorModel.find({ active: true })
+    .lean<IProfessor[]>()
+    .exec()
 
   return professors
     .filter((professor) => professor.active)
@@ -221,7 +248,9 @@ export async function fetchHistoricalPreferences(term: string): Promise<Preferen
             expectedEnrollment: course.expectedEnrollment,
             maxCapacity: course.maxCapacity ?? null,
             creditHours: course.creditHours,
-            preferredDays: [...(course.preferredDays ?? [])].map((days) => normalizeDayPattern(days)),
+            preferredDays: [...(course.preferredDays ?? [])].map((days) =>
+              normalizeDayPattern(days),
+            ),
             preferredTimes: [...(course.preferredTimes ?? [])],
             avoidTimes: [...(course.avoidTimes ?? [])],
             requiredEquipment: [...(course.requiredEquipment ?? [])],
@@ -232,7 +261,9 @@ export async function fetchHistoricalPreferences(term: string): Promise<Preferen
             professorId: professor._id ?? professor.covenantId,
             professorName: professor.displayName,
             departmentCode: professor.departmentCode,
-            submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : null,
+            submittedAt: submission.submittedAt
+              ? new Date(submission.submittedAt)
+              : null,
             status: submission.status,
             term: submission.term,
           })),
@@ -261,12 +292,17 @@ export async function fetchHistoricalAssignments(
     Schedule.find({ term: { $ne: termToExclude } })
       .sort({ updatedAt: -1, runNumber: -1 })
       .limit(maxRuns)
-      .lean<Array<{ term: string; runNumber: number; assignments: IAssignment[] }>>()
+      .lean<
+        Array<{ term: string; runNumber: number; assignments: IAssignment[] }>
+      >()
       .exec(),
   ])
 
   const roomBuildingById = new Map<string, string | null>(
-    rooms.map((room) => [String(room._id ?? room.abbreviation ?? ''), deriveBuildingCode(room.abbreviation, room.buildingName)]),
+    rooms.map((room) => [
+      String(room._id ?? room.abbreviation ?? ''),
+      deriveBuildingCode(room.abbreviation, room.buildingName),
+    ]),
   )
 
   const recentSchedules = schedules

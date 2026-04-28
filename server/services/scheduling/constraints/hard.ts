@@ -1,7 +1,10 @@
 import type { CourseWorkItem, Room } from '../types'
 import { hasRealDataForRoom } from '../utils/history'
 
-function hasRequiredEquipment(room: Room, requiredEquipment: string[]): boolean {
+function hasRequiredEquipment(
+  room: Room,
+  requiredEquipment: string[],
+): boolean {
   return requiredEquipment.every((equipmentId) => {
     const equipmentFlag = room.equipment as Record<string, boolean>
     return equipmentFlag[equipmentId] === true

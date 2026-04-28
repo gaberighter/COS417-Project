@@ -6,11 +6,24 @@ import type {
 } from './types'
 import { collectInputs } from './phases/phase1-collect'
 import { sortByDifficulty } from './phases/phase2-generate'
-import { collectPlacementFlags, evaluatePlacementOptions } from './phases/phase3-constrain'
+import {
+  collectPlacementFlags,
+  evaluatePlacementOptions,
+} from './phases/phase3-constrain'
 import { optimizeCandidatePlacement } from './phases/phase4-optimize'
 import { persistAndReturn } from './phases/phase5-output'
 
-function makeAssignment(workItem: Parameters<typeof evaluatePlacementOptions>[0], chosen: { room: { _id: string }; slot: { days: ScheduleAssignment['days']; startTime: string; endTime: string } }): ScheduleAssignment {
+function makeAssignment(
+  workItem: Parameters<typeof evaluatePlacementOptions>[0],
+  chosen: {
+    room: { _id: string }
+    slot: {
+      days: ScheduleAssignment['days']
+      startTime: string
+      endTime: string
+    }
+  },
+): ScheduleAssignment {
   return {
     courseId: workItem.course._id,
     professorId: workItem.professor._id,
@@ -46,7 +59,11 @@ async function buildPlan(term: string): Promise<{
         continue
       }
 
-      const evaluation = evaluatePlacementOptions(workItem, collected.rooms, assignments)
+      const evaluation = evaluatePlacementOptions(
+        workItem,
+        collected.rooms,
+        assignments,
+      )
 
       if (evaluation.conflict !== null) {
         conflicts.push(evaluation.conflict)
@@ -63,7 +80,9 @@ async function buildPlan(term: string): Promise<{
         }
 
         assignments.push(makeAssignment(workItem, chosen))
-        nearHardFlags.push(...collectPlacementFlags(workItem, chosen, assignments.slice(0, -1)))
+        nearHardFlags.push(
+          ...collectPlacementFlags(workItem, chosen, assignments.slice(0, -1)),
+        )
         pending.splice(index, 1)
         madeProgress = true
         continue
@@ -74,14 +93,22 @@ async function buildPlan(term: string): Promise<{
   }
 
   for (const workItem of pending) {
-    const evaluation = evaluatePlacementOptions(workItem, collected.rooms, assignments)
+    const evaluation = evaluatePlacementOptions(
+      workItem,
+      collected.rooms,
+      assignments,
+    )
 
     if (evaluation.conflict !== null) {
       conflicts.push(evaluation.conflict)
       continue
     }
 
-    const chosen = optimizeCandidatePlacement(evaluation.candidates, workItem, workItem.professor)
+    const chosen = optimizeCandidatePlacement(
+      evaluation.candidates,
+      workItem,
+      workItem.professor,
+    )
 
     if (chosen === null) {
       conflicts.push({
@@ -94,7 +121,9 @@ async function buildPlan(term: string): Promise<{
     const assignment = makeAssignment(workItem, chosen)
 
     assignments.push(assignment)
-    nearHardFlags.push(...collectPlacementFlags(workItem, chosen, assignments.slice(0, -1)))
+    nearHardFlags.push(
+      ...collectPlacementFlags(workItem, chosen, assignments.slice(0, -1)),
+    )
   }
 
   return {
@@ -112,9 +141,18 @@ async function buildPlan(term: string): Promise<{
  * @param adminId - Administrator running the schedule.
  * @returns The persisted schedule result.
  */
-export async function runSchedulingAlgorithm(term: string, adminId: string): Promise<ScheduleResult> {
+export async function runSchedulingAlgorithm(
+  term: string,
+  adminId: string,
+): Promise<ScheduleResult> {
   const plan = await buildPlan(term)
-  return persistAndReturn(term, adminId, plan.assignments, plan.conflicts, plan.nearHardFlags)
+  return persistAndReturn(
+    term,
+    adminId,
+    plan.assignments,
+    plan.conflicts,
+    plan.nearHardFlags,
+  )
 }
 
 /**

@@ -8,7 +8,11 @@ import type {
   ScheduleStatus,
 } from '../types'
 
-function computeStatus(conflicts: ScheduleConflict[], assignments: ScheduleAssignment[], nearHardFlags: NearHardFlag[]): ScheduleStatus {
+function computeStatus(
+  conflicts: ScheduleConflict[],
+  assignments: ScheduleAssignment[],
+  nearHardFlags: NearHardFlag[],
+): ScheduleStatus {
   if (assignments.length === 0) {
     return 'under_review'
   }

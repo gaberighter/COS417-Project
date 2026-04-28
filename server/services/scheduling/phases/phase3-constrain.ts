@@ -10,27 +10,50 @@ import type {
 } from '../types'
 import { filterRooms } from '../constraints/hard'
 import { collectNearHardFlags } from '../constraints/nearHard'
-import { generateAllSlots, isBackToBack, slotsOverlap } from '../utils/timeSlots'
+import {
+  generateAllSlots,
+  isBackToBack,
+  slotsOverlap,
+} from '../utils/timeSlots'
 import { schedulingConfig } from '../config'
-import { hasRealDataForRoom, isPlacementAbnormal, roomRequiresRealData } from '../utils/history'
+import {
+  hasRealDataForRoom,
+  isPlacementAbnormal,
+  roomRequiresRealData,
+} from '../utils/history'
 
-function roomIsBooked(room: Room, slot: TimeSlot, currentAssignments: ScheduleAssignment[]): boolean {
+function roomIsBooked(
+  room: Room,
+  slot: TimeSlot,
+  currentAssignments: ScheduleAssignment[],
+): boolean {
   return currentAssignments.some(
     (assignment) =>
-      assignment.roomId === room._id &&
-      slotsOverlap(assignment, slot),
+      assignment.roomId === room._id && slotsOverlap(assignment, slot),
   )
 }
 
-function professorIsBusy(professorId: string, slot: TimeSlot, currentAssignments: ScheduleAssignment[]): boolean {
+function professorIsBusy(
+  professorId: string,
+  slot: TimeSlot,
+  currentAssignments: ScheduleAssignment[],
+): boolean {
   return currentAssignments.some(
-    (assignment) => assignment.professorId === professorId && slotsOverlap(assignment, slot),
+    (assignment) =>
+      assignment.professorId === professorId && slotsOverlap(assignment, slot),
   )
 }
 
-function findFirstMissingEquipment(workItem: CourseWorkItem, rooms: Room[]): string | null {
+function findFirstMissingEquipment(
+  workItem: CourseWorkItem,
+  rooms: Room[],
+): string | null {
   for (const equipmentId of workItem.requiredEquipment) {
-    const anyRoomHasEquipment = rooms.some((room) => room.available && room.equipment[equipmentId as keyof Room['equipment']] === true)
+    const anyRoomHasEquipment = rooms.some(
+      (room) =>
+        room.available &&
+        room.equipment[equipmentId as keyof Room['equipment']] === true,
+    )
     if (!anyRoomHasEquipment) {
       return equipmentId
     }
@@ -39,7 +62,10 @@ function findFirstMissingEquipment(workItem: CourseWorkItem, rooms: Room[]): str
   return null
 }
 
-function findGuardedRoomsMissingRealData(workItem: CourseWorkItem, rooms: Room[]): Room[] {
+function findGuardedRoomsMissingRealData(
+  workItem: CourseWorkItem,
+  rooms: Room[],
+): Room[] {
   const historicalPreferredRoomIds = workItem.historicalPreferences
     .map((record) => record.preferredRoomId)
     .filter((value): value is string => value !== null)
@@ -61,11 +87,19 @@ function findGuardedRoomsMissingRealData(workItem: CourseWorkItem, rooms: Room[]
   )
 }
 
-function countConcurrentAssignments(slot: TimeSlot, currentAssignments: ScheduleAssignment[]): number {
-  return currentAssignments.filter((assignment) => slotsOverlap(assignment, slot)).length
+function countConcurrentAssignments(
+  slot: TimeSlot,
+  currentAssignments: ScheduleAssignment[],
+): number {
+  return currentAssignments.filter((assignment) =>
+    slotsOverlap(assignment, slot),
+  ).length
 }
 
-function createConflict(workItem: CourseWorkItem, reason: string): ScheduleConflict {
+function createConflict(
+  workItem: CourseWorkItem,
+  reason: string,
+): ScheduleConflict {
   return {
     courseId: workItem.course._id,
     reason,
@@ -104,25 +138,34 @@ function buildCandidatePairs(
   return candidates
 }
 
-function applyPreferenceGates(workItem: CourseWorkItem, candidates: CandidateSlot[]): CandidateSlot[] {
+function applyPreferenceGates(
+  workItem: CourseWorkItem,
+  candidates: CandidateSlot[],
+): CandidateSlot[] {
   let gated = candidates
 
   if (workItem.preferredDays.length > 0) {
-    const dayMatched = gated.filter((candidate) => workItem.preferredDays.includes(candidate.slot.days))
+    const dayMatched = gated.filter((candidate) =>
+      workItem.preferredDays.includes(candidate.slot.days),
+    )
     if (dayMatched.length > 0) {
       gated = dayMatched
     }
   }
 
   if (workItem.preferredTimes.length > 0) {
-    const timeMatched = gated.filter((candidate) => workItem.preferredTimes.includes(candidate.slot.startTime))
+    const timeMatched = gated.filter((candidate) =>
+      workItem.preferredTimes.includes(candidate.slot.startTime),
+    )
     if (timeMatched.length > 0) {
       gated = timeMatched
     }
   }
 
   if (workItem.avoidTimes.length > 0) {
-    const nonAvoided = gated.filter((candidate) => !workItem.avoidTimes.includes(candidate.slot.startTime))
+    const nonAvoided = gated.filter(
+      (candidate) => !workItem.avoidTimes.includes(candidate.slot.startTime),
+    )
     if (nonAvoided.length > 0) {
       gated = nonAvoided
     }
@@ -172,7 +215,10 @@ function resolveConflictReason(
     if (blockedGuardedRooms.length > 0) {
       const roomLabels = blockedGuardedRooms
         .slice(0, 3)
-        .map((room) => room.displayName ?? `${room.buildingCode} ${room.roomNumber}`)
+        .map(
+          (room) =>
+            room.displayName ?? `${room.buildingCode} ${room.roomNumber}`,
+        )
         .join(', ')
       return formatConflict(
         'GUARDED_ROOM_REQUIRES_REAL_DATA',
@@ -183,7 +229,11 @@ function resolveConflictReason(
   }
 
   if (workItem.course.labComponent && candidateRooms.length === 0) {
-    return formatConflict('LAB_CAPACITY', 'Lab capacity exhausted for this time slot.', manualOptions)
+    return formatConflict(
+      'LAB_CAPACITY',
+      'Lab capacity exhausted for this time slot.',
+      manualOptions,
+    )
   }
 
   if (workItem.expectedEnrollment !== null && candidateRooms.length === 0) {
@@ -196,24 +246,49 @@ function resolveConflictReason(
 
   if (
     candidateSlots.length === 0 &&
-    currentAssignments.some((assignment) => assignment.professorId === workItem.professor._id)
+    currentAssignments.some(
+      (assignment) => assignment.professorId === workItem.professor._id,
+    )
   ) {
-    return formatConflict('PROFESSOR_UNAVAILABLE', 'Professor unavailable for all valid time slots.', manualOptions)
+    return formatConflict(
+      'PROFESSOR_UNAVAILABLE',
+      'Professor unavailable for all valid time slots.',
+      manualOptions,
+    )
   }
 
   if (candidateSlots.length === 0) {
-    return formatConflict('NO_VALID_SLOT', 'No valid slot found after applying all hard constraints.', manualOptions)
+    return formatConflict(
+      'NO_VALID_SLOT',
+      'No valid slot found after applying all hard constraints.',
+      manualOptions,
+    )
   }
 
-  return formatConflict('NO_VALID_SLOT', 'No valid slot found after applying all hard constraints.', manualOptions)
+  return formatConflict(
+    'NO_VALID_SLOT',
+    'No valid slot found after applying all hard constraints.',
+    manualOptions,
+  )
 }
 
-function formatConflict(code: string, message: string, manualOptions: string[]): string {
-  const optionsText = manualOptions.length > 0 ? ` Manual options: ${manualOptions.join(' | ')}.` : ''
+function formatConflict(
+  code: string,
+  message: string,
+  manualOptions: string[],
+): string {
+  const optionsText =
+    manualOptions.length > 0
+      ? ` Manual options: ${manualOptions.join(' | ')}.`
+      : ''
   return `[${code}] ${message}${optionsText}`
 }
 
-function buildManualOptions(candidateRooms: Room[], candidateSlots: TimeSlot[], limit = 5): string[] {
+function buildManualOptions(
+  candidateRooms: Room[],
+  candidateSlots: TimeSlot[],
+  limit = 5,
+): string[] {
   if (candidateRooms.length === 0 || candidateSlots.length === 0) {
     return []
   }
@@ -221,7 +296,8 @@ function buildManualOptions(candidateRooms: Room[], candidateSlots: TimeSlot[], 
   const options: string[] = []
   for (const room of candidateRooms) {
     for (const slot of candidateSlots) {
-      const roomLabel = room.displayName ?? `${room.buildingCode} ${room.roomNumber}`
+      const roomLabel =
+        room.displayName ?? `${room.buildingCode} ${room.roomNumber}`
       options.push(`${roomLabel} ${slot.days} ${slot.startTime}`)
       if (options.length >= limit) {
         return options
@@ -232,12 +308,18 @@ function buildManualOptions(candidateRooms: Room[], candidateSlots: TimeSlot[], 
   return options
 }
 
-function filterNormalRooms(workItem: CourseWorkItem, candidateRooms: Room[]): { normal: Room[]; abnormal: Room[] } {
+function filterNormalRooms(
+  workItem: CourseWorkItem,
+  candidateRooms: Room[],
+): { normal: Room[]; abnormal: Room[] } {
   const normal: Room[] = []
   const abnormal: Room[] = []
 
   for (const room of candidateRooms) {
-    const { abnormal: isAbnormal } = isPlacementAbnormal(room, workItem.placementProfile)
+    const { abnormal: isAbnormal } = isPlacementAbnormal(
+      room,
+      workItem.placementProfile,
+    )
     if (isAbnormal) {
       abnormal.push(room)
     } else {
@@ -268,7 +350,10 @@ export function evaluatePlacementOptions(
       return false
     }
 
-    const concurrentAssignments = countConcurrentAssignments(slot, currentAssignments)
+    const concurrentAssignments = countConcurrentAssignments(
+      slot,
+      currentAssignments,
+    )
     return concurrentAssignments < rooms.length - 1
   })
 
@@ -280,17 +365,31 @@ export function evaluatePlacementOptions(
       candidates: [],
       conflict: createConflict(
         workItem,
-        resolveConflictReason(workItem, rooms, candidateRooms, candidateSlots, currentAssignments),
+        resolveConflictReason(
+          workItem,
+          rooms,
+          candidateRooms,
+          candidateSlots,
+          currentAssignments,
+        ),
       ),
     }
   }
 
-  const { normal: normalRooms, abnormal: abnormalRooms } = filterNormalRooms(workItem, candidateRooms)
+  const { normal: normalRooms, abnormal: abnormalRooms } = filterNormalRooms(
+    workItem,
+    candidateRooms,
+  )
   const preferredRooms = normalRooms.length > 0 ? normalRooms : abnormalRooms
 
   const candidates = applyPreferenceGates(
     workItem,
-    buildCandidatePairs(workItem, preferredRooms, candidateSlots, currentAssignments),
+    buildCandidatePairs(
+      workItem,
+      preferredRooms,
+      candidateSlots,
+      currentAssignments,
+    ),
   )
 
   if (candidates.length === 0) {
@@ -301,7 +400,13 @@ export function evaluatePlacementOptions(
       candidates,
       conflict: createConflict(
         workItem,
-        resolveConflictReason(workItem, rooms, candidateRooms, candidateSlots, currentAssignments),
+        resolveConflictReason(
+          workItem,
+          rooms,
+          candidateRooms,
+          candidateSlots,
+          currentAssignments,
+        ),
       ),
     }
   }

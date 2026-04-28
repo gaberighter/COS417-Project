@@ -1,4 +1,10 @@
-import type { CandidateSlot, CourseWorkItem, Professor, Room, TimeSlot } from '../types'
+import type {
+  CandidateSlot,
+  CourseWorkItem,
+  Professor,
+  Room,
+  TimeSlot,
+} from '../types'
 import { schedulingConfig } from '../config'
 import { isPlacementAbnormal } from './history'
 
@@ -7,7 +13,10 @@ function parseTime(value: string): number {
   return Number(hoursText) * 60 + Number(minutesText)
 }
 
-function computeCapacityScore(room: Room, expectedEnrollment: number | null): number {
+function computeCapacityScore(
+  room: Room,
+  expectedEnrollment: number | null,
+): number {
   if (expectedEnrollment === null) {
     return 0
   }
@@ -25,7 +34,9 @@ function computeBackToBackScore(candidate: CandidateSlot): number {
   return candidate.avoidsBackToBackSameCourse === false ? 0 : 10
 }
 
-function computeHistoryMaps(assignments: CourseWorkItem['historicalAssignments']) {
+function computeHistoryMaps(
+  assignments: CourseWorkItem['historicalAssignments'],
+) {
   const exact = new Map<string, number>()
   const time = new Map<string, number>()
   const room = new Map<string, number>()
@@ -41,7 +52,10 @@ function computeHistoryMaps(assignments: CourseWorkItem['historicalAssignments']
     room.set(entry.roomId, (room.get(entry.roomId) ?? 0) + weight)
 
     if (entry.buildingCode) {
-      building.set(entry.buildingCode, (building.get(entry.buildingCode) ?? 0) + weight)
+      building.set(
+        entry.buildingCode,
+        (building.get(entry.buildingCode) ?? 0) + weight,
+      )
     }
   })
 
@@ -67,7 +81,10 @@ function normalizedFromMap(map: Map<string, number>, key: string): number {
   return (map.get(key) ?? 0) / max
 }
 
-function computeHistoryStrength(assignments: CourseWorkItem['historicalAssignments'], candidate: CandidateSlot): number {
+function computeHistoryStrength(
+  assignments: CourseWorkItem['historicalAssignments'],
+  candidate: CandidateSlot,
+): number {
   if (assignments.length === 0) {
     return 0
   }
@@ -102,7 +119,10 @@ function computeHistoryStrength(assignments: CourseWorkItem['historicalAssignmen
   return weighted / weightSum
 }
 
-function computeHistoricalPreferenceScore(workItem: CourseWorkItem, candidate: CandidateSlot): number {
+function computeHistoricalPreferenceScore(
+  workItem: CourseWorkItem,
+  candidate: CandidateSlot,
+): number {
   if (workItem.historicalPreferences.length === 0) {
     return 0
   }
@@ -120,8 +140,12 @@ function computeHistoricalPreferenceScore(workItem: CourseWorkItem, candidate: C
     }
   }
 
-  const dayScore = normalizedFromMap(dayCounts, candidate.slot.days) * schedulingConfig.weights.historicalPreferenceDays
-  const timeScore = normalizedFromMap(timeCounts, candidate.slot.startTime) * schedulingConfig.weights.historicalPreferenceTimes
+  const dayScore =
+    normalizedFromMap(dayCounts, candidate.slot.days) *
+    schedulingConfig.weights.historicalPreferenceDays
+  const timeScore =
+    normalizedFromMap(timeCounts, candidate.slot.startTime) *
+    schedulingConfig.weights.historicalPreferenceTimes
 
   return dayScore + timeScore
 }
@@ -141,7 +165,10 @@ export function scoreCandidateSlot(
 ): number {
   let score = 0
 
-  const { abnormal, reasons } = isPlacementAbnormal(candidate.room, workItem.placementProfile)
+  const { abnormal, reasons } = isPlacementAbnormal(
+    candidate.room,
+    workItem.placementProfile,
+  )
   if (abnormal) {
     score -= schedulingConfig.abnormalPlacement.penaltyScore
   }
@@ -157,18 +184,30 @@ export function scoreCandidateSlot(
   if (workItem.avoidTimes.includes(candidate.slot.startTime)) {
     score += schedulingConfig.weights.currentAvoidTimes
   } else {
-    score += Math.max(0, Math.floor(Math.abs(schedulingConfig.weights.currentAvoidTimes) / 4))
+    score += Math.max(
+      0,
+      Math.floor(Math.abs(schedulingConfig.weights.currentAvoidTimes) / 4),
+    )
   }
 
-  if (workItem.preferredRoomId !== null && candidate.room._id === workItem.preferredRoomId) {
+  if (
+    workItem.preferredRoomId !== null &&
+    candidate.room._id === workItem.preferredRoomId
+  ) {
     score += schedulingConfig.weights.currentPreferredRoom
   }
 
-  if (workItem.preferredBuilding !== null && candidate.room.buildingCode === workItem.preferredBuilding) {
+  if (
+    workItem.preferredBuilding !== null &&
+    candidate.room.buildingCode === workItem.preferredBuilding
+  ) {
     score += schedulingConfig.weights.currentPreferredBuilding
   }
 
-  if (professor.officeBuilding !== null && candidate.room.buildingCode === professor.officeBuilding) {
+  if (
+    professor.officeBuilding !== null &&
+    candidate.room.buildingCode === professor.officeBuilding
+  ) {
     score += schedulingConfig.weights.officeBuilding
   }
 
@@ -180,12 +219,24 @@ export function scoreCandidateSlot(
     schedulingConfig.weights.historyExactTime +
     schedulingConfig.weights.historyExactRoom +
     schedulingConfig.weights.historyBuilding
-  score += computeHistoryStrength(workItem.historicalAssignments, candidate) * historyBaseWeight
-  score += computeHistoryStrength(workItem.professorHistory, candidate) * schedulingConfig.weights.professorHistory
-  score += computeHistoryStrength(workItem.similarProfessorHistory, candidate) * schedulingConfig.weights.similarProfessorHistory
-  score += computeHistoryStrength(workItem.similarCourseHistory, candidate) * schedulingConfig.weights.similarCourseHistory
-  score += computeHistoryStrength(workItem.departmentHistory, candidate) * schedulingConfig.weights.departmentHistory
-  score += computeHistoryStrength(workItem.similarDepartmentHistory, candidate) * schedulingConfig.weights.similarDepartmentHistory
+  score +=
+    computeHistoryStrength(workItem.historicalAssignments, candidate) *
+    historyBaseWeight
+  score +=
+    computeHistoryStrength(workItem.professorHistory, candidate) *
+    schedulingConfig.weights.professorHistory
+  score +=
+    computeHistoryStrength(workItem.similarProfessorHistory, candidate) *
+    schedulingConfig.weights.similarProfessorHistory
+  score +=
+    computeHistoryStrength(workItem.similarCourseHistory, candidate) *
+    schedulingConfig.weights.similarCourseHistory
+  score +=
+    computeHistoryStrength(workItem.departmentHistory, candidate) *
+    schedulingConfig.weights.departmentHistory
+  score +=
+    computeHistoryStrength(workItem.similarDepartmentHistory, candidate) *
+    schedulingConfig.weights.similarDepartmentHistory
 
   if (!abnormal) {
     const profile = workItem.placementProfile
@@ -220,7 +271,11 @@ export function scoreCandidateSlot(
  * @returns The best candidate, or null when no candidates exist.
  */
 export function scoreAndRank(
-  candidates: Array<{ room: Room; slot: TimeSlot; avoidsBackToBackSameCourse?: boolean }>,
+  candidates: Array<{
+    room: Room
+    slot: TimeSlot
+    avoidsBackToBackSameCourse?: boolean
+  }>,
   workItem: CourseWorkItem,
   professor: Professor,
 ): { room: Room; slot: TimeSlot } | null {
@@ -235,7 +290,10 @@ export function scoreAndRank(
     const scored = scoreCandidateSlot(candidate, workItem, professor)
     if (
       scored > bestScore ||
-      (scored === bestScore && bestCandidate !== null && parseTime(candidate.slot.startTime) < parseTime(bestCandidate.slot.startTime))
+      (scored === bestScore &&
+        bestCandidate !== null &&
+        parseTime(candidate.slot.startTime) <
+          parseTime(bestCandidate.slot.startTime))
     ) {
       bestCandidate = {
         room: candidate.room,

@@ -1,4 +1,9 @@
-import type { CandidateSlot, CourseWorkItem, NearHardFlag, ScheduleAssignment } from '../types'
+import type {
+  CandidateSlot,
+  CourseWorkItem,
+  NearHardFlag,
+  ScheduleAssignment,
+} from '../types'
 import { isBackToBack, slotsOverlap } from '../utils/timeSlots'
 import { isPlacementAbnormal } from '../utils/history'
 
@@ -26,7 +31,10 @@ export function collectNearHardFlags(
   const courseId = workItem.course._id
   const professorId = workItem.professor._id
 
-  const abnormalCheck = isPlacementAbnormal(candidate.room, workItem.placementProfile)
+  const abnormalCheck = isPlacementAbnormal(
+    candidate.room,
+    workItem.placementProfile,
+  )
   if (abnormalCheck.abnormal) {
     flags.push(
       makeFlag(
@@ -50,7 +58,9 @@ export function collectNearHardFlags(
       )
     }
 
-    const explicitBackToBack = workItem.backToBackWith !== null && assignment.courseId === workItem.backToBackWith
+    const explicitBackToBack =
+      workItem.backToBackWith !== null &&
+      assignment.courseId === workItem.backToBackWith
     if (explicitBackToBack && isBackToBack(assignment, candidate.slot)) {
       flags.push(
         makeFlag(
@@ -60,8 +70,14 @@ export function collectNearHardFlags(
       )
     }
 
-    const corequisiteCourseIds = new Set([...workItem.coreqWith, ...workItem.course.corequisites])
-    if (corequisiteCourseIds.has(assignment.courseId) && slotsOverlap(assignment, candidate.slot)) {
+    const corequisiteCourseIds = new Set([
+      ...workItem.coreqWith,
+      ...workItem.course.corequisites,
+    ])
+    if (
+      corequisiteCourseIds.has(assignment.courseId) &&
+      slotsOverlap(assignment, candidate.slot)
+    ) {
       flags.push(
         makeFlag(
           courseId,

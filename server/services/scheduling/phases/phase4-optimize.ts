@@ -1,4 +1,9 @@
-import type { CandidateSlot, CourseWorkItem, Professor, TimeSlot } from '../types'
+import type {
+  CandidateSlot,
+  CourseWorkItem,
+  Professor,
+  TimeSlot,
+} from '../types'
 import { scoreAndRank } from '../utils/scoring'
 
 /**
@@ -10,7 +15,11 @@ import { scoreAndRank } from '../utils/scoring'
  * @returns The best candidate, or null when no candidates exist.
  */
 export function optimizeCandidatePlacement(
-  candidates: Array<{ room: CandidateSlot['room']; slot: TimeSlot; avoidsBackToBackSameCourse?: boolean }>,
+  candidates: Array<{
+    room: CandidateSlot['room']
+    slot: TimeSlot
+    avoidsBackToBackSameCourse?: boolean
+  }>,
   workItem: CourseWorkItem,
   professor: Professor,
 ): { room: CandidateSlot['room']; slot: TimeSlot } | null {
