@@ -171,12 +171,17 @@ export default defineEventHandler(async (event: H3Event) => {
               attributes: samlUser,
             } = samlResponse.user
 
-            // Log raw attributes to help diagnose any future mapping issues.
-            console.log(
-              '[SAML] raw attributes:',
-              JSON.stringify(samlResponse.user.attributes, null, 2),
-            )
+            // Log only attribute keys by default to avoid leaking PII in logs.
+            const samlAttributeKeys = Object.keys(samlUser || {})
+            console.log('[SAML] attribute keys:', samlAttributeKeys.join(', '))
 
+            // Allow full attribute logging only when explicitly enabled for debugging.
+            if (process.env.SAML_DEBUG_ATTRIBUTES === 'true') {
+              console.log(
+                '[SAML] raw attributes:',
+                JSON.stringify(samlResponse.user.attributes, null, 2),
+              )
+            }
             // Normalize attributes — flatten single-element arrays and remap
             // namespaced keys to friendly names BEFORE deleting http:// fields.
             for (const field in samlUser) {
