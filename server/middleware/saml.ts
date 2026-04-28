@@ -147,6 +147,13 @@ export default defineEventHandler(async (event: H3Event) => {
         return new Promise((resolve, reject) => {
           const onAssert = async (err: Error | null, samlResponse: any) => {
             if (err) {
+              // TODO: §4.7 Log authentication event - LOGIN_FAILURE
+              // Integrate with auditService.logAuthEvent() to capture:
+              // - userId: extracted from request if possible
+              // - action: LOGIN_FAILURE
+              // - ipAddress: getClientIp(event)
+              // - detail: err.message
+
               return reject(
                 createError({
                   statusCode: 500,
@@ -208,6 +215,13 @@ export default defineEventHandler(async (event: H3Event) => {
               user,
               loggedInAt: Date.now(),
             })
+
+            // TODO: §4.7 Log authentication event - LOGIN_SUCCESS
+            // Integrate with auditService.logAuthEvent() to capture:
+            // - userId: user.username or email
+            // - action: LOGIN_SUCCESS
+            // - ipAddress: getClientIp(event)
+            // - detail: optional user metadata
 
             return resolve(
               sendRedirect(event, process.env.SAML_REDIRECT_TO || '/'),
