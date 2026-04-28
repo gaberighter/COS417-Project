@@ -80,6 +80,14 @@ function getProviders() {
   return providers
 }
 
+// Maps Microsoft/Azure AD namespaced SAML attribute keys to friendly names.
+const FIELD_MAP: Record<string, string> = {
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress': 'email',
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname': 'firstName',
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname': 'lastName',
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name': 'displayName',
+}
+
 export default defineEventHandler(async (event: H3Event) => {
   const urlObj = getRequestURL(event)
 
@@ -162,12 +170,22 @@ export default defineEventHandler(async (event: H3Event) => {
               attributes: samlUser,
             } = samlResponse.user
 
+            // Log raw attributes to help diagnose any future mapping issues.
+            console.log('[SAML] raw attributes:', JSON.stringify(samlResponse.user.attributes, null, 2))
+
+            // Normalize attributes — flatten single-element arrays and remap
+            // namespaced keys to friendly names BEFORE deleting http:// fields.
             for (const field in samlUser) {
               if (
                 Array.isArray(samlUser[field]) &&
                 samlUser[field].length === 1
               ) {
                 samlUser[field] = samlUser[field][0]
+              }
+
+              const friendlyName = FIELD_MAP[field]
+              if (friendlyName) {
+                samlUser[friendlyName] = samlUser[field]
               }
 
               if (field.substring(0, 7) === 'http://') {
@@ -179,7 +197,14 @@ export default defineEventHandler(async (event: H3Event) => {
             const username =
               'oracleUser' in samlUser
                 ? samlUser.oracleUser
-                : lookupOracleUser(samlUser.email)
+                : samlUser.email
+                  ? lookupOracleUser(samlUser.email)
+                  : (() => {
+                      throw new Error(
+                        `SAML response has no email or oracleUser. Keys present: ${Object.keys(samlUser).join(', ')}`,
+                      )
+                    })()
+
             const roles = getRoles(username)
 
             // Look up the user and create the session payload.
