@@ -1,5 +1,6 @@
 import type { CandidateSlot, CourseWorkItem, NearHardFlag, ScheduleAssignment } from '../types'
 import { isBackToBack, slotsOverlap } from '../utils/timeSlots'
+import { isPlacementAbnormal } from '../utils/history'
 
 function makeFlag(courseId: string, reason: string): NearHardFlag {
   return {
@@ -24,6 +25,16 @@ export function collectNearHardFlags(
   const flags: NearHardFlag[] = []
   const courseId = workItem.course._id
   const professorId = workItem.professor._id
+
+  const abnormalCheck = isPlacementAbnormal(candidate.room, workItem.placementProfile)
+  if (abnormalCheck.abnormal) {
+    flags.push(
+      makeFlag(
+        courseId,
+        `Abnormal placement: ${abnormalCheck.reasons.join('; ')}. Manual review recommended.`,
+      ),
+    )
+  }
 
   for (const assignment of currentAssignments) {
     if (

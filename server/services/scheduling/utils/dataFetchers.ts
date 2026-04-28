@@ -199,6 +199,48 @@ export async function fetchPreferences(term: string): Promise<PreferenceRecord[]
 }
 
 /**
+ * Loads preference submissions for all terms except the provided term.
+ *
+ * @param term - Academic term identifier to exclude.
+ * @returns Flattened preference records for prior terms.
+ */
+export async function fetchHistoricalPreferences(term: string): Promise<PreferenceRecord[]> {
+  await connectDB()
+
+  const professors = await ProfessorModel.find({ active: true }).lean<IProfessor[]>().exec()
+
+  return professors
+    .filter((professor) => professor.active)
+    .flatMap((professor) =>
+      professor.preferences
+        .filter((submission) => submission.term !== term)
+        .flatMap((submission) =>
+          submission.courses.map((course) => ({
+            courseId: course.courseId,
+            title: course.title,
+            expectedEnrollment: course.expectedEnrollment,
+            maxCapacity: course.maxCapacity ?? null,
+            creditHours: course.creditHours,
+            preferredDays: [...(course.preferredDays ?? [])].map((days) => normalizeDayPattern(days)),
+            preferredTimes: [...(course.preferredTimes ?? [])],
+            avoidTimes: [...(course.avoidTimes ?? [])],
+            requiredEquipment: [...(course.requiredEquipment ?? [])],
+            preferredBuilding: course.preferredBuilding ?? null,
+            preferredRoomId: course.preferredRoomId ?? null,
+            backToBackWith: course.backToBackWith ?? null,
+            coreqWith: [...(course.coreqWith ?? [])],
+            professorId: professor._id ?? professor.covenantId,
+            professorName: professor.displayName,
+            departmentCode: professor.departmentCode,
+            submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : null,
+            status: submission.status,
+            term: submission.term,
+          })),
+        ),
+    )
+}
+
+/**
  * Loads recent historical assignments for the provided courses across prior terms.
  *
  * @param courseIds - Course IDs to include in the historical query.

@@ -91,6 +91,13 @@ export interface CourseWorkItem {
   professor: Professor
   preference: PreferenceRecord | null
   historicalAssignments: HistoricalAssignment[]
+  professorHistory: HistoricalAssignment[]
+  similarProfessorHistory: HistoricalAssignment[]
+  similarCourseHistory: HistoricalAssignment[]
+  departmentHistory: HistoricalAssignment[]
+  similarDepartmentHistory: HistoricalAssignment[]
+  historicalPreferences: PreferenceRecord[]
+  placementProfile: PlacementProfile
   expectedEnrollment: number | null
   preferredDays: DayPattern[]
   preferredTimes: string[]
@@ -118,6 +125,15 @@ export interface HistoricalAssignment {
   startTime: string
   endTime: string
   buildingCode: string | null
+}
+
+export interface PlacementProfile {
+  buildings: string[]
+  floors: number[]
+  roomTypes: Array<Room['roomType']>
+  roomIds: string[]
+  capacityMin: number | null
+  capacityMax: number | null
 }
 
 export interface ScheduleAssignment {

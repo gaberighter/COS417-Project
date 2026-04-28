@@ -1,4 +1,5 @@
 import type { CourseWorkItem, Room } from '../types'
+import { hasRealDataForRoom } from '../utils/history'
 
 function hasRequiredEquipment(room: Room, requiredEquipment: string[]): boolean {
   return requiredEquipment.every((equipmentId) => {
@@ -16,6 +17,12 @@ function hasRequiredEquipment(room: Room, requiredEquipment: string[]): boolean 
  */
 export function filterRooms(workItem: CourseWorkItem, rooms: Room[]): Room[] {
   const expectedEnrollment = workItem.expectedEnrollment
+  const historicalPreferredRoomIds = workItem.historicalPreferences
+    .map((record) => record.preferredRoomId)
+    .filter((value): value is string => value !== null)
+  const historicalPreferredBuildings = workItem.historicalPreferences
+    .map((record) => record.preferredBuilding)
+    .filter((value): value is string => value !== null)
 
   return rooms.filter((room) => {
     if (!room.available) {
@@ -30,6 +37,16 @@ export function filterRooms(workItem: CourseWorkItem, rooms: Room[]): Room[] {
       return false
     }
 
-    return hasRequiredEquipment(room, workItem.requiredEquipment)
+    if (!hasRequiredEquipment(room, workItem.requiredEquipment)) {
+      return false
+    }
+
+    return hasRealDataForRoom(room, {
+      historicalAssignments: workItem.historicalAssignments,
+      preferredRoomId: workItem.preferredRoomId,
+      preferredBuilding: workItem.preferredBuilding,
+      historicalPreferredRoomIds,
+      historicalPreferredBuildings,
+    })
   })
 }

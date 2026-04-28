@@ -8,8 +8,9 @@ import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Professor, Schedule } from '../../models/index'
 import { logAction } from '../../services/auditService'
+import { runSchedulingPlan } from '../../services/scheduling'
+import { SchedulingInputError } from '../../services/scheduling/types'
 import { getClientIp } from '../../utils/ip'
-import { run as runScheduler } from '../../services/schedulingEngine'
 
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 const MAX_SCHEDULE_CREATE_RETRIES = 3
@@ -47,7 +48,20 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
   }
 
-  const result = await runScheduler(term)
+  const result = await (async () => {
+    try {
+      return await runSchedulingPlan(term)
+    } catch (error) {
+      if (error instanceof SchedulingInputError) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: error.reasons.join('; '),
+        })
+      }
+
+      throw error
+    }
+  })()
 
   const adminProfessor = await Professor.findOne({
     $or: [
