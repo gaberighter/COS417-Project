@@ -8,6 +8,7 @@ import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Professor, Schedule } from '../../models/index'
 import { logAction } from '../../services/auditService'
+import { getClientIp } from '../../utils/ip'
 import { run as runScheduler } from '../../services/schedulingEngine'
 
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
@@ -24,6 +25,9 @@ function isDuplicateKeyError(error: unknown): boolean {
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
   await connectDB()
+
+  // Capture client IP for audit logging (§4.7)
+  const clientIp = getClientIp(event)
 
   let body: { term: string }
   try {
@@ -101,6 +105,7 @@ export default defineEventHandler(async (event) => {
     'schedules',
     schedule._id,
     `Executed scheduling run ${runNumber} for ${term}`,
+    clientIp,
   )
   return schedule.toObject()
 })
