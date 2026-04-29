@@ -343,14 +343,46 @@ function cancelEdit() {
   editingCourseId.value = null
 }
 
+function validateAssignmentDraft() {
+  const requiredFields: Array<[string, string]> = [
+    ['courseId', editingCourseId.value ?? ''],
+    ['professor', editingDraft.professorId],
+    ['room', editingDraft.roomId],
+    ['days', editingDraft.days],
+    ['start time', editingDraft.startTime],
+    ['end time', editingDraft.endTime],
+  ]
+
+  const missing = requiredFields.find(([, value]) => !value?.trim())
+  if (missing) {
+    return `Please enter a ${missing[0]} before saving.`
+  }
+
+  if (!dayPatternOptions.includes(editingDraft.days)) {
+    return 'Please select a valid day pattern.'
+  }
+
+  return ''
+}
+
 async function saveEdit() {
   if (!selectedScheduleDetails.value || !editingCourseId.value) return
   editPending.value = true
   actionMessage.value = ''
   const schedule = selectedScheduleDetails.value
+  const validationMessage = validateAssignmentDraft()
+  if (validationMessage) {
+    actionMessage.value = validationMessage
+    editPending.value = false
+    return
+  }
   const updatedAssignments = schedule.assignments.map((assignment) =>
     assignment.courseId === editingCourseId.value
-      ? { ...assignment, ...editingDraft }
+      ? {
+          ...assignment,
+          ...editingDraft,
+          courseId: editingCourseId.value,
+        }
       : assignment,
   )
 
