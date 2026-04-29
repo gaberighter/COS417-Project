@@ -181,6 +181,17 @@ function formatScheduleLabel(schedule: ScheduleSummary) {
   cursor: pointer;
   font-weight: 600;
   color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.term-dropdown > summary::after {
+  content: '▾';
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  transition: transform 0.2s ease;
 }
 
 .term-dropdown > summary::-webkit-details-marker {
@@ -189,6 +200,10 @@ function formatScheduleLabel(schedule: ScheduleSummary) {
 
 .term-dropdown[open] {
   background-color: var(--color-surface-elevated);
+}
+
+.term-dropdown[open] > summary::after {
+  transform: rotate(-180deg);
 }
 
 .schedule-buttons {
