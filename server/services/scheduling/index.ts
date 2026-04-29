@@ -44,8 +44,19 @@ async function buildPlan(term: string): Promise<{
   const orderedWorkItems = sortByDifficulty(collected.workItems)
   const pending = [...orderedWorkItems]
   const assignments: ScheduleAssignment[] = []
-  const conflicts: ScheduleConflict[] = []
+  const conflicts: ScheduleConflict[] = [...collected.conflicts]
   const nearHardFlags: NearHardFlag[] = []
+
+  function makeRuntimeConflict(
+    courseId: string,
+    code: string,
+    detail: string,
+  ): ScheduleConflict {
+    return {
+      courseId,
+      reason: `[${code}] ${detail}`,
+    }
+  }
 
   // Repeatedly place classes that have exactly one valid hard-constraint option.
   let madeProgress = true
@@ -59,11 +70,27 @@ async function buildPlan(term: string): Promise<{
         continue
       }
 
-      const evaluation = evaluatePlacementOptions(
-        workItem,
-        collected.rooms,
-        assignments,
-      )
+      let evaluation: ReturnType<typeof evaluatePlacementOptions>
+      try {
+        evaluation = evaluatePlacementOptions(
+          workItem,
+          collected.rooms,
+          assignments,
+        )
+      } catch (error) {
+        const detail =
+          error instanceof Error ? error.message : 'Unknown constraint error'
+        conflicts.push(
+          makeRuntimeConflict(
+            workItem.course._id,
+            'PLACEMENT_EVALUATION_FAILED',
+            `Constraint evaluation failed. ${detail}`,
+          ),
+        )
+        pending.splice(index, 1)
+        madeProgress = true
+        continue
+      }
 
       if (evaluation.conflict !== null) {
         conflicts.push(evaluation.conflict)
@@ -79,10 +106,30 @@ async function buildPlan(term: string): Promise<{
           continue
         }
 
-        assignments.push(makeAssignment(workItem, chosen))
-        nearHardFlags.push(
-          ...collectPlacementFlags(workItem, chosen, assignments.slice(0, -1)),
-        )
+        try {
+          assignments.push(makeAssignment(workItem, chosen))
+          nearHardFlags.push(
+            ...collectPlacementFlags(
+              workItem,
+              chosen,
+              assignments.slice(0, -1),
+            ),
+          )
+        } catch (error) {
+          assignments.pop()
+          const detail =
+            error instanceof Error ? error.message : 'Unknown assignment error'
+          conflicts.push(
+            makeRuntimeConflict(
+              workItem.course._id,
+              'ASSIGNMENT_APPLICATION_FAILED',
+              `The selected placement could not be applied. ${detail}`,
+            ),
+          )
+          pending.splice(index, 1)
+          madeProgress = true
+          continue
+        }
         pending.splice(index, 1)
         madeProgress = true
         continue
@@ -93,22 +140,50 @@ async function buildPlan(term: string): Promise<{
   }
 
   for (const workItem of pending) {
-    const evaluation = evaluatePlacementOptions(
-      workItem,
-      collected.rooms,
-      assignments,
-    )
+    let evaluation: ReturnType<typeof evaluatePlacementOptions>
+    try {
+      evaluation = evaluatePlacementOptions(
+        workItem,
+        collected.rooms,
+        assignments,
+      )
+    } catch (error) {
+      const detail =
+        error instanceof Error ? error.message : 'Unknown constraint error'
+      conflicts.push(
+        makeRuntimeConflict(
+          workItem.course._id,
+          'PLACEMENT_EVALUATION_FAILED',
+          `Constraint evaluation failed. ${detail}`,
+        ),
+      )
+      continue
+    }
 
     if (evaluation.conflict !== null) {
       conflicts.push(evaluation.conflict)
       continue
     }
 
-    const chosen = optimizeCandidatePlacement(
-      evaluation.candidates,
-      workItem,
-      workItem.professor,
-    )
+    let chosen: ReturnType<typeof optimizeCandidatePlacement>
+    try {
+      chosen = optimizeCandidatePlacement(
+        evaluation.candidates,
+        workItem,
+        workItem.professor,
+      )
+    } catch (error) {
+      const detail =
+        error instanceof Error ? error.message : 'Unknown optimization error'
+      conflicts.push(
+        makeRuntimeConflict(
+          workItem.course._id,
+          'PLACEMENT_OPTIMIZATION_FAILED',
+          `Candidate ranking failed. ${detail}`,
+        ),
+      )
+      continue
+    }
 
     if (chosen === null) {
       conflicts.push({
@@ -118,12 +193,24 @@ async function buildPlan(term: string): Promise<{
       continue
     }
 
-    const assignment = makeAssignment(workItem, chosen)
-
-    assignments.push(assignment)
-    nearHardFlags.push(
-      ...collectPlacementFlags(workItem, chosen, assignments.slice(0, -1)),
-    )
+    try {
+      const assignment = makeAssignment(workItem, chosen)
+      assignments.push(assignment)
+      nearHardFlags.push(
+        ...collectPlacementFlags(workItem, chosen, assignments.slice(0, -1)),
+      )
+    } catch (error) {
+      assignments.pop()
+      const detail =
+        error instanceof Error ? error.message : 'Unknown assignment error'
+      conflicts.push(
+        makeRuntimeConflict(
+          workItem.course._id,
+          'ASSIGNMENT_APPLICATION_FAILED',
+          `The selected placement could not be applied. ${detail}`,
+        ),
+      )
+    }
   }
 
   return {

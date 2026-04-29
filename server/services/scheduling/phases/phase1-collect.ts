@@ -7,6 +7,7 @@ import type {
   Professor,
   PreferenceRecord,
   Room,
+  ScheduleConflict,
 } from '../types'
 import { SchedulingInputError } from '../types'
 import { schedulingConfig } from '../config'
@@ -125,7 +126,6 @@ function buildPreferenceLookup(
 
 function normalizeCoursePreferences(
   course: CoursePreference | null,
-  professor: Professor,
 ): CoursePreference {
   return {
     courseId: course?.courseId ?? '',
@@ -137,8 +137,7 @@ function normalizeCoursePreferences(
     preferredTimes: course?.preferredTimes ?? [],
     avoidTimes: course?.avoidTimes ?? [],
     requiredEquipment: course?.requiredEquipment ?? [],
-    preferredBuilding:
-      course?.preferredBuilding ?? professor.officeBuilding ?? null,
+    preferredBuilding: course?.preferredBuilding ?? null,
     preferredRoomId: course?.preferredRoomId ?? null,
     backToBackWith: course?.backToBackWith ?? null,
     coreqWith: course?.coreqWith ?? [],
@@ -157,12 +156,18 @@ function buildWorkItem(
   similarDepartmentHistory: HistoricalAssignment[],
   historicalPreferences: PreferenceRecord[],
   placementProfile: PlacementProfile,
+  departmentTypicalRoomIds: string[],
   warnings: string[],
 ): CourseWorkItem {
   const preferenceCourses = preference ?? null
   const effectivePreference = preferenceCourses
-    ? normalizeCoursePreferences(preferenceCourses, professor)
+    ? normalizeCoursePreferences(preferenceCourses)
     : null
+  const hasSubmittedRoomBuildingPreference =
+    (preferenceCourses?.preferredRoomId ?? null) !== null ||
+    (preferenceCourses?.preferredBuilding ?? null) !== null
+  const hasDirectRoomHistory =
+    historicalAssignments.length > 0 || professorHistory.length > 0
 
   const expectedEnrollment =
     effectivePreference?.expectedEnrollment ?? course.typicalEnrollment ?? null
@@ -185,6 +190,9 @@ function buildWorkItem(
     similarDepartmentHistory,
     historicalPreferences,
     placementProfile,
+    hasSubmittedRoomBuildingPreference,
+    hasDirectRoomHistory,
+    departmentTypicalRoomIds,
     expectedEnrollment,
     preferredDays:
       effectivePreference?.preferredDays ??
@@ -201,6 +209,63 @@ function buildWorkItem(
     backToBackWith: effectivePreference?.backToBackWith ?? null,
     coreqWith: effectivePreference?.coreqWith ?? [...course.corequisites],
   }
+}
+
+function createCollectionConflict(
+  courseId: string,
+  reason: string,
+): ScheduleConflict {
+  return {
+    courseId,
+    reason,
+  }
+}
+
+function resolveDepartmentTypicalRoomIds(
+  departmentCode: string,
+  rooms: Room[],
+  warnings: string[],
+): string[] {
+  const configuredRooms =
+    schedulingConfig.departmentTypicalRooms[departmentCode] ?? []
+  if (configuredRooms.length === 0) {
+    return []
+  }
+
+  const roomsByNormalizedLabel = new Map<string, Room>()
+  for (const room of rooms) {
+    const labels = new Set(
+      [room._id, room.displayName]
+        .map((value) => String(value ?? '').trim().toUpperCase())
+        .filter((value) => value.length > 0),
+    )
+
+    for (const label of labels) {
+      if (!roomsByNormalizedLabel.has(label)) {
+        roomsByNormalizedLabel.set(label, room)
+      }
+    }
+  }
+
+  const resolved: string[] = []
+  for (const configuredRoom of configuredRooms) {
+    const normalizedConfiguredRoom = configuredRoom.trim().toUpperCase()
+    if (normalizedConfiguredRoom.length === 0) {
+      continue
+    }
+
+    const matchedRoom = roomsByNormalizedLabel.get(normalizedConfiguredRoom)
+    if (matchedRoom === undefined) {
+      warnings.push(
+        `Department typical room "${configuredRoom}" for ${departmentCode} does not match any active room`,
+      )
+      continue
+    }
+
+    resolved.push(matchedRoom._id)
+  }
+
+  return [...new Set(resolved)]
 }
 
 /**
@@ -221,6 +286,7 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
     ])
 
   const warnings: string[] = []
+  const conflicts: ScheduleConflict[] = []
 
   if (rooms.length === 0) {
     throw new SchedulingInputError(['No active rooms available'])
@@ -258,28 +324,26 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
   }
 
   const preferenceLookup = buildPreferenceLookup(preferences)
-  const scheduledCourseIds = [...preferenceLookup.keys()]
-
-  if (scheduledCourseIds.length === 0) {
+  const submittedCourseIds = [...preferenceLookup.keys()]
+  if (submittedCourseIds.length === 0) {
     throw new SchedulingInputError([
       `No course preferences submitted for term ${term}`,
     ])
   }
 
-  const scheduledCourses = scheduledCourseIds
-    .map(
-      (courseId) => courses.find((course) => course._id === courseId) ?? null,
-    )
-    .filter((course): course is NonNullable<typeof course> => course !== null)
-
-  const missingScheduledCourseIds = scheduledCourseIds.filter(
-    (courseId) => !scheduledCourses.some((course) => course._id === courseId),
+  const missingScheduledCourseIds = submittedCourseIds.filter(
+    (courseId) => !courses.some((course) => course._id === courseId),
   )
 
   if (missingScheduledCourseIds.length > 0) {
-    throw new SchedulingInputError([
-      `Preference submissions reference courses missing from the active catalog: ${missingScheduledCourseIds.join(', ')}`,
-    ])
+    for (const courseId of missingScheduledCourseIds) {
+      conflicts.push(
+        createCollectionConflict(
+          courseId,
+          '[COURSE_MISSING_FROM_CATALOG] Preference submission references a course missing from the active catalog.',
+        ),
+      )
+    }
   }
 
   const historyByCourse = await fetchHistoricalAssignments(
@@ -317,83 +381,125 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
     historicalPreferencesByCourse.set(record.courseId, list)
   }
 
-  const workItems = scheduledCourses.map((course) => {
-    const preference = preferenceLookup.get(course._id) ?? null
-    const professor = resolveProfessor(course, preference, professors)
-    const historicalAssignments = historyByCourse.get(course._id) ?? []
+  const scheduledCourses = submittedCourseIds
+    .map(
+      (courseId) => courses.find((course) => course._id === courseId) ?? null,
+    )
+    .filter((course): course is NonNullable<typeof course> => course !== null)
 
-    const professorHistory = historyByProfessor.get(professor._id) ?? []
+  if (scheduledCourses.length === 0) {
+    throw new SchedulingInputError([
+      `No submitted courses for term ${term} could be matched to the active catalog`,
+    ])
+  }
 
-    const similarProfessorHistory: HistoricalAssignment[] = []
-    for (const peer of professors) {
-      if (peer._id === professor._id) {
-        continue
+  const workItems: CourseWorkItem[] = []
+  for (const course of scheduledCourses) {
+    try {
+      const preference = preferenceLookup.get(course._id) ?? null
+      const professor = resolveProfessor(course, preference, professors)
+      const historicalAssignments = historyByCourse.get(course._id) ?? []
+
+      const professorHistory = historyByProfessor.get(professor._id) ?? []
+
+      const similarProfessorHistory: HistoricalAssignment[] = []
+      for (const peer of professors) {
+        if (peer._id === professor._id) {
+          continue
+        }
+
+        if (
+          areDepartmentsSimilar(peer.departmentCode, professor.departmentCode)
+        ) {
+          const peerHistory = historyByProfessor.get(peer._id) ?? []
+          similarProfessorHistory.push(...peerHistory)
+        }
       }
 
-      if (
-        areDepartmentsSimilar(peer.departmentCode, professor.departmentCode)
-      ) {
-        const peerHistory = historyByProfessor.get(peer._id) ?? []
-        similarProfessorHistory.push(...peerHistory)
+      const baseEnrollment =
+        preference?.expectedEnrollment ?? course.typicalEnrollment ?? null
+      const similarCourses = courses.filter(
+        (candidate) =>
+          candidate._id !== course._id &&
+          isSimilarCourse(course, baseEnrollment, candidate),
+      )
+      const similarCourseHistory = similarCourses.flatMap(
+        (candidate) => historyByCourse.get(candidate._id) ?? [],
+      )
+
+      const departmentHistory = historyByDepartment.get(course.deptCode) ?? []
+      const similarDepartmentHistory: HistoricalAssignment[] = []
+      for (const [
+        deptCode,
+        deptAssignments,
+      ] of historyByDepartment.entries()) {
+        if (deptCode === course.deptCode) {
+          continue
+        }
+
+        if (areDepartmentsSimilar(deptCode, course.deptCode)) {
+          similarDepartmentHistory.push(...deptAssignments)
+        }
       }
+
+      const historicalPreferenceRecords =
+        historicalPreferencesByCourse.get(course._id) ?? []
+      const departmentTypicalRoomIds = resolveDepartmentTypicalRoomIds(
+        course.deptCode,
+        rooms,
+        warnings,
+      )
+
+      const profileAssignments = [
+        ...historicalAssignments,
+        ...similarCourseHistory,
+      ].slice(0, schedulingConfig.maxHistoryForProfile)
+      const placementProfile = buildPlacementProfile(
+        profileAssignments,
+        roomsById,
+      )
+
+      workItems.push(
+        buildWorkItem(
+          course,
+          professor,
+          preference,
+          historicalAssignments.slice(0, schedulingConfig.maxHistoryPerCourse),
+          professorHistory,
+          similarProfessorHistory,
+          similarCourseHistory,
+          departmentHistory,
+          similarDepartmentHistory,
+          historicalPreferenceRecords,
+          placementProfile,
+          departmentTypicalRoomIds,
+          warnings,
+        ),
+      )
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown scheduling error'
+      conflicts.push(
+        createCollectionConflict(
+          course._id,
+          `[COLLECTION_FAILED] Unable to prepare this course for scheduling. ${message}`,
+        ),
+      )
     }
+  }
 
-    const baseEnrollment =
-      preference?.expectedEnrollment ?? course.typicalEnrollment ?? null
-    const similarCourses = courses.filter(
-      (candidate) =>
-        candidate._id !== course._id &&
-        isSimilarCourse(course, baseEnrollment, candidate),
-    )
-    const similarCourseHistory = similarCourses.flatMap(
-      (candidate) => historyByCourse.get(candidate._id) ?? [],
-    )
-
-    const departmentHistory = historyByDepartment.get(course.deptCode) ?? []
-    const similarDepartmentHistory: HistoricalAssignment[] = []
-    for (const [deptCode, deptAssignments] of historyByDepartment.entries()) {
-      if (deptCode === course.deptCode) {
-        continue
-      }
-
-      if (areDepartmentsSimilar(deptCode, course.deptCode)) {
-        similarDepartmentHistory.push(...deptAssignments)
-      }
-    }
-
-    const historicalPreferenceRecords =
-      historicalPreferencesByCourse.get(course._id) ?? []
-
-    const profileAssignments = [
-      ...historicalAssignments,
-      ...similarCourseHistory,
-    ].slice(0, schedulingConfig.maxHistoryForProfile)
-    const placementProfile = buildPlacementProfile(
-      profileAssignments,
-      roomsById,
-    )
-
-    return buildWorkItem(
-      course,
-      professor,
-      preference,
-      historicalAssignments.slice(0, schedulingConfig.maxHistoryPerCourse),
-      professorHistory,
-      similarProfessorHistory,
-      similarCourseHistory,
-      departmentHistory,
-      similarDepartmentHistory,
-      historicalPreferenceRecords,
-      placementProfile,
-      warnings,
-    )
-  })
+  if (workItems.length === 0) {
+    throw new SchedulingInputError([
+      `No submitted courses for term ${term} could be prepared for scheduling`,
+    ])
+  }
 
   return {
     rooms,
     courses,
     professors,
     workItems,
+    conflicts,
     warnings,
   }
 }

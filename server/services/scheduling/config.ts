@@ -1,26 +1,4 @@
-const similarDepartments: Record<string, string[]> = {
-  ACC: ['BUS', 'ECO', 'FIN'],
-  BUS: ['ACC', 'FIN', 'MGT', 'MKT', 'SPM'],
-  ECO: ['BUS', 'ACC', 'FIN'],
-  FIN: ['BUS', 'ACC', 'ECO'],
-  MGT: ['BUS', 'ACC'],
-  MKT: ['BUS', 'ACC'],
-  COS: ['MAT', 'STA'],
-  MAT: ['COS', 'STA', 'PHY'],
-  STA: ['MAT', 'COS'],
-  BIO: ['CHE', 'PHY'],
-  CHE: ['BIO', 'PHY'],
-  PHY: ['MAT', 'CHE', 'BIO'],
-  ENG: [],
-  HIS: ['POL'],
-  POL: ['HIS', 'ECO'],
-  BIB: ['MIN'],
-  MIN: ['BIB'],
-  SPA: ['FRE', 'ASL'],
-  FRE: ['SPA', 'ASL'],
-  ASL: ['SPA', 'FRE'],
-}
-
+import { d } from "vue-router/dist/index-BzEKChPW.js"
 
 // Rooms typically used by each department
 const departmentTypicalRooms: Record<string, string[]> = {
@@ -38,7 +16,7 @@ const departmentTypicalRooms: Record<string, string[]> = {
   EDU: ['BH 122', 'BH 313'],
   ENG: ['SN 101', 'SN 102', 'SN 114', 'SN 119B', 'SN 201', 'SN 202'],
   ENT: [], // Entrepreneurship
-  FIN: [], // Finance
+  FIN: ['MH 130', 'MH 280'], // Finance
   FRE: ['BH 209', 'BH 212', 'BH 214'],
   GE: ['BH 122'], // General Ed (academic help classes)
   GRE: ['SN 119B', 'SN 201', 'SN 202'], // Greek
@@ -52,7 +30,7 @@ const departmentTypicalRooms: Record<string, string[]> = {
   MAT: ['MH 270', 'MH 280', 'MH 380'],
   MIN: ['SN 101', 'SN 102', 'SN 114', 'SN 119B', 'SN 201', 'SN 202'], // Ministry
   MIS: ['SN 201', 'SN 202', 'BH 114'], // Missions (contains world religions)
-  MKT: [], // Marketing
+  MKT: ['MH 160', 'MH 270'], // Marketing
   MSP: ['BH 212'], // Mac Scholars Program (and likely other leadership classes)
   MUS: ['CL 122', 'CL 113', 'CL 210'],
   NSC: ['MH 180', 'MH 280', 'MH 310'], // Natural Sciences
@@ -116,5 +94,5 @@ export const schedulingConfig = {
     departmentHistory: 12,
     similarDepartmentHistory: 10,
   },
-  similarDepartments,
+  departmentTypicalRooms,
 } as const

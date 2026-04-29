@@ -98,6 +98,9 @@ export interface CourseWorkItem {
   similarDepartmentHistory: HistoricalAssignment[]
   historicalPreferences: PreferenceRecord[]
   placementProfile: PlacementProfile
+  hasSubmittedRoomBuildingPreference: boolean
+  hasDirectRoomHistory: boolean
+  departmentTypicalRoomIds: string[]
   expectedEnrollment: number | null
   preferredDays: DayPattern[]
   preferredTimes: string[]
@@ -174,6 +177,7 @@ export interface CollectedInputs {
   courses: Course[]
   professors: Professor[]
   workItems: CourseWorkItem[]
+  conflicts: ScheduleConflict[]
   warnings: string[]
 }
 

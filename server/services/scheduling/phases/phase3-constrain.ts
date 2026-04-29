@@ -106,6 +106,36 @@ function createConflict(
   }
 }
 
+function describePlacementAttempts(workItem: CourseWorkItem): string {
+  const attempts: string[] = []
+
+  if (workItem.hasSubmittedRoomBuildingPreference) {
+    attempts.push('submitted room/building preferences')
+  } else if (workItem.preference !== null) {
+    attempts.push('submitted day/time preferences')
+  }
+
+  if (workItem.historicalAssignments.length > 0) {
+    attempts.push('course historical placements')
+  }
+
+  if (workItem.professorHistory.length > 0) {
+    attempts.push('professor historical placements')
+  }
+
+  if (
+    !workItem.hasSubmittedRoomBuildingPreference &&
+    !workItem.hasDirectRoomHistory &&
+    workItem.departmentTypicalRoomIds.length > 0
+  ) {
+    attempts.push('department typical rooms')
+  }
+
+  attempts.push('inferred valid rooms')
+
+  return `Placement attempts exhausted: ${attempts.join(', ')}.`
+}
+
 function buildCandidatePairs(
   workItem: CourseWorkItem,
   candidateRooms: Room[],
@@ -182,6 +212,7 @@ function resolveConflictReason(
   currentAssignments: ScheduleAssignment[],
 ): string {
   const manualOptions = buildManualOptions(candidateRooms, candidateSlots)
+  const attemptSummary = describePlacementAttempts(workItem)
 
   if (
     schedulingConfig.abnormalPlacement.requireHistoricalBuilding &&
@@ -197,6 +228,7 @@ function resolveConflictReason(
         'BUILDING_UNAVAILABLE',
         `No available rooms remain in the historically required building ${preferredBuilding}.`,
         manualOptions,
+        attemptSummary,
       )
     }
   }
@@ -207,6 +239,7 @@ function resolveConflictReason(
       'EQUIPMENT_MISSING',
       `No room found with required equipment: ${missingEquipment}.`,
       manualOptions,
+      attemptSummary,
     )
   }
 
@@ -224,6 +257,7 @@ function resolveConflictReason(
         'GUARDED_ROOM_REQUIRES_REAL_DATA',
         `Guarded rooms withheld until this course has direct room data (preference or direct history): ${roomLabels}.`,
         manualOptions,
+        attemptSummary,
       )
     }
   }
@@ -233,6 +267,7 @@ function resolveConflictReason(
       'LAB_CAPACITY',
       'Lab capacity exhausted for this time slot.',
       manualOptions,
+      attemptSummary,
     )
   }
 
@@ -241,6 +276,7 @@ function resolveConflictReason(
       'CAPACITY_OVERFLOW',
       `No room with sufficient capacity (${workItem.expectedEnrollment} seats needed).`,
       manualOptions,
+      attemptSummary,
     )
   }
 
@@ -254,6 +290,7 @@ function resolveConflictReason(
       'PROFESSOR_UNAVAILABLE',
       'Professor unavailable for all valid time slots.',
       manualOptions,
+      attemptSummary,
     )
   }
 
@@ -262,6 +299,7 @@ function resolveConflictReason(
       'NO_VALID_SLOT',
       'No valid slot found after applying all hard constraints.',
       manualOptions,
+      attemptSummary,
     )
   }
 
@@ -269,6 +307,7 @@ function resolveConflictReason(
     'NO_VALID_SLOT',
     'No valid slot found after applying all hard constraints.',
     manualOptions,
+    attemptSummary,
   )
 }
 
@@ -276,12 +315,13 @@ function formatConflict(
   code: string,
   message: string,
   manualOptions: string[],
+  attemptSummary: string,
 ): string {
   const optionsText =
     manualOptions.length > 0
       ? ` Manual options: ${manualOptions.join(' | ')}.`
       : ''
-  return `[${code}] ${message}${optionsText}`
+  return `[${code}] ${message} ${attemptSummary}${optionsText}`
 }
 
 function buildManualOptions(
@@ -330,6 +370,32 @@ function filterNormalRooms(
   return { normal, abnormal }
 }
 
+function applyDepartmentTypicalRoomFallback(
+  workItem: CourseWorkItem,
+  candidateRooms: Room[],
+): Room[] {
+  if (workItem.hasSubmittedRoomBuildingPreference) {
+    return candidateRooms
+  }
+
+  if (workItem.hasDirectRoomHistory) {
+    return candidateRooms
+  }
+
+  if (workItem.departmentTypicalRoomIds.length === 0) {
+    return candidateRooms
+  }
+
+  const typicalRoomIdSet = new Set(workItem.departmentTypicalRoomIds)
+  const departmentTypicalRooms = candidateRooms.filter((room) =>
+    typicalRoomIdSet.has(room._id),
+  )
+
+  return departmentTypicalRooms.length > 0
+    ? departmentTypicalRooms
+    : candidateRooms
+}
+
 /**
  * Applies the hard-constraint filters and turns a work item into room/slot candidates.
  *
@@ -343,7 +409,11 @@ export function evaluatePlacementOptions(
   rooms: Room[],
   currentAssignments: ScheduleAssignment[],
 ): ConstraintEvaluation {
-  const candidateRooms = filterRooms(workItem, rooms)
+  const unconstrainedCandidateRooms = filterRooms(workItem, rooms)
+  const candidateRooms = applyDepartmentTypicalRoomFallback(
+    workItem,
+    unconstrainedCandidateRooms,
+  )
   const allSlots = generateAllSlots(workItem.course.creditHours)
   const candidateSlots = allSlots.filter((slot) => {
     if (professorIsBusy(workItem.professor._id, slot, currentAssignments)) {
