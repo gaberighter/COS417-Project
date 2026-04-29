@@ -10,6 +10,7 @@ import {
   type IRoom,
 } from '../../../models/index'
 import {
+  assignSyntheticSectionsToCourseReferences,
   catalogCourseIdOf,
   normalizeCourseReference,
 } from '../../../utils/courseReferences'
@@ -192,7 +193,7 @@ export async function fetchPreferences(
     .lean<IProfessor[]>()
     .exec()
 
-  return professors
+  const records = professors
     .filter((professor) => professor.active)
     .flatMap((professor) =>
       professor.preferences
@@ -234,6 +235,8 @@ export async function fetchPreferences(
           }),
         ),
     )
+
+  return assignSyntheticSectionsToCourseReferences(records)
 }
 
 /**
@@ -251,7 +254,7 @@ export async function fetchHistoricalPreferences(
     .lean<IProfessor[]>()
     .exec()
 
-  return professors
+  const records = professors
     .filter((professor) => professor.active)
     .flatMap((professor) =>
       professor.preferences
@@ -293,6 +296,8 @@ export async function fetchHistoricalPreferences(
           }),
         ),
     )
+
+  return assignSyntheticSectionsToCourseReferences(records)
 }
 
 /**
