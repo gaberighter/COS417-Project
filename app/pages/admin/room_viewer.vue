@@ -194,7 +194,7 @@
           </tbody>
         </table>
       </div>
-      <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
+      <p v-if="statusMessage" class="action-message">{{ statusMessage }}</p>
     </div>
   </div>
   <button class="add-room-fab" @click="openAddRoomModal" title="Add New Room">
@@ -353,7 +353,7 @@ definePageMeta({
 })
 
 // Composables
-const { rooms, pending, error, loadRooms, retryLoad, deleteRoom } =
+const { rooms, pending, error, loadRooms, retryLoad, deleteRoom, deleteMessage } =
   useRoomCRUD()
 const {
   filters,
@@ -376,6 +376,8 @@ const {
   submitNewRoom,
   validateRoomTypeForLabStations,
 } = useRoomForm(loadRooms)
+
+const statusMessage = computed(() => deleteMessage.value || actionMessage.value)
 
 // Navigation
 const { redirectToLogin, redirectToAdmin } = useDebugNavigation()

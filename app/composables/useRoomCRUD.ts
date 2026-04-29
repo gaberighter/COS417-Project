@@ -14,6 +14,7 @@ interface RoomEquipment {
 }
 
 interface Room {
+  abbreviation?: string
   buildingCode: string
   roomNumber: string
   displayName: string
@@ -27,6 +28,7 @@ export const useRoomCRUD = () => {
   const rooms = ref<Room[]>([])
   const pending = ref(false)
   const error = ref<Error | null>(null)
+  const deleteMessage = ref('')
 
   const loadRooms = async () => {
     pending.value = true
@@ -44,7 +46,19 @@ export const useRoomCRUD = () => {
 
   const retryLoad = () => loadRooms()
 
-  const deleteRoom = (room: Room) => {
+  const buildRoomId = (room: Room) => {
+    if (room.abbreviation?.trim()) {
+      return room.abbreviation.trim().toUpperCase()
+    }
+
+    const buildingCode = room.buildingCode?.trim().toUpperCase()
+    const roomNumber = room.roomNumber?.trim()
+    return `${buildingCode} ${roomNumber}`.trim()
+  }
+
+  const deleteRoom = async (room: Room) => {
+    const roomId = buildRoomId(room)
+    deleteMessage.value = ''
     const shouldDelete = window.confirm(
       `Delete room ${room.buildingCode} ${room.roomNumber}?`,
     )
@@ -52,8 +66,17 @@ export const useRoomCRUD = () => {
       return
     }
 
-    // Delete not supported yet on backend
-    return 'Delete is not available yet on the backend. Add a DELETE /api/rooms route to enable it.'
+    try {
+      await $fetch(`/api/rooms/${encodeURIComponent(roomId)}`, {
+        method: 'DELETE',
+        headers: { 'x-dev-role': 'Admin' },
+      })
+      deleteMessage.value = 'Room deleted.'
+      await loadRooms()
+    } catch (e) {
+      console.error('Failed to delete room:', e)
+      deleteMessage.value = 'Failed to delete room. Please try again.'
+    }
   }
 
   return {
@@ -63,5 +86,6 @@ export const useRoomCRUD = () => {
     loadRooms,
     retryLoad,
     deleteRoom,
+    deleteMessage,
   }
 }
