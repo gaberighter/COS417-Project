@@ -5,6 +5,13 @@
       <h1 class="site-top-bar__title">{{ currentPageTitle }}</h1>
       <div class="site-top-bar__actions">
         <button
+          v-if="canShowDashboardAction"
+          class="site-top-bar__auth-btn site-top-bar__auth-btn--secondary"
+          @click="handleDashboardAction"
+        >
+          {{ dashboardActionLabel }}
+        </button>
+        <button
           class="site-top-bar__auth-btn site-top-bar__auth-btn--secondary site-top-bar__theme-btn"
           @click="toggleTheme"
         >
@@ -153,6 +160,38 @@ const authContextLabel = computed(() => {
   return 'Signed in'
 })
 
+const dashboardAction = computed(() => {
+  const path = route.path ?? ''
+
+  if (path.startsWith('/admin')) {
+    return {
+      label: 'Admin Dashboard',
+      target: '/admin/admin_dashboard',
+    }
+  }
+
+  if (path.startsWith('/faculty')) {
+    return {
+      label: 'Faculty Dashboard',
+      target: '/faculty/faculty_dashboard',
+    }
+  }
+
+  return null
+})
+
+const canShowDashboardAction = computed(() => {
+  if (!dashboardAction.value) {
+    return false
+  }
+
+  return route.path !== dashboardAction.value.target
+})
+
+const dashboardActionLabel = computed(() => {
+  return dashboardAction.value?.label ?? ''
+})
+
 const canShowProfileAction = computed(() => {
   if (!isLoggedIn.value) {
     return false
@@ -221,5 +260,13 @@ const handleProfileAction = async () => {
   if (typeof auth.profileRoute === 'string' && auth.profileRoute.length > 0) {
     await navigateTo(auth.profileRoute)
   }
+}
+
+const handleDashboardAction = async () => {
+  if (!dashboardAction.value) {
+    return
+  }
+
+  await navigateTo(dashboardAction.value.target)
 }
 </script>
