@@ -345,34 +345,29 @@ function cancelEdit() {
 
 async function saveEdit() {
   if (!selectedScheduleDetails.value || !editingCourseId.value) return
-  const term = selectedScheduleDetails.value.term
   editPending.value = true
   actionMessage.value = ''
+  const schedule = selectedScheduleDetails.value
+  const updatedAssignments = schedule.assignments.map((assignment) =>
+    assignment.courseId === editingCourseId.value
+      ? { ...assignment, ...editingDraft }
+      : assignment,
+  )
 
   try {
-    const updated = await $fetch<Assignment>(
-      `/api/schedule/${encodeURIComponent(term)}/assignment`,
+    const updatedSchedule = await $fetch<ScheduleDetails>(
+      `/api/schedule/${encodeURIComponent(schedule.term)}`,
       {
         method: 'PATCH',
         body: {
-          courseId: editingCourseId.value,
-          professorId: editingDraft.professorId,
-          roomId: editingDraft.roomId,
-          days: editingDraft.days,
-          startTime: editingDraft.startTime,
-          endTime: editingDraft.endTime,
+          runNumber: schedule.runNumber,
+          assignments: updatedAssignments,
         },
       },
     )
 
-    const schedule = selectedScheduleDetails.value
-    const assignmentIndex = schedule.assignments.findIndex(
-      (assignment) => assignment.courseId === editingCourseId.value,
-    )
-    if (assignmentIndex >= 0) {
-      schedule.assignments.splice(assignmentIndex, 1, updated)
-      scheduleDetailsCache.set(schedule._id, schedule)
-    }
+    selectedScheduleDetails.value = updatedSchedule
+    scheduleDetailsCache.set(updatedSchedule._id, updatedSchedule)
     actionMessage.value = 'Assignment updated.'
     editingCourseId.value = null
   } catch (error) {
