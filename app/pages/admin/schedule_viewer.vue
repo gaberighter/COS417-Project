@@ -5,14 +5,24 @@
       <div v-if="scheduleError">Unable to load schedules.</div>
       <div v-else-if="schedulePending">Loading schedules...</div>
       <div v-else-if="scheduleItems.length === 0">No schedules available.</div>
-      <div v-else class="schedule-buttons">
-        <button
-          v-for="schedule in scheduleItems"
-          :key="schedule._id"
-          @click="selectSchedule(schedule)"
+      <div v-else class="term-dropdowns">
+        <details
+          v-for="term in termKeys"
+          :key="term"
+          class="term-dropdown"
+          :open="term === termKeys[0]"
         >
-          {{ formatScheduleLabel(schedule) }}
-        </button>
+          <summary>{{ term }}</summary>
+          <div class="schedule-buttons">
+            <button
+              v-for="schedule in schedulesByTerm[term]"
+              :key="schedule._id"
+              @click="selectSchedule(schedule)"
+            >
+              {{ formatScheduleLabel(schedule) }}
+            </button>
+          </div>
+        </details>
       </div>
     </div>
     <div class="schedule-content">
@@ -76,6 +86,19 @@ const {
 } = useFetch<ScheduleSummary[]>('/api/schedule')
 
 const scheduleItems = computed(() => schedules.value ?? [])
+const schedulesByTerm = computed(() => {
+  return scheduleItems.value.reduce<Record<string, ScheduleSummary[]>>(
+    (acc, schedule) => {
+      if (!acc[schedule.term]) acc[schedule.term] = []
+      acc[schedule.term].push(schedule)
+      return acc
+    },
+    {},
+  )
+})
+const termKeys = computed(() =>
+  Object.keys(schedulesByTerm.value).sort((a, b) => b.localeCompare(a)),
+)
 const selectedScheduleId = ref<string | null>(null)
 const selectedScheduleDetails = ref<ScheduleDetails | null>(null)
 const selectedSchedulePending = ref(false)
@@ -130,5 +153,60 @@ function formatScheduleLabel(schedule: ScheduleSummary) {
   max-width: 1000px;
   margin: 0 auto;
   padding: 16px;
+}
+
+.schedule-list {
+  margin-top: 1rem;
+}
+
+.term-dropdowns {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.term-dropdown {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.4rem 0.8rem;
+  min-width: min(220px, 100%);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.15);
+}
+
+.term-dropdown > summary {
+  list-style: none;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.term-dropdown > summary::-webkit-details-marker {
+  display: none;
+}
+
+.term-dropdown[open] {
+  background-color: var(--color-surface-elevated);
+}
+
+.schedule-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.schedule-buttons button {
+  text-align: left;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .term-dropdown {
+    width: 100%;
+  }
 }
 </style>
