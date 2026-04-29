@@ -4,7 +4,7 @@ import { d } from 'vue-router/dist/index-BzEKChPW.js'
 const departmentTypicalRooms: Record<string, string[]> = {
   ACC: ['MH 160'],
   ART: ['JH 114', 'JH 116', 'LA 103'],
-  ASL: [],
+  ASL: ['SN 101', 'SN 102'],
   BIB: ['SN 101', 'SN 102', 'SN 114', 'SN 119B', 'SN 201', 'SN 202'],
   BIO: ['MH 160', 'MH 180', 'MH 270', 'MH 280', 'MH 232', 'MH 250'],
   BUS: ['MH 150', 'MH 180'],
@@ -15,14 +15,14 @@ const departmentTypicalRooms: Record<string, string[]> = {
   ECO: ['BH 118', 'BH 120', 'BH 122', 'MH 180', 'SN 114'],
   EDU: ['BH 122', 'BH 313'],
   ENG: ['SN 101', 'SN 102', 'SN 114', 'SN 119B', 'SN 201', 'SN 202'],
-  ENT: [], // Entrepreneurship
+  ENT: ['AH 108'], // Entrepreneurship
   FIN: ['MH 130', 'MH 280'], // Finance
   FRE: ['BH 209', 'BH 212', 'BH 214'],
   GE: ['BH 122'], // General Ed (academic help classes)
   GRE: ['SN 119B', 'SN 201', 'SN 202'], // Greek
   HEB: ['SN 119B', 'SN 201', 'SN 202'], // Hebrew
   HIS: ['BH 114', 'BH 120', 'BH 212', 'BH 214', 'MH 160'],
-  HSC: [], // Health Sciences
+  HSC: ['MH 160', 'MH 180', 'MH 270', 'MH 280', 'MH 232', 'MH 250'], // Health Sciences
   HWC: ['BC 312'], // Health and Wellness Core (Fitness for Life: Likely not in use anymore)
   IDS: [], // Interdisciplinary Studies
   INS: ['BH 114', 'BH 214'], // International Studies
@@ -41,7 +41,7 @@ const departmentTypicalRooms: Record<string, string[]> = {
   PSY: ['MH 160', 'MH 214', 'MH 270'],
   SOC: ['BH 118'],
   SPA: ['BH 209', 'BH 212', 'BH 214'],
-  SPM: [],
+  SPM: ['MH 130', 'MH 160', 'MH 380'],
   STA: ['BH 120', 'MH 150'], // Stats
   THT: [], // Theater
 }
