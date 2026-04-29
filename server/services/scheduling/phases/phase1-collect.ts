@@ -236,7 +236,11 @@ function resolveDepartmentTypicalRoomIds(
   for (const room of rooms) {
     const labels = new Set(
       [room._id, room.displayName]
-        .map((value) => String(value ?? '').trim().toUpperCase())
+        .map((value) =>
+          String(value ?? '')
+            .trim()
+            .toUpperCase(),
+        )
         .filter((value) => value.length > 0),
     )
 
@@ -429,10 +433,7 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
 
       const departmentHistory = historyByDepartment.get(course.deptCode) ?? []
       const similarDepartmentHistory: HistoricalAssignment[] = []
-      for (const [
-        deptCode,
-        deptAssignments,
-      ] of historyByDepartment.entries()) {
+      for (const [deptCode, deptAssignments] of historyByDepartment.entries()) {
         if (deptCode === course.deptCode) {
           continue
         }

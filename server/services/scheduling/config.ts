@@ -1,4 +1,4 @@
-import { d } from "vue-router/dist/index-BzEKChPW.js"
+import { d } from 'vue-router/dist/index-BzEKChPW.js'
 
 // Rooms typically used by each department
 const departmentTypicalRooms: Record<string, string[]> = {
@@ -43,7 +43,7 @@ const departmentTypicalRooms: Record<string, string[]> = {
   SPA: ['BH 209', 'BH 212', 'BH 214'],
   SPM: [],
   STA: ['BH 120', 'MH 150'], // Stats
-  THT: [] // Theater
+  THT: [], // Theater
 }
 
 export const schedulingConfig = {
