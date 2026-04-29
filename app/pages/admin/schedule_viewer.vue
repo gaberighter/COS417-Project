@@ -46,6 +46,7 @@
                 <th>Start</th>
                 <th>End</th>
                 <th>Override By</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -54,19 +55,118 @@
                 :key="`${assignment.courseId}-${assignment.roomId}-${index}`"
               >
                 <td>{{ assignment.courseId }}</td>
-                <td>{{ assignment.professorId }}</td>
-                <td>{{ assignment.roomId }}</td>
-                <td>{{ assignment.days }}</td>
-                <td>{{ assignment.startTime }}</td>
-                <td>{{ assignment.endTime }}</td>
+                <td>
+                  <span v-if="!isEditing(assignment)">
+                    {{ formatProfessorName(assignment.professorId) }}
+                  </span>
+                  <input
+                    v-else
+                    v-model="editingDraft.professorId"
+                    class="schedule-table-input"
+                    type="text"
+                    placeholder="firstname.lastname"
+                  />
+                </td>
+                <td>
+                  <span v-if="!isEditing(assignment)">
+                    {{ assignment.roomId }}
+                  </span>
+                  <input
+                    v-else
+                    v-model="editingDraft.roomId"
+                    class="schedule-table-input"
+                    type="text"
+                  />
+                </td>
+                <td>
+                  <span v-if="!isEditing(assignment)">
+                    {{ assignment.days }}
+                  </span>
+                  <select
+                    v-else
+                    v-model="editingDraft.days"
+                    class="schedule-table-input"
+                  >
+                    <option
+                      v-for="pattern in dayPatternOptions"
+                      :key="pattern"
+                      :value="pattern"
+                    >
+                      {{ pattern }}
+                    </option>
+                  </select>
+                </td>
+                <td>
+                  <span v-if="!isEditing(assignment)">
+                    {{ assignment.startTime }}
+                  </span>
+                  <input
+                    v-else
+                    v-model="editingDraft.startTime"
+                    class="schedule-table-input"
+                    type="text"
+                    placeholder="09:00"
+                  />
+                </td>
+                <td>
+                  <span v-if="!isEditing(assignment)">
+                    {{ assignment.endTime }}
+                  </span>
+                  <input
+                    v-else
+                    v-model="editingDraft.endTime"
+                    class="schedule-table-input"
+                    type="text"
+                    placeholder="10:15"
+                  />
+                </td>
                 <td>{{ formatOptionalValue(assignment.overrideBy) }}</td>
+                <td class="row-actions">
+                  <button
+                    v-if="!isEditing(assignment)"
+                    type="button"
+                    class="action-btn action-btn--edit"
+                    :disabled="editPending || editingCourseId !== null"
+                    @click="startEdit(assignment)"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    v-if="!isEditing(assignment)"
+                    type="button"
+                    class="action-btn action-btn--delete"
+                    :disabled="editPending || editingCourseId !== null"
+                    @click="deleteAssignment(assignment)"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    v-else
+                    type="button"
+                    class="action-btn action-btn--save"
+                    :disabled="editPending"
+                    @click="saveEdit"
+                  >
+                    Save
+                  </button>
+                  <button
+                    v-else
+                    type="button"
+                    class="action-btn action-btn--cancel"
+                    :disabled="editPending"
+                    @click="cancelEdit"
+                  >
+                    Cancel
+                  </button>
+                </td>
               </tr>
               <tr v-if="selectedAssignments.length === 0">
-                <td colspan="7">No classes in this schedule.</td>
+                <td colspan="8">No classes in this schedule.</td>
               </tr>
             </tbody>
           </table>
         </div>
+        <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
       </div>
     </div>
   </div>
@@ -115,6 +215,8 @@ type ScheduleRunResponse = {
   schedules: ScheduleDetails[]
 }
 
+type Assignment = ScheduleDetails['assignments'][number]
+
 const {
   data: schedules,
   pending: schedulePending,
@@ -141,6 +243,30 @@ const selectedSchedulePending = ref(false)
 const selectedScheduleError = ref<unknown>(null)
 const scheduleDetailsCache = new Map<string, ScheduleDetails>()
 let latestScheduleRequest = 0
+
+const editingCourseId = ref<string | null>(null)
+const editPending = ref(false)
+const actionMessage = ref('')
+const editingDraft = reactive<Assignment>({
+  courseId: '',
+  professorId: '',
+  roomId: '',
+  days: 'MWF',
+  startTime: '',
+  endTime: '',
+  overrideBy: null,
+})
+
+const dayPatternOptions: Assignment['days'][] = [
+  'MWF',
+  'TR',
+  'MW',
+  'MTWF',
+  'MWRF',
+  'W',
+  'T',
+  'R',
+]
 
 const selectedAssignments = computed(
   () => selectedScheduleDetails.value?.assignments ?? [],
@@ -190,6 +316,109 @@ function formatScheduleLabel(schedule: ScheduleSummary) {
 function formatOptionalValue(value?: string | null) {
   return value && value.trim().length > 0 ? value : 'N/A'
 }
+
+function formatProfessorName(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return 'Unknown'
+  const parts = trimmed.split(/[.\s_]+/).filter(Boolean)
+  const formatted = parts.map((part) =>
+    part.length > 1
+      ? `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`
+      : part.toUpperCase(),
+  )
+  return formatted.join(' ')
+}
+
+function isEditing(assignment: Assignment) {
+  return editingCourseId.value === assignment.courseId
+}
+
+function startEdit(assignment: Assignment) {
+  editingCourseId.value = assignment.courseId
+  actionMessage.value = ''
+  Object.assign(editingDraft, assignment)
+}
+
+function cancelEdit() {
+  editingCourseId.value = null
+}
+
+async function saveEdit() {
+  if (!selectedScheduleDetails.value || !editingCourseId.value) return
+  const term = selectedScheduleDetails.value.term
+  editPending.value = true
+  actionMessage.value = ''
+
+  try {
+    const updated = await $fetch<Assignment>(
+      `/api/schedule/${encodeURIComponent(term)}/assignment`,
+      {
+        method: 'PATCH',
+        body: {
+          courseId: editingCourseId.value,
+          professorId: editingDraft.professorId,
+          roomId: editingDraft.roomId,
+          days: editingDraft.days,
+          startTime: editingDraft.startTime,
+          endTime: editingDraft.endTime,
+        },
+      },
+    )
+
+    const schedule = selectedScheduleDetails.value
+    const assignmentIndex = schedule.assignments.findIndex(
+      (assignment) => assignment.courseId === editingCourseId.value,
+    )
+    if (assignmentIndex >= 0) {
+      schedule.assignments.splice(assignmentIndex, 1, updated)
+      scheduleDetailsCache.set(schedule._id, schedule)
+    }
+    actionMessage.value = 'Assignment updated.'
+    editingCourseId.value = null
+  } catch (error) {
+    actionMessage.value = 'Unable to update assignment.'
+    selectedScheduleError.value = error
+  } finally {
+    editPending.value = false
+  }
+}
+
+async function deleteAssignment(assignment: Assignment) {
+  if (!selectedScheduleDetails.value) return
+  const shouldDelete = window.confirm(
+    `Delete assignment for ${assignment.courseId}?`,
+  )
+  if (!shouldDelete) return
+
+  editPending.value = true
+  actionMessage.value = ''
+  const schedule = selectedScheduleDetails.value
+  const updatedAssignments = schedule.assignments.filter(
+    (item) => item.courseId !== assignment.courseId,
+  )
+
+  try {
+    const updatedSchedule = await $fetch<ScheduleDetails>(
+      `/api/schedule/${encodeURIComponent(schedule.term)}`,
+      {
+        method: 'PATCH',
+        body: {
+          runNumber: schedule.runNumber,
+          assignments: updatedAssignments,
+        },
+      },
+    )
+
+    selectedScheduleDetails.value = updatedSchedule
+    scheduleDetailsCache.set(updatedSchedule._id, updatedSchedule)
+    actionMessage.value = 'Assignment deleted.'
+  } catch (error) {
+    actionMessage.value = 'Unable to delete assignment.'
+    selectedScheduleError.value = error
+  } finally {
+    editPending.value = false
+  }
+}
 </script>
 
 <style>
@@ -197,10 +426,18 @@ function formatOptionalValue(value?: string | null) {
   max-width: 1000px;
   margin: 0 auto;
   padding: 16px;
+  min-height: calc(100vh - 4rem);
+  display: flex;
+  flex-direction: column;
 }
 
 .schedule-list {
   margin-top: 1rem;
+}
+
+.schedule-content {
+  flex: 1;
+  min-height: 0;
 }
 
 .term-dropdowns {
@@ -267,6 +504,8 @@ function formatOptionalValue(value?: string | null) {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  flex: 1;
+  min-height: 0;
 }
 
 .schedule-meta {
@@ -282,9 +521,11 @@ function formatOptionalValue(value?: string | null) {
 
 .table-container {
   overflow-x: auto;
+  overflow-y: auto;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
+  max-height: min(60vh, 520px);
 }
 
 table {
@@ -301,6 +542,76 @@ td {
 
 thead {
   background-color: var(--color-surface-elevated);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.row-actions {
+  white-space: nowrap;
+}
+
+.action-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-action-secondary-border);
+  background: var(--color-action-secondary-bg);
+  color: var(--color-action-secondary-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn + .action-btn {
+  margin-left: 0.4rem;
+}
+
+.action-btn:hover {
+  background: var(--color-action-secondary-bg-hover);
+}
+
+.action-btn--delete {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.action-btn--delete:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.action-btn--save {
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #22c55e;
+}
+
+.action-btn--save:hover {
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.action-btn--cancel {
+  border-color: rgba(148, 163, 184, 0.6);
+  color: var(--color-text-secondary);
+}
+
+.schedule-table-input {
+  width: 100%;
+  background-color: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  border-radius: 6px;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.9rem;
+}
+
+.schedule-table-input:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.action-message {
+  margin: 0.6rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
 }
 
 @media (max-width: 640px) {
