@@ -140,24 +140,24 @@
                   >
                     Delete
                   </button>
-                  <button
-                    v-else
-                    type="button"
-                    class="action-btn action-btn--save"
-                    :disabled="editPending"
-                    @click="saveEdit"
-                  >
-                    Save
-                  </button>
-                  <button
-                    v-else
-                    type="button"
-                    class="action-btn action-btn--cancel"
-                    :disabled="editPending"
-                    @click="cancelEdit"
-                  >
-                    Cancel
-                  </button>
+                  <template v-else>
+                    <button
+                      type="button"
+                      class="action-btn action-btn--save"
+                      :disabled="editPending"
+                      @click="saveEdit"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      class="action-btn action-btn--cancel"
+                      :disabled="editPending"
+                      @click="cancelEdit"
+                    >
+                      Cancel
+                    </button>
+                  </template>
                 </td>
               </tr>
               <tr v-if="selectedAssignments.length === 0">
