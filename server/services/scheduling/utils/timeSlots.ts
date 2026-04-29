@@ -1,28 +1,5 @@
 import type { DayPattern, TimeSlot } from '../types'
-
-const START_TIMES = [
-  '08:00',
-  '08:30',
-  '09:00',
-  '09:30',
-  '10:00',
-  '11:00',
-  '11:45',
-  '12:00',
-  '12:30',
-  '13:00',
-  '13:30',
-  '14:00',
-  '14:30',
-  '15:00',
-  '16:00',
-  '16:10',
-  '17:00',
-  '17:30',
-  '18:00',
-  '19:00',
-  '19:30',
-] as const
+import { schedulingConfig } from '../config'
 
 function parseTime(value: string): number {
   const [hoursText, minutesText] = value.split(':')
@@ -38,30 +15,70 @@ function formatTime(totalMinutes: number): string {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
 }
 
+function uniqueMeetingDayCount(days: DayPattern): number {
+  return new Set(days.split('')).size
+}
+
+function roundToNearestFive(totalMinutes: number): number {
+  return Math.max(25, Math.round(totalMinutes / 5) * 5)
+}
+
 function patternDuration(days: DayPattern, creditHours = 3): number {
-  const baseDuration = (() => {
-    switch (days) {
-      case 'TR':
-        return 75
-      case 'MW':
-        return 110
-      case 'MWF':
-      case 'MTWF':
-        return 50
-      default:
-        return 50
-    }
-  })()
+  const meetingsPerWeek = uniqueMeetingDayCount(days)
+  const weeklyInstructionMinutes = Math.max(50, creditHours * 50)
+  return roundToNearestFive(weeklyInstructionMinutes / meetingsPerWeek)
+}
 
-  if (creditHours <= 1) {
-    return Math.max(25, Math.floor(baseDuration / 2))
+const SUPPORTED_PATTERNS: DayPattern[] = [
+  'MWF',
+  'TR',
+  'MW',
+  'MTWF',
+  'MWRF',
+  'M',
+  'W',
+  'T',
+  'R',
+]
+
+export function normalizeClockTime(value: string): string {
+  const trimmed = value.trim()
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})$/)
+  if (!match) {
+    return trimmed
   }
 
-  if (creditHours >= 4) {
-    return baseDuration + 25
+  const hours = Number(match[1])
+  const minutes = Number(match[2])
+  if (
+    !Number.isFinite(hours) ||
+    !Number.isFinite(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return trimmed
   }
 
-  return baseDuration
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+}
+
+function uniqueNormalizedTimes(values: string[]): string[] {
+  return [...new Set(values.map(normalizeClockTime).filter(Boolean))]
+}
+
+function startTimesForPattern(
+  days: DayPattern,
+  requestedTimes: string[] = [],
+): string[] {
+  const configuredTypicalTimes =
+    schedulingConfig.typicalStartTimesByPattern[days] ?? []
+
+  return uniqueNormalizedTimes([
+    ...configuredTypicalTimes,
+    ...requestedTimes,
+  ])
 }
 
 function sharedDays(left: DayPattern, right: DayPattern): string[] {
@@ -74,12 +91,17 @@ function sharedDays(left: DayPattern, right: DayPattern): string[] {
  * @param creditHours - Course credit hours used for duration adjustments.
  * @returns All valid term slots across the supported day patterns.
  */
-export function generateAllSlots(creditHours = 3): TimeSlot[] {
-  const patterns: DayPattern[] = ['MWF', 'TR', 'MW', 'MTWF']
+export function generateAllSlots(
+  creditHours = 3,
+  requestedPatterns: DayPattern[] = [],
+  requestedTimes: string[] = [],
+): TimeSlot[] {
   const slots: TimeSlot[] = []
+  const patterns = uniqueNormalizedPatterns(requestedPatterns)
+  const activePatterns = patterns.length > 0 ? patterns : SUPPORTED_PATTERNS
 
-  for (const days of patterns) {
-    for (const startTime of START_TIMES) {
+  for (const days of activePatterns) {
+    for (const startTime of startTimesForPattern(days, requestedTimes)) {
       slots.push({
         days,
         startTime,
@@ -91,6 +113,12 @@ export function generateAllSlots(creditHours = 3): TimeSlot[] {
   }
 
   return slots
+}
+
+function uniqueNormalizedPatterns(values: DayPattern[]): DayPattern[] {
+  return [...new Set(values)].filter((value): value is DayPattern =>
+    SUPPORTED_PATTERNS.includes(value),
+  )
 }
 
 /**
@@ -106,7 +134,9 @@ export function computeEndTime(
   days: DayPattern,
   creditHours: number,
 ): string {
-  return formatTime(parseTime(startTime) + patternDuration(days, creditHours))
+  return formatTime(
+    parseTime(normalizeClockTime(startTime)) + patternDuration(days, creditHours),
+  )
 }
 
 /**

@@ -24,9 +24,19 @@ import type {
   Professor,
   Room,
 } from '../types'
+import { normalizeClockTime } from './timeSlots'
 
 function normalizeDayPattern(value: string): DayPattern {
-  if (value === 'MWF' || value === 'TR' || value === 'MW' || value === 'MTWF') {
+  if (
+    value === 'MWF' ||
+    value === 'TR' ||
+    value === 'MW' ||
+    value === 'MTWF' ||
+    value === 'MWRF' ||
+    value === 'W' ||
+    value === 'T' ||
+    value === 'R'
+  ) {
     return value
   }
 
@@ -88,7 +98,9 @@ function cloneCourse(course: ICourse): Course {
     typicalDays: course.typicalDays
       ? normalizeDayPattern(course.typicalDays)
       : null,
-    typicalTime: course.typicalTime ?? null,
+    typicalTime: course.typicalTime
+      ? normalizeClockTime(course.typicalTime)
+      : null,
     requiredEquipment: [...course.requiredEquipment],
     prerequisites: [...course.prerequisites],
     corequisites: [...course.corequisites],
@@ -216,8 +228,12 @@ export async function fetchPreferences(
               preferredDays: [...(course.preferredDays ?? [])].map((days) =>
                 normalizeDayPattern(days),
               ),
-              preferredTimes: [...(course.preferredTimes ?? [])],
-              avoidTimes: [...(course.avoidTimes ?? [])],
+              preferredTimes: [...(course.preferredTimes ?? [])].map(
+                normalizeClockTime,
+              ),
+              avoidTimes: [...(course.avoidTimes ?? [])].map(
+                normalizeClockTime,
+              ),
               requiredEquipment: [...(course.requiredEquipment ?? [])],
               preferredBuilding: course.preferredBuilding ?? null,
               preferredRoomId: course.preferredRoomId ?? null,
@@ -277,8 +293,12 @@ export async function fetchHistoricalPreferences(
               preferredDays: [...(course.preferredDays ?? [])].map((days) =>
                 normalizeDayPattern(days),
               ),
-              preferredTimes: [...(course.preferredTimes ?? [])],
-              avoidTimes: [...(course.avoidTimes ?? [])],
+              preferredTimes: [...(course.preferredTimes ?? [])].map(
+                normalizeClockTime,
+              ),
+              avoidTimes: [...(course.avoidTimes ?? [])].map(
+                normalizeClockTime,
+              ),
               requiredEquipment: [...(course.requiredEquipment ?? [])],
               preferredBuilding: course.preferredBuilding ?? null,
               preferredRoomId: course.preferredRoomId ?? null,

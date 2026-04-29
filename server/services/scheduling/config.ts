@@ -1,3 +1,5 @@
+import type { DayPattern } from './types'
+
 // Rooms typically used by each department
 const departmentTypicalRooms: Record<string, string[]> = {
   ACC: ['MH 160'],
@@ -57,6 +59,18 @@ const guardedRoomDisplayNamesRequiringRealData = [
   'Barnes 312',
 ] as string[]
 
+const typicalStartTimesByPattern: Record<DayPattern, readonly string[]> = {
+  MWF: ['08:00', '09:00', '10:00', '11:45', '13:00', '14:00', '15:00'],
+  TR: ['08:00', '09:30', '13:00', '14:30', '16:00'],
+  MW: ['8:00', '11:45', '18:00', '17:00', '19:00'],
+  MTWF: [],
+  MWRF: [],
+  M: [],
+  W: [],
+  T: [],
+  R: [],
+}
+
 export const schedulingConfig = {
   maxHistoryRuns: 24,
   maxHistoryPerCourse: 32,
@@ -100,4 +114,5 @@ export const schedulingConfig = {
     similarDepartmentHistory: 10,
   },
   departmentTypicalRooms,
+  typicalStartTimesByPattern,
 } as const

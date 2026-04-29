@@ -418,7 +418,11 @@ export function evaluatePlacementOptions(
     workItem,
     unconstrainedCandidateRooms,
   )
-  const allSlots = generateAllSlots(workItem.course.creditHours)
+  const allSlots = generateAllSlots(
+    workItem.course.creditHours,
+    workItem.preferredDays,
+    workItem.preferredTimes,
+  )
   const candidateSlots = allSlots.filter((slot) => {
     if (professorIsBusy(workItem.professor._id, slot, currentAssignments)) {
       return false

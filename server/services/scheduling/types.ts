@@ -1,4 +1,4 @@
-export type DayPattern = 'MWF' | 'TR' | 'MW' | 'MTWF'
+export type DayPattern = 'MWF' | 'TR' | 'MW' | 'MTWF' | 'MWRF' | 'M' | 'W' | 'T' | 'R'
 
 export type ScheduleStatus = 'draft' | 'under_review' | 'approved' | 'exported'
 
