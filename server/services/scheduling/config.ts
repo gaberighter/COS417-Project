@@ -24,25 +24,48 @@ const similarDepartments: Record<string, string[]> = {
 
 // Rooms typically used by each department
 const departmentTypicalRooms: Record<string, string[]> = {
-  ACC: ['Mills 160'],
-  ART: ['Jackson 114', 'Jackson 116', 'Lucas 103'],
+  ACC: ['MH 160'],
+  ART: ['JH 114', 'JH 116', 'LA 103'],
   ASL: [],
-  BIB: ['Sanderson 101', 'Sanderson 102', 'Sanderson 114', 'Sanderson 119B', 'Sanderson 201', 'Sanderson 202'],
-  BIO: ['Mills 160', 'Mills 180', 'Mills 270', 'Mills 280', 'Mills 232', 'Mills 250'],
-  BUS: ['Mills 150', 'Mills 180'],
-  CDV: ['Brock 122', 'Brock 212', 'Brock 214'],
-  CHE: ['Mills 180', 'Mills 280', 'Mills 380', 'Mills 330'],
+  BIB: ['SN 101', 'SN 102', 'SN 114', 'SN 119B', 'SN 201', 'SN 202'],
+  BIO: ['MH 160', 'MH 180', 'MH 270', 'MH 280', 'MH 232', 'MH 250'],
+  BUS: ['MH 150', 'MH 180'],
+  CDV: ['BH 122', 'BH 212', 'BH 214'], // Community Development
+  CHE: ['MH 180', 'MH 280', 'MH 380', 'MH 330'],
   COR: [],
-  COS: ['Mills 130', 'Mills 150'],
-  ECO: ['Brock 118', 'Brock 120', 'Brock 122', 'Mills 180', 'Sanderson 114'],
-  EDU: ['Brock 122', 'Brock 313'],
-  ENG: ['Sanderson 101', 'Sanderson 102', 'Sanderson 114', 'Sanderson 119B', 'Sanderson 201', 'Sanderson 202'],
+  COS: ['MH 130', 'MH 150'],
+  ECO: ['BH 118', 'BH 120', 'BH 122', 'MH 180', 'SN 114'],
+  EDU: ['BH 122', 'BH 313'],
+  ENG: ['SN 101', 'SN 102', 'SN 114', 'SN 119B', 'SN 201', 'SN 202'],
   ENT: [], // Entrepreneurship
   FIN: [], // Finance
-  FRE: ['Brock 212'],
-  GE: ['Brock 122'],
-  GRE: ['Sanderson 119B'], // Greek
-
+  FRE: ['BH 209', 'BH 212', 'BH 214'],
+  GE: ['BH 122'], // General Ed (academic help classes)
+  GRE: ['SN 119B', 'SN 201', 'SN 202'], // Greek
+  HEB: ['SN 119B', 'SN 201', 'SN 202'], // Hebrew
+  HIS: ['BH 114', 'BH 120', 'BH 212', 'BH 214', 'MH 160'],
+  HSC: [], // Health Sciences
+  HWC: ['BC 312'], // Health and Wellness Core (Fitness for Life: Likely not in use anymore)
+  IDS: [], // Interdisciplinary Studies
+  INS: ['BH 114', 'BH 214'], // International Studies
+  LIN: ['SN 201', 'SN 202', 'BH 122'], // Linguistics
+  MAT: ['MH 270', 'MH 280', 'MH 380'],
+  MIN: ['SN 101', 'SN 102', 'SN 114', 'SN 119B', 'SN 201', 'SN 202'], // Ministry
+  MIS: ['SN 201', 'SN 202', 'BH 114'], // Missions (contains world religions)
+  MKT: [], // Marketing
+  MSP: ['BH 212'], // Mac Scholars Program (and likely other leadership classes)
+  MUS: ['CL 122', 'CL 113', 'CL 210'],
+  NSC: ['MH 180', 'MH 280', 'MH 310'], // Natural Sciences
+  PDV: ['BH 122', 'BH 212', 'BH 214'], // Poverty and Development
+  PHI: ['SN 101', 'SN 102', 'SN 114', 'SN 119B'],
+  PHY: ['MH 380', 'MH 310', 'MH 360'],
+  POL: ['BH 114', 'BH 214'],
+  PSY: ['MH 160', 'MH 214', 'MH 270'],
+  SOC: ['BH 118'],
+  SPA: ['BH 209', 'BH 212', 'BH 214'],
+  SPM: [],
+  STA: ['BH 120', 'MH 150'], // Stats
+  THT: [] // Theater
 }
 
 export const schedulingConfig = {
