@@ -4,6 +4,7 @@ import type {
   NearHardFlag,
   ScheduleAssignment,
 } from '../types'
+import { scheduledCourseIdsShareCatalog } from '../../../utils/courseReferences'
 import { isBackToBack, slotsOverlap } from '../utils/timeSlots'
 import { isPlacementAbnormal } from '../utils/history'
 
@@ -28,7 +29,7 @@ export function collectNearHardFlags(
   currentAssignments: ScheduleAssignment[],
 ): NearHardFlag[] {
   const flags: NearHardFlag[] = []
-  const courseId = workItem.course._id
+  const courseId = workItem.scheduledCourseId
   const professorId = workItem.professor._id
 
   const abnormalCheck = isPlacementAbnormal(
@@ -46,7 +47,7 @@ export function collectNearHardFlags(
 
   for (const assignment of currentAssignments) {
     if (
-      assignment.courseId === courseId &&
+      scheduledCourseIdsShareCatalog(assignment.courseId, courseId) &&
       assignment.professorId === professorId &&
       isBackToBack(assignment, candidate.slot)
     ) {

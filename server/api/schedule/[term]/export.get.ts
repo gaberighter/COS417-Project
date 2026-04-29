@@ -4,6 +4,11 @@
 
 import { defineEventHandler, getRouterParam, createError, setHeader } from 'h3'
 import { requireAuth } from '../../../utils/auth'
+import {
+  catalogCourseIdOf,
+  courseSectionOf,
+  normalizeCourseReference,
+} from '../../../utils/courseReferences'
 import { connectDB } from '../../../utils/db'
 import {
   CourseCatalog,
@@ -65,7 +70,8 @@ function buildBannerRows(
   const missingFields: string[] = []
 
   for (const assignment of assignments) {
-    const course = lookups.coursesById.get(assignment.courseId)
+    const catalogCourseId = catalogCourseIdOf(assignment.courseId)
+    const course = lookups.coursesById.get(catalogCourseId)
     const professor =
       lookups.professorsById.get(assignment.professorId) ??
       lookups.professorsById.get(assignment.professorId.toLowerCase())
@@ -80,7 +86,7 @@ function buildBannerRows(
     const values = [
       course?.deptCode ?? '',
       course?.courseNumber ?? '',
-      '',
+      courseSectionOf(assignment.courseId) ?? '',
       course?.title ?? '',
       course ? String(course.creditHours) : '',
       professor?.covenantId ?? '',
@@ -143,7 +149,9 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const courseIds = [...new Set(schedule.assignments.map((a) => a.courseId))]
+  const courseIds = [
+    ...new Set(schedule.assignments.map((a) => catalogCourseIdOf(a.courseId))),
+  ]
   const professorIds = [
     ...new Set(schedule.assignments.map((a) => a.professorId)),
   ]
@@ -205,12 +213,16 @@ export default defineEventHandler(async (event) => {
     for (const submission of professor.preferences ?? []) {
       if (submission.term !== term) continue
       for (const coursePreference of submission.courses ?? []) {
+        const normalizedReference = normalizeCourseReference(
+          coursePreference.courseId,
+          coursePreference.section ?? null,
+        )
         estimatedEnrollmentByKey.set(
-          `${professor._id}::${coursePreference.courseId}`,
+          `${professor._id}::${normalizedReference.scheduledCourseId}`,
           coursePreference.expectedEnrollment,
         )
         estimatedEnrollmentByKey.set(
-          `${professor.covenantId}::${coursePreference.courseId}`,
+          `${professor.covenantId}::${normalizedReference.scheduledCourseId}`,
           coursePreference.expectedEnrollment,
         )
       }

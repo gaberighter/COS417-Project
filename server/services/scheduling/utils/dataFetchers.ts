@@ -9,6 +9,10 @@ import {
   type IProfessor,
   type IRoom,
 } from '../../../models/index'
+import {
+  catalogCourseIdOf,
+  normalizeCourseReference,
+} from '../../../utils/courseReferences'
 import { connectDB } from '../../../utils/db'
 import type {
   Course,
@@ -61,6 +65,7 @@ function cloneRoom(room: IRoom): Room {
     buildingCode: deriveBuildingCode(room.abbreviation, room.buildingName),
     roomNumber: room.roomNumber,
     displayName: room.displayName ?? null,
+    abbreviation: room.abbreviation ?? null,
     capacity: room.capacity,
     roomType: room.roomType,
     available: room.available,
@@ -102,6 +107,7 @@ function clonePreferenceSubmission(
     status: submission.status,
     courses: submission.courses.map((course) => ({
       courseId: course.courseId,
+      section: course.section ?? null,
       title: course.title,
       expectedEnrollment: course.expectedEnrollment,
       maxCapacity: course.maxCapacity ?? null,
@@ -192,31 +198,40 @@ export async function fetchPreferences(
       professor.preferences
         .filter((submission) => submission.term === term)
         .flatMap((submission) =>
-          submission.courses.map((course) => ({
-            courseId: course.courseId,
-            title: course.title,
-            expectedEnrollment: course.expectedEnrollment,
-            maxCapacity: course.maxCapacity ?? null,
-            creditHours: course.creditHours,
-            preferredDays: [...(course.preferredDays ?? [])].map((days) =>
-              normalizeDayPattern(days),
-            ),
-            preferredTimes: [...(course.preferredTimes ?? [])],
-            avoidTimes: [...(course.avoidTimes ?? [])],
-            requiredEquipment: [...(course.requiredEquipment ?? [])],
-            preferredBuilding: course.preferredBuilding ?? null,
-            preferredRoomId: course.preferredRoomId ?? null,
-            backToBackWith: course.backToBackWith ?? null,
-            coreqWith: [...(course.coreqWith ?? [])],
-            professorId: professor._id ?? professor.covenantId,
-            professorName: professor.displayName,
-            departmentCode: professor.departmentCode,
-            submittedAt: submission.submittedAt
-              ? new Date(submission.submittedAt)
-              : null,
-            status: submission.status,
-            term: submission.term,
-          })),
+          submission.courses.map((course) => {
+            const normalized = normalizeCourseReference(
+              course.courseId,
+              course.section ?? null,
+            )
+            return {
+              courseId: normalized.rawCourseId,
+              catalogCourseId: normalized.catalogCourseId,
+              scheduledCourseId: normalized.scheduledCourseId,
+              section: normalized.section,
+              title: course.title,
+              expectedEnrollment: course.expectedEnrollment,
+              maxCapacity: course.maxCapacity ?? null,
+              creditHours: course.creditHours,
+              preferredDays: [...(course.preferredDays ?? [])].map((days) =>
+                normalizeDayPattern(days),
+              ),
+              preferredTimes: [...(course.preferredTimes ?? [])],
+              avoidTimes: [...(course.avoidTimes ?? [])],
+              requiredEquipment: [...(course.requiredEquipment ?? [])],
+              preferredBuilding: course.preferredBuilding ?? null,
+              preferredRoomId: course.preferredRoomId ?? null,
+              backToBackWith: course.backToBackWith ?? null,
+              coreqWith: [...(course.coreqWith ?? [])],
+              professorId: professor._id ?? professor.covenantId,
+              professorName: professor.displayName,
+              departmentCode: professor.departmentCode,
+              submittedAt: submission.submittedAt
+                ? new Date(submission.submittedAt)
+                : null,
+              status: submission.status,
+              term: submission.term,
+            }
+          }),
         ),
     )
 }
@@ -242,31 +257,40 @@ export async function fetchHistoricalPreferences(
       professor.preferences
         .filter((submission) => submission.term !== term)
         .flatMap((submission) =>
-          submission.courses.map((course) => ({
-            courseId: course.courseId,
-            title: course.title,
-            expectedEnrollment: course.expectedEnrollment,
-            maxCapacity: course.maxCapacity ?? null,
-            creditHours: course.creditHours,
-            preferredDays: [...(course.preferredDays ?? [])].map((days) =>
-              normalizeDayPattern(days),
-            ),
-            preferredTimes: [...(course.preferredTimes ?? [])],
-            avoidTimes: [...(course.avoidTimes ?? [])],
-            requiredEquipment: [...(course.requiredEquipment ?? [])],
-            preferredBuilding: course.preferredBuilding ?? null,
-            preferredRoomId: course.preferredRoomId ?? null,
-            backToBackWith: course.backToBackWith ?? null,
-            coreqWith: [...(course.coreqWith ?? [])],
-            professorId: professor._id ?? professor.covenantId,
-            professorName: professor.displayName,
-            departmentCode: professor.departmentCode,
-            submittedAt: submission.submittedAt
-              ? new Date(submission.submittedAt)
-              : null,
-            status: submission.status,
-            term: submission.term,
-          })),
+          submission.courses.map((course) => {
+            const normalized = normalizeCourseReference(
+              course.courseId,
+              course.section ?? null,
+            )
+            return {
+              courseId: normalized.rawCourseId,
+              catalogCourseId: normalized.catalogCourseId,
+              scheduledCourseId: normalized.scheduledCourseId,
+              section: normalized.section,
+              title: course.title,
+              expectedEnrollment: course.expectedEnrollment,
+              maxCapacity: course.maxCapacity ?? null,
+              creditHours: course.creditHours,
+              preferredDays: [...(course.preferredDays ?? [])].map((days) =>
+                normalizeDayPattern(days),
+              ),
+              preferredTimes: [...(course.preferredTimes ?? [])],
+              avoidTimes: [...(course.avoidTimes ?? [])],
+              requiredEquipment: [...(course.requiredEquipment ?? [])],
+              preferredBuilding: course.preferredBuilding ?? null,
+              preferredRoomId: course.preferredRoomId ?? null,
+              backToBackWith: course.backToBackWith ?? null,
+              coreqWith: [...(course.coreqWith ?? [])],
+              professorId: professor._id ?? professor.covenantId,
+              professorName: professor.displayName,
+              departmentCode: professor.departmentCode,
+              submittedAt: submission.submittedAt
+                ? new Date(submission.submittedAt)
+                : null,
+              status: submission.status,
+              term: submission.term,
+            }
+          }),
         ),
     )
 }
@@ -312,14 +336,15 @@ export async function fetchHistoricalAssignments(
 
   for (const schedule of recentSchedules) {
     for (const assignment of schedule.assignments ?? []) {
-      if (!targetCourseIds.has(assignment.courseId)) {
+      const catalogCourseId = catalogCourseIdOf(assignment.courseId)
+      if (!targetCourseIds.has(catalogCourseId)) {
         continue
       }
 
       const dedupeKey = [
         schedule.term,
         schedule.runNumber,
-        assignment.courseId,
+        catalogCourseId,
         assignment.professorId,
         assignment.roomId,
         assignment.days,
@@ -333,11 +358,11 @@ export async function fetchHistoricalAssignments(
 
       seenAssignments.add(dedupeKey)
 
-      const existing = historyByCourse.get(assignment.courseId) ?? []
+      const existing = historyByCourse.get(catalogCourseId) ?? []
       existing.push({
         term: schedule.term,
         runNumber: schedule.runNumber,
-        courseId: assignment.courseId,
+        courseId: catalogCourseId,
         professorId: assignment.professorId,
         roomId: assignment.roomId,
         days: normalizeDayPattern(assignment.days),
@@ -345,7 +370,7 @@ export async function fetchHistoricalAssignments(
         endTime: assignment.endTime,
         buildingCode: roomBuildingById.get(assignment.roomId) ?? null,
       })
-      historyByCourse.set(assignment.courseId, existing)
+      historyByCourse.set(catalogCourseId, existing)
     }
   }
 

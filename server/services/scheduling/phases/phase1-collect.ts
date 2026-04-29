@@ -11,6 +11,7 @@ import type {
 } from '../types'
 import { SchedulingInputError } from '../types'
 import { schedulingConfig } from '../config'
+import { buildScheduledCourseId } from '../../../utils/courseReferences'
 import {
   fetchCourses,
   fetchHistoricalAssignments,
@@ -84,9 +85,9 @@ function buildPreferenceLookup(
   const lookup = new Map<string, PreferenceRecord>()
 
   for (const record of preferences) {
-    const current = lookup.get(record.courseId)
+    const current = lookup.get(record.scheduledCourseId)
     if (current === undefined) {
-      lookup.set(record.courseId, record)
+      lookup.set(record.scheduledCourseId, record)
       continue
     }
 
@@ -108,7 +109,7 @@ function buildPreferenceLookup(
             : 0
 
     if (nextPriority > currentPriority) {
-      lookup.set(record.courseId, record)
+      lookup.set(record.scheduledCourseId, record)
       continue
     }
 
@@ -116,7 +117,7 @@ function buildPreferenceLookup(
       const currentSubmittedAt = current.submittedAt?.getTime() ?? 0
       const nextSubmittedAt = record.submittedAt?.getTime() ?? 0
       if (nextSubmittedAt > currentSubmittedAt) {
-        lookup.set(record.courseId, record)
+        lookup.set(record.scheduledCourseId, record)
       }
     }
   }
@@ -129,6 +130,7 @@ function normalizeCoursePreferences(
 ): CoursePreference {
   return {
     courseId: course?.courseId ?? '',
+    section: course?.section ?? null,
     title: course?.title ?? '',
     expectedEnrollment: course?.expectedEnrollment ?? null,
     maxCapacity: course?.maxCapacity ?? null,
@@ -179,6 +181,9 @@ function buildWorkItem(
   }
 
   return {
+    scheduledCourseId: preferenceCourses?.scheduledCourseId ?? course._id,
+    catalogCourseId: preferenceCourses?.catalogCourseId ?? course._id,
+    section: preferenceCourses?.section ?? null,
     course,
     professor,
     preference: preferenceCourses,
@@ -235,7 +240,7 @@ function resolveDepartmentTypicalRoomIds(
   const roomsByNormalizedLabel = new Map<string, Room>()
   for (const room of rooms) {
     const labels = new Set(
-      [room._id, room.displayName]
+      [room._id, room.displayName, room.abbreviation]
         .map((value) =>
           String(value ?? '')
             .trim()
@@ -314,7 +319,7 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
       .filter((value): value is string => value !== null && value.length > 0),
   )
 
-  for (const configuredName of schedulingConfig.guardedRoomDisplayNamesRequiringRealData) {
+  for (const configuredName of schedulingConfig.guardedRoomDisplayNamesRequiringRealData ?? []) {
     const normalizedConfiguredName = configuredName.trim().toLowerCase()
     if (normalizedConfiguredName.length === 0) {
       continue
@@ -329,21 +334,23 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
 
   const preferenceLookup = buildPreferenceLookup(preferences)
   const submittedCourseIds = [...preferenceLookup.keys()]
+  const submittedPreferences = [...preferenceLookup.values()]
   if (submittedCourseIds.length === 0) {
     throw new SchedulingInputError([
       `No course preferences submitted for term ${term}`,
     ])
   }
 
-  const missingScheduledCourseIds = submittedCourseIds.filter(
-    (courseId) => !courses.some((course) => course._id === courseId),
+  const missingScheduledCourseIds = submittedPreferences.filter(
+    (preference) =>
+      !courses.some((course) => course._id === preference.catalogCourseId),
   )
 
   if (missingScheduledCourseIds.length > 0) {
-    for (const courseId of missingScheduledCourseIds) {
+    for (const preference of missingScheduledCourseIds) {
       conflicts.push(
         createCollectionConflict(
-          courseId,
+          preference.scheduledCourseId,
           '[COURSE_MISSING_FROM_CATALOG] Preference submission references a course missing from the active catalog.',
         ),
       )
@@ -380,16 +387,26 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
 
   const historicalPreferencesByCourse = new Map<string, PreferenceRecord[]>()
   for (const record of historicalPreferences) {
-    const list = historicalPreferencesByCourse.get(record.courseId) ?? []
+    const list = historicalPreferencesByCourse.get(record.catalogCourseId) ?? []
     list.push(record)
-    historicalPreferencesByCourse.set(record.courseId, list)
+    historicalPreferencesByCourse.set(record.catalogCourseId, list)
   }
 
-  const scheduledCourses = submittedCourseIds
-    .map(
-      (courseId) => courses.find((course) => course._id === courseId) ?? null,
+  const scheduledCourses = submittedPreferences
+    .map((preference) => ({
+      preference,
+      course:
+        courses.find((course) => course._id === preference.catalogCourseId) ??
+        null,
+    }))
+    .filter(
+      (
+        entry,
+      ): entry is {
+        preference: PreferenceRecord
+        course: NonNullable<(typeof courses)[number]>
+      } => entry.course !== null,
     )
-    .filter((course): course is NonNullable<typeof course> => course !== null)
 
   if (scheduledCourses.length === 0) {
     throw new SchedulingInputError([
@@ -398,9 +415,9 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
   }
 
   const workItems: CourseWorkItem[] = []
-  for (const course of scheduledCourses) {
+  for (const scheduledCourse of scheduledCourses) {
     try {
-      const preference = preferenceLookup.get(course._id) ?? null
+      const { course, preference } = scheduledCourse
       const professor = resolveProfessor(course, preference, professors)
       const historicalAssignments = historyByCourse.get(course._id) ?? []
 
@@ -482,7 +499,10 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
         error instanceof Error ? error.message : 'Unknown scheduling error'
       conflicts.push(
         createCollectionConflict(
-          course._id,
+          buildScheduledCourseId(
+            scheduledCourse.course._id,
+            scheduledCourse.preference.section,
+          ),
           `[COLLECTION_FAILED] Unable to prepare this course for scheduling. ${message}`,
         ),
       )

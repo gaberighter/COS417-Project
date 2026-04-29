@@ -8,6 +8,7 @@ import type {
   ScheduleConflict,
   TimeSlot,
 } from '../types'
+import { scheduledCourseIdsShareCatalog } from '../../../utils/courseReferences'
 import { filterRooms } from '../constraints/hard'
 import { collectNearHardFlags } from '../constraints/nearHard'
 import {
@@ -101,7 +102,7 @@ function createConflict(
   reason: string,
 ): ScheduleConflict {
   return {
-    courseId: workItem.course._id,
+    courseId: workItem.scheduledCourseId,
     reason,
   }
 }
@@ -152,7 +153,10 @@ function buildCandidatePairs(
 
       const avoidsBackToBackSameCourse = !currentAssignments.some(
         (assignment) =>
-          assignment.courseId === workItem.course._id &&
+          scheduledCourseIdsShareCatalog(
+            assignment.courseId,
+            workItem.scheduledCourseId,
+          ) &&
           assignment.professorId === workItem.professor._id &&
           isBackToBack(assignment, slot),
       )

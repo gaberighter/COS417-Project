@@ -25,7 +25,7 @@ function makeAssignment(
   },
 ): ScheduleAssignment {
   return {
-    courseId: workItem.course._id,
+    courseId: workItem.scheduledCourseId,
     professorId: workItem.professor._id,
     roomId: chosen.room._id,
     days: chosen.slot.days,
@@ -82,7 +82,7 @@ async function buildPlan(term: string): Promise<{
           error instanceof Error ? error.message : 'Unknown constraint error'
         conflicts.push(
           makeRuntimeConflict(
-            workItem.course._id,
+            workItem.scheduledCourseId,
             'PLACEMENT_EVALUATION_FAILED',
             `Constraint evaluation failed. ${detail}`,
           ),
@@ -121,7 +121,7 @@ async function buildPlan(term: string): Promise<{
             error instanceof Error ? error.message : 'Unknown assignment error'
           conflicts.push(
             makeRuntimeConflict(
-              workItem.course._id,
+              workItem.scheduledCourseId,
               'ASSIGNMENT_APPLICATION_FAILED',
               `The selected placement could not be applied. ${detail}`,
             ),
@@ -151,8 +151,8 @@ async function buildPlan(term: string): Promise<{
       const detail =
         error instanceof Error ? error.message : 'Unknown constraint error'
       conflicts.push(
-        makeRuntimeConflict(
-          workItem.course._id,
+          makeRuntimeConflict(
+          workItem.scheduledCourseId,
           'PLACEMENT_EVALUATION_FAILED',
           `Constraint evaluation failed. ${detail}`,
         ),
@@ -177,7 +177,7 @@ async function buildPlan(term: string): Promise<{
         error instanceof Error ? error.message : 'Unknown optimization error'
       conflicts.push(
         makeRuntimeConflict(
-          workItem.course._id,
+          workItem.scheduledCourseId,
           'PLACEMENT_OPTIMIZATION_FAILED',
           `Candidate ranking failed. ${detail}`,
         ),
@@ -187,7 +187,7 @@ async function buildPlan(term: string): Promise<{
 
     if (chosen === null) {
       conflicts.push({
-        courseId: workItem.course._id,
+        courseId: workItem.scheduledCourseId,
         reason: 'No valid slot found after applying all hard constraints',
       })
       continue
@@ -205,7 +205,7 @@ async function buildPlan(term: string): Promise<{
         error instanceof Error ? error.message : 'Unknown assignment error'
       conflicts.push(
         makeRuntimeConflict(
-          workItem.course._id,
+          workItem.scheduledCourseId,
           'ASSIGNMENT_APPLICATION_FAILED',
           `The selected placement could not be applied. ${detail}`,
         ),

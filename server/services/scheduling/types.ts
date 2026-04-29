@@ -9,6 +9,7 @@ export interface Room {
   buildingCode: string
   roomNumber: string
   displayName: string | null
+  abbreviation?: string | null
   capacity: number
   roomType: 'classroom' | 'lab'
   available: boolean
@@ -42,6 +43,7 @@ export interface Course {
 
 export interface CoursePreference {
   courseId: string
+  section?: string | null
   title: string
   expectedEnrollment: number | null
   maxCapacity: number | null
@@ -78,6 +80,9 @@ export interface Professor {
 }
 
 export interface PreferenceRecord extends CoursePreference {
+  catalogCourseId: string
+  scheduledCourseId: string
+  section: string | null
   professorId: string
   professorName: string
   departmentCode: string
@@ -87,6 +92,9 @@ export interface PreferenceRecord extends CoursePreference {
 }
 
 export interface CourseWorkItem {
+  scheduledCourseId: string
+  catalogCourseId: string
+  section: string | null
   course: Course
   professor: Professor
   preference: PreferenceRecord | null

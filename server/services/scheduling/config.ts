@@ -1,5 +1,3 @@
-import { d } from 'vue-router/dist/index-BzEKChPW.js'
-
 // Rooms typically used by each department
 const departmentTypicalRooms: Record<string, string[]> = {
   ACC: ['MH 160'],
@@ -46,22 +44,29 @@ const departmentTypicalRooms: Record<string, string[]> = {
   THT: [], // Theater
 }
 
+const similarDepartments: Record<string, string[]> = {}
+
+const guardedRoomDisplayNamesRequiringRealData = [
+  'Jackson 114',
+  'Jackson 115',
+  'Jackson 116',
+  'Jackson 117',
+  'Andreas 108',
+  'Kirk',
+  'Kresge 212',
+  'Barnes 312',
+] as string[]
+
 export const schedulingConfig = {
   maxHistoryRuns: 24,
   maxHistoryPerCourse: 32,
   maxHistoryForProfile: 120,
   historyRecencyDecay: 0.85,
   // Rooms that should not be assigned classes unless they have been there before, or are explicitly requested
-  guardedRoomIdsRequiringRealData: [
-    'Jackson 114',
-    'Jackson 115',
-    'Jackson 116',
-    'Jackson 117',
-    'Andreas 108',
-    'Kirk',
-    'Kresge 212',
-    'Barnes 312',
-  ] as string[],
+  guardedRoomIdsRequiringRealData:
+    guardedRoomDisplayNamesRequiringRealData as string[],
+  guardedRoomDisplayNamesRequiringRealData,
+  similarDepartments,
   similarity: {
     enrollmentDeltaAbsolute: 10,
     enrollmentDeltaPercent: 0.25,

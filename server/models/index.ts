@@ -46,6 +46,7 @@ export interface ICourse {
 
 export interface ICoursePreference {
   courseId: string
+  section?: string | null
   title: string
   expectedEnrollment: number
   maxCapacity?: number | null
@@ -211,6 +212,7 @@ courseSchema.pre('validate', function setCourseId() {
 const coursePreferenceSchema = new Schema<ICoursePreference>(
   {
     courseId: { type: String, required: true, trim: true },
+    section: { type: String, default: null, trim: true },
     title: { type: String, required: true, trim: true },
     expectedEnrollment: { type: Number, required: true, min: 0 },
     maxCapacity: { type: Number, default: null, min: 0 },
