@@ -16,7 +16,12 @@
       </div>
     </div>
     <div class="schedule-content">
-
+      <div v-if="!selectedScheduleId">Select a schedule to view details.</div>
+      <div v-else-if="selectedSchedulePending">Loading schedule details...</div>
+      <div v-else-if="selectedScheduleError">Unable to load schedule details.</div>
+      <pre v-else-if="selectedScheduleDetails">{{
+        JSON.stringify(selectedScheduleDetails, null, 2)
+      }}</pre>
     </div>
   </div>
   <div class="temporary-debug-buttons">
@@ -40,6 +45,30 @@ type ScheduleSummary = {
   createdAt?: string
 }
 
+type ScheduleDetails = ScheduleSummary & {
+  createdBy: string
+  assignments: {
+    courseId: string
+    professorId: string
+    roomId: string
+    days: string
+    startTime: string
+    endTime: string
+    overrideBy?: string | null
+  }[]
+  conflicts: {
+    courseId: string
+    reason: string
+    resolvedBy?: string | null
+    resolvedAt?: string | null
+  }[]
+  updatedAt?: string
+}
+
+type ScheduleRunResponse = {
+  schedules: ScheduleDetails[]
+}
+
 const {
   data: schedules,
   pending: schedulePending,
@@ -48,10 +77,47 @@ const {
 
 const scheduleItems = computed(() => schedules.value ?? [])
 const selectedScheduleId = ref<string | null>(null)
+const selectedScheduleDetails = ref<ScheduleDetails | null>(null)
+const selectedSchedulePending = ref(false)
+const selectedScheduleError = ref<unknown>(null)
+const scheduleDetailsCache = new Map<string, ScheduleDetails>()
+let latestScheduleRequest = 0
 
-function selectSchedule(schedule: ScheduleSummary) {
+async function selectSchedule(schedule: ScheduleSummary) {
+  const requestId = ++latestScheduleRequest
   selectedScheduleId.value = schedule._id
-  // TODO: Load the selected schedule details into the viewer.
+  selectedScheduleError.value = null
+
+  const cachedSchedule = scheduleDetailsCache.get(schedule._id)
+  if (cachedSchedule) {
+    selectedScheduleDetails.value = cachedSchedule
+    selectedSchedulePending.value = false
+    return
+  }
+
+  selectedScheduleDetails.value = null
+  selectedSchedulePending.value = true
+
+  try {
+    const response = await $fetch<ScheduleRunResponse>(
+      `/api/schedule/${encodeURIComponent(schedule.term)}/all`,
+    )
+    const details =
+      response.schedules.find((item) => item._id === schedule._id) ??
+      response.schedules.find((item) => item.runNumber === schedule.runNumber) ??
+      null
+
+    if (requestId !== latestScheduleRequest) return
+    selectedScheduleDetails.value = details
+    if (details) scheduleDetailsCache.set(schedule._id, details)
+  } catch (error) {
+    if (requestId !== latestScheduleRequest) return
+    selectedScheduleError.value = error
+  } finally {
+    if (requestId === latestScheduleRequest) {
+      selectedSchedulePending.value = false
+    }
+  }
 }
 
 function formatScheduleLabel(schedule: ScheduleSummary) {
