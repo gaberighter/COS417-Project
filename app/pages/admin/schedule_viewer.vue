@@ -29,9 +29,45 @@
       <div v-if="!selectedScheduleId">Select a schedule to view details.</div>
       <div v-else-if="selectedSchedulePending">Loading schedule details...</div>
       <div v-else-if="selectedScheduleError">Unable to load schedule details.</div>
-      <pre v-else-if="selectedScheduleDetails">{{
-        JSON.stringify(selectedScheduleDetails, null, 2)
-      }}</pre>
+      <div v-else-if="selectedScheduleDetails" class="schedule-details">
+        <div class="schedule-meta">
+          <p><strong>Term:</strong> {{ selectedScheduleDetails.term }}</p>
+          <p><strong>Run:</strong> {{ selectedScheduleDetails.runNumber }}</p>
+          <p><strong>Status:</strong> {{ selectedScheduleDetails.status }}</p>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Course</th>
+                <th>Professor</th>
+                <th>Room</th>
+                <th>Days</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Override By</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(assignment, index) in selectedAssignments"
+                :key="`${assignment.courseId}-${assignment.roomId}-${index}`"
+              >
+                <td>{{ assignment.courseId }}</td>
+                <td>{{ assignment.professorId }}</td>
+                <td>{{ assignment.roomId }}</td>
+                <td>{{ assignment.days }}</td>
+                <td>{{ assignment.startTime }}</td>
+                <td>{{ assignment.endTime }}</td>
+                <td>{{ formatOptionalValue(assignment.overrideBy) }}</td>
+              </tr>
+              <tr v-if="selectedAssignments.length === 0">
+                <td colspan="7">No classes in this schedule.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
   <div class="temporary-debug-buttons">
@@ -106,6 +142,10 @@ const selectedScheduleError = ref<unknown>(null)
 const scheduleDetailsCache = new Map<string, ScheduleDetails>()
 let latestScheduleRequest = 0
 
+const selectedAssignments = computed(
+  () => selectedScheduleDetails.value?.assignments ?? [],
+)
+
 async function selectSchedule(schedule: ScheduleSummary) {
   const requestId = ++latestScheduleRequest
   selectedScheduleId.value = schedule._id
@@ -145,6 +185,10 @@ async function selectSchedule(schedule: ScheduleSummary) {
 
 function formatScheduleLabel(schedule: ScheduleSummary) {
   return `${schedule.term} - Run ${schedule.runNumber} (${schedule.status})`
+}
+
+function formatOptionalValue(value?: string | null) {
+  return value && value.trim().length > 0 ? value : 'N/A'
 }
 </script>
 
@@ -219,9 +263,54 @@ function formatScheduleLabel(schedule: ScheduleSummary) {
   padding: 0.5rem 0.75rem;
 }
 
+.schedule-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.schedule-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  color: var(--color-text-secondary);
+}
+
+.schedule-meta p {
+  margin: 0;
+}
+
+.table-container {
+  overflow-x: auto;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border: 1px solid var(--color-border);
+  padding: 0.5rem;
+  text-align: left;
+}
+
+thead {
+  background-color: var(--color-surface-elevated);
+}
+
 @media (max-width: 640px) {
   .term-dropdown {
     width: 100%;
+  }
+
+  .schedule-meta {
+    flex-direction: column;
+    gap: 0.35rem;
   }
 }
 </style>
