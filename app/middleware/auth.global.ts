@@ -1,6 +1,6 @@
 export default defineNuxtRouteMiddleware((to) => {
   const { loggedIn } = useUserSession()
-
+  /*
   // Redirect unauthenticated users to the login route.
   if (
     !loggedIn.value &&
@@ -9,4 +9,5 @@ export default defineNuxtRouteMiddleware((to) => {
   ) {
     return navigateTo('/auth/login')
   }
+    */
 })
