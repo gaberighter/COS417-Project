@@ -3,5 +3,19 @@ export const useFaculty = () => {
 
   const addNewPreference = async () => {}
 
-  return { viewChangePreferences, addNewPreference }
+  const importPreferencesCsv = async (file: File | null) => {
+    if (!file) {
+      return {
+        ok: false,
+        message: 'Please choose a CSV file before importing.',
+      }
+    }
+
+    return {
+      ok: true,
+      message: `Selected ${file.name}. CSV import is not connected yet.`,
+    }
+  }
+
+  return { viewChangePreferences, addNewPreference, importPreferencesCsv }
 }
