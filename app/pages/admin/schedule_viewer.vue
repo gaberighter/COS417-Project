@@ -229,11 +229,11 @@ const scheduleItems = computed(() => schedules.value ?? [])
 const schedulesByTerm = computed(() => {
   return scheduleItems.value.reduce<Record<string, ScheduleSummary[]>>(
     (acc, schedule) => {
-      if (!acc[schedule.term]) acc[schedule.term] = []
-      acc[schedule.term].push(schedule)
+      const termSchedules = acc[schedule.term] ?? (acc[schedule.term] = [])
+      termSchedules.push(schedule)
       return acc
     },
-    {},
+    Object.create(null) as Record<string, ScheduleSummary[]>,
   )
 })
 const termKeys = computed(() =>
