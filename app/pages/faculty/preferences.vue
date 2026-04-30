@@ -63,6 +63,13 @@
                   @click="resetTable"
                 />
                 <Button
+                  label="Upload CSV"
+                  severity="secondary"
+                  outlined
+                  :disabled="loadPending || savePending"
+                  @click="triggerCsvUpload"
+                />
+                <Button
                   :label="saveNotSubmittedLabel"
                   severity="secondary"
                   :disabled="referencePending || loadPending || savePending"
@@ -439,6 +446,14 @@
         </template>
       </Card>
     </div>
+
+    <input
+      ref="csvFileInput"
+      type="file"
+      accept=".csv,text/csv"
+      style="display: none"
+      @change="handleCsvUpload"
+    />
   </div>
 </template>
 
@@ -1577,6 +1592,149 @@ async function loadPageData() {
   } finally {
     referencePending.value = false
   }
+}
+
+const csvFileInput = ref<HTMLInputElement | null>(null)
+
+function triggerCsvUpload() {
+  csvFileInput.value?.click()
+}
+
+function parseCsvLine(line: string): string[] {
+  const fields: string[] = []
+  let current = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+    } else if (ch === ',' && !inQuotes) {
+      fields.push(current)
+      current = ''
+    } else {
+      current += ch ?? ''
+    }
+  }
+  fields.push(current)
+  return fields
+}
+
+const CSV_COLUMN_MAP: Record<string, keyof PreferenceRow> = {
+  subject: 'subject',
+  dept: 'subject',
+  department: 'subject',
+  course_code: 'subject',
+  crn: 'crn',
+  course_reference_number: 'crn',
+  section: 'section',
+  sec: 'section',
+  course_name: 'courseName',
+  coursename: 'courseName',
+  course: 'courseName',
+  title: 'courseName',
+  name: 'courseName',
+  credits: 'creditHours',
+  credit_hours: 'creditHours',
+  credithours: 'creditHours',
+  credit: 'creditHours',
+  max_enrollment: 'maxEnrollment',
+  maxenrollment: 'maxEnrollment',
+  max_enroll: 'maxEnrollment',
+  enrollment: 'maxEnrollment',
+  capacity: 'maxEnrollment',
+  max_capacity: 'maxEnrollment',
+  days: 'days',
+  day_pattern: 'days',
+  meeting_days: 'days',
+  time: 'time',
+  start_time: 'time',
+  meeting_time: 'time',
+  instructor: 'instructor',
+  professor: 'instructor',
+  faculty: 'instructor',
+  building: 'buildingPreference',
+  building_preference: 'buildingPreference',
+  buildingpreference: 'buildingPreference',
+  bldg: 'buildingPreference',
+  room: 'roomPreference',
+  room_preference: 'roomPreference',
+  roompreference: 'roomPreference',
+  room_number: 'roomPreference',
+  fee: 'courseFee',
+  course_fee: 'courseFee',
+  coursefee: 'courseFee',
+}
+
+const NON_EDITABLE_FIELDS = new Set<keyof PreferenceRow>([
+  'localId',
+  'courseId',
+  'error',
+])
+
+function handleCsvUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  input.value = ''
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const text = e.target?.result as string
+    if (!text) return
+
+    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0)
+    if (lines.length < 2) {
+      statusMessage.value =
+        'CSV must have a header row and at least one data row.'
+      statusTone.value = 'error'
+      return
+    }
+
+    const headers = parseCsvLine(lines[0]!).map((h) =>
+      h.trim().toLowerCase().replace(/\s+/g, '_'),
+    )
+    const fieldMap = headers.map((h) => CSV_COLUMN_MAP[h] ?? null)
+
+    const newRows: PreferenceRow[] = []
+    for (let i = 1; i < lines.length; i++) {
+      const values = parseCsvLine(lines[i]!)
+      if (values.every((v) => v.trim().length === 0)) continue
+      const row = createEmptyRow()
+      for (let j = 0; j < headers.length; j++) {
+        const field = fieldMap[j]
+        if (field && !NON_EDITABLE_FIELDS.has(field)) {
+          ;(row as unknown as Record<string, string>)[field] = (
+            values[j] ?? ''
+          ).trim()
+        }
+      }
+      newRows.push(row)
+    }
+
+    if (newRows.length === 0) {
+      statusMessage.value = 'No valid rows found in CSV.'
+      statusTone.value = 'error'
+      return
+    }
+
+    const hasContent = rows.value.some((r) => rowHasAnyContent(r))
+    if (hasContent) {
+      const ok = window.confirm(
+        `Replace the current ${rows.value.length} row(s) with ${newRows.length} row(s) from CSV?`,
+      )
+      if (!ok) return
+    }
+
+    rows.value = newRows
+    statusMessage.value = `Loaded ${newRows.length} row(s) from CSV.`
+    statusTone.value = 'success'
+  }
+  reader.readAsText(file)
 }
 
 onMounted(loadPageData)
