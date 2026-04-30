@@ -14,8 +14,7 @@ export default defineEventHandler(async (event) => {
 
   const { includeInactive } = getQuery(event)
   const isAdmin = auth.role === 'Admin'
-  const filter =
-    isAdmin && includeInactive === 'true' ? {} : { active: true }
+  const filter = isAdmin && includeInactive === 'true' ? {} : { active: true }
 
   return Professor.find(filter).lean().exec()
 })
