@@ -24,6 +24,61 @@ const UsersCollection = Users as any
 
 let providers: SAMLProviders | null = null
 
+const REGISTRAR_ONLY = [
+  '/api/professors',
+  '/api/rooms',
+  '/api/courses',
+  '/api/audit-logs',
+  '/api/schedule',
+]
+
+const FACULTY_OR_REGISTRAR = [
+  '/api/preferences',
+]
+
+// Temporary hardcoded list of registrar covenantIds until we have a proper Registrar collection in the database.
+const REGISTRAR_USERNAMES = [
+  'maximus.mueller',
+  'jacob.eldridge',
+  'grant.widener',
+  'graham.widener',
+  'gabe.righter',
+  'jon.moon',
+  'ben.mitchell',
+  'rodney.miller',
+  'david.darden',
+  'barbara.wingard',
+  'matthew.luther',
+]
+
+// The Oracle username is the first letter of the first name and then the last name, in all caps.
+function lookupOracleUser(email: string) {
+  return (
+    email.substring(0, 1) +
+    email.substring(email.indexOf('.') + 1, email.indexOf('@'))
+  ).toUpperCase()
+}
+
+async function getRoles(username: string, email: string): Promise<string[]> {
+  const roles: string[] = []
+
+  const covenantId = email.substring(0, email.indexOf('@'))
+
+  if (REGISTRAR_USERNAMES.includes(covenantId)) {
+    roles.push('REGISTRAR')
+  }
+
+  const professor = await mongoose.connection.db
+    .collection('professors')
+    .findOne({ covenantId })
+
+  if (professor) {
+    roles.push('FACULTY')
+  }
+
+  return roles
+}
+
 function readFileOrThrow(path: string, label: string) {
   if (!fs.existsSync(path)) {
     console.error(`${label} file not found`, { path })
@@ -162,6 +217,7 @@ export default defineEventHandler(async (event: H3Event) => {
               session_index,
               attributes: samlUser,
             } = samlResponse.user
+            console.log('SAML user attributes:', JSON.stringify(samlUser, null, 2)) // Log the raw SAML user attributes for debugging. TODO: remove
 
             for (const field in samlUser) {
               if (
@@ -266,57 +322,22 @@ export default defineEventHandler(async (event: H3Event) => {
     const session = await requireUserSession(event)
     const roles: string[] = session.user.roles as string[]
 
-    const isAdminRoute = urlObj.pathname.startsWith('/api/admin')
-    const isFacultyRoute = urlObj.pathname.startsWith('/api/faculty')
+    const isRegistrar = roles.includes('REGISTRAR')
+    const isFaculty = roles.includes('FACULTY')
 
-    if (isAdminRoute && !roles.includes('REGISTRAR')) {
+    const isRegistrarOnly = REGISTRAR_ONLY.some(route => 
+      urlObj.pathname.startsWith(route)
+    )
+    const isFacultyRoute = FACULTY_OR_REGISTRAR.some(route => 
+      urlObj.pathname.startsWith(route)
+    )
+
+    if (isRegistrarOnly && !isRegistrar) {
       throw createError({ statusCode: 403, statusMessage: 'Access denied' })
     }
 
-    if (
-      isFacultyRoute &&
-      !roles.includes('FACULTY') &&
-      !roles.includes('REGISTRAR')
-    ) {
+    if (isFacultyRoute && !isFaculty && !isRegistrar) {
       throw createError({ statusCode: 403, statusMessage: 'Access denied' })
     }
   }
 })
-
-// The Oracle username is the first letter of the first name and then the last name, in all caps.
-function lookupOracleUser(email: string) {
-  return (
-    email.substring(0, 1) +
-    email.substring(email.indexOf('.') + 1, email.indexOf('@'))
-  ).toUpperCase()
-}
-
-// Temporary hardcoded list of registrar covenantIds until we have a proper Registrar collection in the database.
-const REGISTRAR_USERNAMES = [
-  'maximus.mueller',
-  'jacob.eldridge',
-  'grant.widener',
-  'graham.widener',
-  'gabe.righter',
-  'jon.moon',
-]
-
-async function getRoles(username: string, email: string): Promise<string[]> {
-  const roles: string[] = []
-
-  const covenantId = email.substring(0, email.indexOf('@'))
-
-  if (REGISTRAR_USERNAMES.includes(covenantId)) {
-    roles.push('REGISTRAR')
-  }
-
-  const professor = await mongoose.connection.db
-    .collection('professors')
-    .findOne({ covenantId })
-
-  if (professor) {
-    roles.push('FACULTY')
-  }
-
-  return roles
-}
