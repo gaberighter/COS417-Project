@@ -16,9 +16,6 @@ const UserSchema = new Schema(
     preferred: { type: String, trim: true },
     last: { type: String, trim: true },
     lastLogin: Date,
-    settings: {
-      dark: { type: Boolean, default: false },
-    },
     directoryId: { type: ObjectId, ref: 'directoryPerson' },
     name_id: String,
     session_index: String,
