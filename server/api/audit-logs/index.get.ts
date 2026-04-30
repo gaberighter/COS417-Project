@@ -30,9 +30,5 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const limit = parseLimit(query.limit)
 
-  return AuditLog.find({})
-    .sort({ timestamp: -1 })
-    .limit(limit)
-    .lean()
-    .exec()
+  return AuditLog.find({}).sort({ timestamp: -1 }).limit(limit).lean().exec()
 })

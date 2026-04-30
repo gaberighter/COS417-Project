@@ -111,10 +111,18 @@
       <p v-if="statusMessage" class="action-message">{{ statusMessage }}</p>
     </div>
   </div>
-  <button class="add-room-fab" @click="openAddCourseModal" title="Add New Course">
+  <button
+    class="add-room-fab"
+    @click="openAddCourseModal"
+    title="Add New Course"
+  >
     +
   </button>
-  <div v-if="showCourseModal" class="modal-overlay" @click.self="closeCourseModal">
+  <div
+    v-if="showCourseModal"
+    class="modal-overlay"
+    @click.self="closeCourseModal"
+  >
     <div class="modal-content">
       <div class="modal-header">
         <h2>{{ isEditMode ? 'Edit Course' : 'Add New Course' }}</h2>
@@ -313,7 +321,17 @@ const actionMessage = ref('')
 const showCourseModal = ref(false)
 const isEditMode = ref(false)
 
-const dayOptions: DayPattern[] = ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'M', 'W', 'T', 'R']
+const dayOptions: DayPattern[] = [
+  'MWF',
+  'TR',
+  'MW',
+  'MTWF',
+  'MWRF',
+  'M',
+  'W',
+  'T',
+  'R',
+]
 
 const createDefaultFilters = (): CourseFilters => ({
   deptCode: '',
@@ -405,7 +423,9 @@ const filteredCourses = computed(() => {
       return false
     }
 
-    if (!matchesBooleanFilter(course.labComponent, appliedFilters.labComponent)) {
+    if (
+      !matchesBooleanFilter(course.labComponent, appliedFilters.labComponent)
+    ) {
       return false
     }
 
@@ -474,7 +494,9 @@ const submitCourse = async () => {
         courseNumber: courseForm.courseNumber.trim(),
         title: courseForm.title.trim(),
         creditHours: courseForm.creditHours,
-        typicalEnrollment: normalizeOptionalNumber(courseForm.typicalEnrollment),
+        typicalEnrollment: normalizeOptionalNumber(
+          courseForm.typicalEnrollment,
+        ),
         requiredEquipment: splitCsv(courseForm.requiredEquipment),
         labComponent: courseForm.labComponent,
         active: courseForm.active,
@@ -486,7 +508,9 @@ const submitCourse = async () => {
       },
       headers: { 'x-dev-role': 'Admin' },
     })
-    actionMessage.value = isEditMode.value ? 'Course updated.' : 'Course created.'
+    actionMessage.value = isEditMode.value
+      ? 'Course updated.'
+      : 'Course created.'
     await loadCourses()
     closeCourseModal()
   } catch (saveError) {

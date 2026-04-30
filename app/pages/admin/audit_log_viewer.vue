@@ -168,7 +168,10 @@ const retryLoad = () => loadAuditLogs()
 
 const filteredLogs = computed(() => {
   return auditLogs.value.filter((log) => {
-    if (appliedFilters.action && !includesInsensitive(log.action, appliedFilters.action)) {
+    if (
+      appliedFilters.action &&
+      !includesInsensitive(log.action, appliedFilters.action)
+    ) {
       return false
     }
 
@@ -181,7 +184,10 @@ const filteredLogs = computed(() => {
 
     if (
       appliedFilters.collectionName &&
-      !includesInsensitive(log.collectionName ?? '', appliedFilters.collectionName)
+      !includesInsensitive(
+        log.collectionName ?? '',
+        appliedFilters.collectionName,
+      )
     ) {
       return false
     }
@@ -193,7 +199,10 @@ const filteredLogs = computed(() => {
       return false
     }
 
-    if (appliedFilters.detail && !includesInsensitive(log.detail, appliedFilters.detail)) {
+    if (
+      appliedFilters.detail &&
+      !includesInsensitive(log.detail, appliedFilters.detail)
+    ) {
       return false
     }
 

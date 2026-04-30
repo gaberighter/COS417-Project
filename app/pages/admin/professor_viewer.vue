@@ -56,7 +56,8 @@
         <button @click="applyFilters">Apply Filters</button>
         <button @click="resetFilters">Clear Filters</button>
         <p class="filter-results">
-          Showing {{ filteredProfessors.length }} of {{ professors.length }} professors
+          Showing {{ filteredProfessors.length }} of
+          {{ professors.length }} professors
         </p>
       </div>
     </div>
@@ -119,7 +120,11 @@
       <p v-if="statusMessage" class="action-message">{{ statusMessage }}</p>
     </div>
   </div>
-  <button class="add-room-fab" @click="openAddProfessorModal" title="Add New Professor">
+  <button
+    class="add-room-fab"
+    @click="openAddProfessorModal"
+    title="Add New Professor"
+  >
     +
   </button>
   <div
@@ -200,7 +205,11 @@
           </label>
         </div>
         <div class="form-actions">
-          <button type="button" class="btn-secondary" @click="closeProfessorModal">
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="closeProfessorModal"
+          >
             Cancel
           </button>
           <button type="submit" class="btn-primary">
@@ -331,7 +340,10 @@ const filteredProfessors = computed(() => {
 
     if (
       appliedFilters.departmentCode &&
-      !includesInsensitive(professor.departmentCode, appliedFilters.departmentCode)
+      !includesInsensitive(
+        professor.departmentCode,
+        appliedFilters.departmentCode,
+      )
     ) {
       return false
     }
@@ -348,7 +360,10 @@ const filteredProfessors = computed(() => {
 
     if (
       appliedFilters.officeRoom &&
-      !includesInsensitive(professor.officeRoom ?? '', appliedFilters.officeRoom)
+      !includesInsensitive(
+        professor.officeRoom ?? '',
+        appliedFilters.officeRoom,
+      )
     ) {
       return false
     }
