@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
+    "contrast:check": "node scripts/validate-contrast.mjs",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "lint": "npx --yes prettier --check .",
