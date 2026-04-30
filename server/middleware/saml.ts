@@ -52,8 +52,7 @@ const REGISTRAR_USERNAMES = [
 // Maps Microsoft/Azure AD namespaced SAML attribute keys to friendly names.
 const FIELD_MAP: Record<string, string> = {
   'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress': 'email',
-  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname':
-    'firstName',
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname': 'firstName',
   'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname': 'lastName',
   'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name': 'displayName',
 }
@@ -219,10 +218,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
               // Log only attribute keys by default to avoid leaking PII in logs.
               const samlAttributeKeys = Object.keys(samlUser || {})
-              console.log(
-                '[SAML] attribute keys:',
-                samlAttributeKeys.join(', '),
-              )
+              console.log('[SAML] attribute keys:', samlAttributeKeys.join(', '))
 
               // Allow full attribute logging only when explicitly enabled for debugging.
               if (process.env.SAML_DEBUG_ATTRIBUTES === 'true') {
@@ -275,15 +271,6 @@ export default defineEventHandler(async (event: H3Event) => {
                 name_id,
                 session_index,
               }
-              // Look up the user and create the session payload.
-              const user: Record<string, unknown> = {
-                ...samlUser,
-                username,
-                roles,
-                lastLogin: new Date(),
-                name_id,
-                session_index,
-              }
 
               // See if this user exists in the Users collection.
               const existingUser = await UsersCollection.findOne({
@@ -297,7 +284,6 @@ export default defineEventHandler(async (event: H3Event) => {
                 await UsersCollection.updateOne({ _id: existingUser._id }, user)
               }
 
-              await setUserSession(event, { user, loggedInAt: Date.now() })
               await setUserSession(event, { user, loggedInAt: Date.now() })
 
               return resolve(
