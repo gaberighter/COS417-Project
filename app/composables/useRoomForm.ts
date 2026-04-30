@@ -14,9 +14,7 @@ interface RoomEquipment {
 }
 
 interface Room {
-  buildingName: string
-  abbreviation: string
-  buildingCode?: string
+  buildingCode: string
   roomNumber: string
   displayName: string
   capacity: number
@@ -97,10 +95,10 @@ export const useRoomForm = (onRoomSaved: () => Promise<void>) => {
   const openEditRoomModal = (room: Room) => {
     isEditMode.value = true
     actionMessage.value = ''
+    // Derive the building code from the room's abbreviation (first space-delimited token)
+    const derivedBuildingCode = room.abbreviation.trim().split(/\s+/)[0] || ''
     Object.assign(newRoomForm, {
-      buildingCode:
-        room.buildingCode?.trim().toUpperCase() ||
-        deriveBuildingCode(room.abbreviation),
+      buildingCode: room.buildingCode,
       roomNumber: room.roomNumber,
       displayName: room.displayName,
       capacity: room.capacity,

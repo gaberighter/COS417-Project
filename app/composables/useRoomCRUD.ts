@@ -14,9 +14,8 @@ interface RoomEquipment {
 }
 
 interface Room {
-  buildingName: string
   abbreviation: string
-  buildingCode: string
+  buildingName: string
   roomNumber: string
   displayName: string
   capacity: number
@@ -73,7 +72,7 @@ export const useRoomCRUD = () => {
     const roomId = buildRoomId(room)
     deleteMessage.value = ''
     const shouldDelete = window.confirm(
-      `Delete room ${room.abbreviation} ${room.roomNumber}?`,
+      `Delete room ${room.buildingName} ${room.roomNumber}?`,
     )
     if (!shouldDelete) {
       return
