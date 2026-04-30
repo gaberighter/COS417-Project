@@ -53,6 +53,7 @@ const REGISTRAR_USERNAMES = [
   'david.darden',
   'barbara.wingard',
   'matthew.luther',
+  'paul.morton',
 ]
 
 // Maps Microsoft/Azure AD namespaced SAML attribute keys to friendly names.
