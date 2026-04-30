@@ -75,10 +75,7 @@ function startTimesForPattern(
   const configuredTypicalTimes =
     schedulingConfig.typicalStartTimesByPattern[days] ?? []
 
-  return uniqueNormalizedTimes([
-    ...configuredTypicalTimes,
-    ...requestedTimes,
-  ])
+  return uniqueNormalizedTimes([...configuredTypicalTimes, ...requestedTimes])
 }
 
 function sharedDays(left: DayPattern, right: DayPattern): string[] {
@@ -135,7 +132,8 @@ export function computeEndTime(
   creditHours: number,
 ): string {
   return formatTime(
-    parseTime(normalizeClockTime(startTime)) + patternDuration(days, creditHours),
+    parseTime(normalizeClockTime(startTime)) +
+      patternDuration(days, creditHours),
   )
 }
 

@@ -64,7 +64,7 @@ export async function persistAndReturn(
     conflicts,
   }
 
-  await Schedule.create(schedule)
+  await Schedule.create(schedule as unknown as Record<string, unknown>)
 
   return schedule
 }

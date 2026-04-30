@@ -31,7 +31,9 @@ function computeCapacityScore(
 }
 
 function computeBackToBackScore(candidate: CandidateSlot): number {
-  return candidate.avoidsBackToBackSameCourse === false ? 0 : 10
+  let score = candidate.avoidsBackToBackSameCourse === false ? 0 : 10
+  score += (candidate.preferredBackToBackMatchCount ?? 0) * 18
+  return score
 }
 
 function computeHistoryMaps(

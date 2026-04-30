@@ -20,9 +20,10 @@ function normalizeSectionText(value: string | null | undefined): string | null {
   return normalized.length > 0 ? normalized : null
 }
 
-function parseEmbeddedSection(
-  normalizedCourseId: string,
-): { catalogCourseId: string; section: string | null } {
+function parseEmbeddedSection(normalizedCourseId: string): {
+  catalogCourseId: string
+  section: string | null
+} {
   const match = normalizedCourseId.match(/^(.+\s+\S+)-([A-Z0-9]+)$/)
   if (!match) {
     return {
@@ -31,7 +32,8 @@ function parseEmbeddedSection(
     }
   }
 
-  const [, catalogCourseId, section] = match
+  const catalogCourseId = match[1] ?? normalizedCourseId
+  const section = match[2] ?? null
   return {
     catalogCourseId: normalizeCourseIdText(catalogCourseId),
     section: normalizeSectionText(section),

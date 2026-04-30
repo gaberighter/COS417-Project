@@ -8,7 +8,10 @@ import type {
   ScheduleConflict,
   TimeSlot,
 } from '../types'
-import { scheduledCourseIdsShareCatalog } from '../../../utils/courseReferences'
+import {
+  normalizeCourseReference,
+  scheduledCourseIdsShareCatalog,
+} from '../../../utils/courseReferences'
 import { filterRooms } from '../constraints/hard'
 import { collectNearHardFlags } from '../constraints/nearHard'
 import {
@@ -160,11 +163,23 @@ function buildCandidatePairs(
           assignment.professorId === workItem.professor._id &&
           isBackToBack(assignment, slot),
       )
+      const pairedCourseIds = new Set(
+        [workItem.backToBackWith, ...workItem.preferredBackToBackWith]
+          .filter((value): value is string => value !== null)
+          .map((value) => normalizeCourseReference(value).scheduledCourseId),
+      )
+      const preferredBackToBackMatchCount = currentAssignments.filter(
+        (assignment) =>
+          pairedCourseIds.has(assignment.courseId) &&
+          assignment.roomId === room._id &&
+          (isBackToBack(assignment, slot) || isBackToBack(slot, assignment)),
+      ).length
 
       candidates.push({
         room,
         slot,
         avoidsBackToBackSameCourse,
+        preferredBackToBackMatchCount,
       })
     }
   }
@@ -214,8 +229,13 @@ function resolveConflictReason(
   candidateRooms: Room[],
   candidateSlots: TimeSlot[],
   currentAssignments: ScheduleAssignment[],
+  candidates: CandidateSlot[] = [],
 ): string {
-  const manualOptions = buildManualOptions(candidateRooms, candidateSlots)
+  const manualOptions = buildManualOptions(
+    candidates,
+    candidateRooms,
+    candidateSlots,
+  )
   const attemptSummary = describePlacementAttempts(workItem)
 
   if (
@@ -298,6 +318,18 @@ function resolveConflictReason(
     )
   }
 
+  if (
+    candidateSlots.length === 0 &&
+    currentAssignments.length >= rooms.length - 1
+  ) {
+    return formatConflict(
+      'SLOT_SATURATED',
+      'All valid time slots were saturated by concurrent assignments under the current global occupancy limit.',
+      manualOptions,
+      attemptSummary,
+    )
+  }
+
   if (candidateSlots.length === 0) {
     return formatConflict(
       'NO_VALID_SLOT',
@@ -329,15 +361,32 @@ function formatConflict(
 }
 
 function buildManualOptions(
+  candidates: CandidateSlot[],
   candidateRooms: Room[],
   candidateSlots: TimeSlot[],
   limit = 5,
 ): string[] {
+  const options: string[] = []
+  for (const candidate of candidates) {
+    const roomLabel =
+      candidate.room.displayName ??
+      `${candidate.room.buildingCode} ${candidate.room.roomNumber}`
+    options.push(
+      `${roomLabel} ${candidate.slot.days} ${candidate.slot.startTime}`,
+    )
+    if (options.length >= limit) {
+      return options
+    }
+  }
+
+  if (options.length > 0) {
+    return options
+  }
+
   if (candidateRooms.length === 0 || candidateSlots.length === 0) {
     return []
   }
 
-  const options: string[] = []
   for (const room of candidateRooms) {
     for (const slot of candidateSlots) {
       const roomLabel =
@@ -449,6 +498,7 @@ export function evaluatePlacementOptions(
           candidateRooms,
           candidateSlots,
           currentAssignments,
+          [],
         ),
       ),
     }
@@ -484,6 +534,7 @@ export function evaluatePlacementOptions(
           candidateRooms,
           candidateSlots,
           currentAssignments,
+          candidates,
         ),
       ),
     }

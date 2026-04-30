@@ -1,34 +1,19 @@
 // server/api/schedule/run.post.ts
-// POST /api/schedule/run — §4.1.2
-// Role: Admin — execute the scheduling algorithm for a term.
+// POST /api/schedule/run — generate a schedule plan for a term without persisting it.
+// Role: Admin
 // Body: { term: string }
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
-import { Professor, Schedule } from '../../models/index'
-import { logAction } from '../../services/auditService'
 import { runSchedulingPlan } from '../../services/scheduling'
 import { SchedulingInputError } from '../../services/scheduling/types'
-import { getClientIp } from '../../utils/ip'
 
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
-const MAX_SCHEDULE_CREATE_RETRIES = 3
-
-function isDuplicateKeyError(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) {
-    return false
-  }
-
-  return 'code' in error && (error as { code?: number }).code === 11000
-}
 
 export default defineEventHandler(async (event) => {
-  const auth = requireAuth(event, ['Admin'])
+  requireAuth(event, ['Admin'])
   await connectDB()
-
-  // Capture client IP for audit logging (§4.7)
-  const clientIp = getClientIp(event)
 
   let body: { term: string }
   try {
@@ -63,63 +48,18 @@ export default defineEventHandler(async (event) => {
     }
   })()
 
-  const adminProfessor = await Professor.findOne({
-    $or: [
-      { covenantId: auth.userId.toLowerCase() },
-      { _id: auth.userId.toLowerCase() },
-      { _id: auth.userId },
-    ],
-  })
-    .select({ _id: 1 })
-    .lean()
-    .exec()
-
-  const createdBy = adminProfessor?._id ?? auth.userId.toLowerCase()
-  const status = result.conflicts.length > 0 ? 'under_review' : 'approved'
-
-  const { schedule, runNumber } = await (async () => {
-    for (let attempt = 0; attempt < MAX_SCHEDULE_CREATE_RETRIES; attempt += 1) {
-      const latestRun = await Schedule.findOne({ term })
-        .sort({ runNumber: -1 })
-        .select({ runNumber: 1 })
-        .lean()
-        .exec()
-      const nextRunNumber = (latestRun?.runNumber ?? 0) + 1
-
-      try {
-        const createdSchedule = await Schedule.create({
-          term,
-          runNumber: nextRunNumber,
-          status,
-          createdBy,
-          assignments: result.assignments,
-          conflicts: result.conflicts,
-        })
-
-        return { schedule: createdSchedule, runNumber: nextRunNumber }
-      } catch (error: unknown) {
-        if (
-          !isDuplicateKeyError(error) ||
-          attempt === MAX_SCHEDULE_CREATE_RETRIES - 1
-        ) {
-          throw error
-        }
-      }
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Failed to persist schedule run',
-    })
-  })()
-
-  await logAction(
-    auth,
-    'SCHEDULE_RUN',
-    'schedules',
-    schedule._id,
-    `Executed scheduling run ${runNumber} for ${term}`,
-    clientIp,
-  )
-  return schedule.toObject()
+  return {
+    ok: true,
+    persisted: false,
+    term,
+    recommendedStatus:
+      result.conflicts.length > 0 || result.nearHardFlags.length > 0
+        ? 'under_review'
+        : 'approved',
+    assignments: result.assignments,
+    conflicts: result.conflicts,
+    nearHardFlags: result.nearHardFlags,
+    warnings: result.warnings,
+    traces: result.traces,
+  }
 })

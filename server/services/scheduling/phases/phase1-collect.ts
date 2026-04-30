@@ -25,6 +25,23 @@ import {
   buildPlacementProfile,
   isSimilarCourse,
 } from '../utils/history'
+import { computeEndTime, isBackToBack } from '../utils/timeSlots'
+
+const NULL_PROFESSOR_ID = 'null-professor'
+
+function makeNullProfessor(departmentCode: string): Professor {
+  return {
+    _id: NULL_PROFESSOR_ID,
+    covenantId: NULL_PROFESSOR_ID,
+    displayName: 'Unassigned Professor',
+    departmentCode,
+    officeBuilding: null,
+    officeRoom: null,
+    seniorityYear: null,
+    active: true,
+    preferences: [],
+  }
+}
 
 function findProfessorForId(
   professors: Professor[],
@@ -69,14 +86,7 @@ function resolveProfessor(
     return typicalProfessor
   }
 
-  const departmentProfessor = professors.find(
-    (professor) => professor.departmentCode === course.deptCode,
-  )
-  if (departmentProfessor !== undefined) {
-    return departmentProfessor
-  }
-
-  return professors[0]!
+  return makeNullProfessor(course.deptCode)
 }
 
 function buildPreferenceLookup(
@@ -212,7 +222,88 @@ function buildWorkItem(
     preferredBuilding: effectivePreference?.preferredBuilding ?? null,
     preferredRoomId: effectivePreference?.preferredRoomId ?? null,
     backToBackWith: effectivePreference?.backToBackWith ?? null,
+    preferredBackToBackWith: [],
     coreqWith: effectivePreference?.coreqWith ?? [...course.corequisites],
+  }
+}
+
+function derivePreferredBackToBackPairs(workItems: CourseWorkItem[]): void {
+  const byProfessor = new Map<string, CourseWorkItem[]>()
+
+  for (const workItem of workItems) {
+    const list = byProfessor.get(workItem.professor._id) ?? []
+    list.push(workItem)
+    byProfessor.set(workItem.professor._id, list)
+  }
+
+  for (const professorItems of byProfessor.values()) {
+    for (let index = 0; index < professorItems.length; index += 1) {
+      const left = professorItems[index]
+      if (left === undefined) continue
+
+      for (
+        let compareIndex = index + 1;
+        compareIndex < professorItems.length;
+        compareIndex += 1
+      ) {
+        const right = professorItems[compareIndex]
+        if (right === undefined) continue
+
+        if (
+          left.preferredRoomId === null ||
+          left.preferredRoomId !== right.preferredRoomId ||
+          left.preferredDays.length !== 1 ||
+          right.preferredDays.length !== 1 ||
+          left.preferredTimes.length !== 1 ||
+          right.preferredTimes.length !== 1
+        ) {
+          continue
+        }
+
+        const [leftDays] = left.preferredDays
+        const [rightDays] = right.preferredDays
+        const [leftStart] = left.preferredTimes
+        const [rightStart] = right.preferredTimes
+        if (
+          leftDays === undefined ||
+          rightDays === undefined ||
+          leftStart === undefined ||
+          rightStart === undefined ||
+          leftDays !== rightDays
+        ) {
+          continue
+        }
+
+        const leftSlot = {
+          days: leftDays,
+          startTime: leftStart,
+          endTime: computeEndTime(leftStart, leftDays, left.course.creditHours),
+        }
+        const rightSlot = {
+          days: rightDays,
+          startTime: rightStart,
+          endTime: computeEndTime(
+            rightStart,
+            rightDays,
+            right.course.creditHours,
+          ),
+        }
+
+        if (
+          !isBackToBack(leftSlot, rightSlot) &&
+          !isBackToBack(rightSlot, leftSlot)
+        ) {
+          continue
+        }
+
+        if (!left.preferredBackToBackWith.includes(right.scheduledCourseId)) {
+          left.preferredBackToBackWith.push(right.scheduledCourseId)
+        }
+        if (!right.preferredBackToBackWith.includes(left.scheduledCourseId)) {
+          right.preferredBackToBackWith.push(left.scheduledCourseId)
+        }
+      }
+    }
   }
 }
 
@@ -319,7 +410,8 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
       .filter((value): value is string => value !== null && value.length > 0),
   )
 
-  for (const configuredName of schedulingConfig.guardedRoomDisplayNamesRequiringRealData ?? []) {
+  for (const configuredName of schedulingConfig.guardedRoomDisplayNamesRequiringRealData ??
+    []) {
     const normalizedConfiguredName = configuredName.trim().toLowerCase()
     if (normalizedConfiguredName.length === 0) {
       continue
@@ -514,6 +606,8 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
       `No submitted courses for term ${term} could be prepared for scheduling`,
     ])
   }
+
+  derivePreferredBackToBackPairs(workItems)
 
   return {
     rooms,

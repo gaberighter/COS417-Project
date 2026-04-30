@@ -4,7 +4,10 @@ import type {
   NearHardFlag,
   ScheduleAssignment,
 } from '../types'
-import { scheduledCourseIdsShareCatalog } from '../../../utils/courseReferences'
+import {
+  normalizeCourseReference,
+  scheduledCourseIdsShareCatalog,
+} from '../../../utils/courseReferences'
 import { isBackToBack, slotsOverlap } from '../utils/timeSlots'
 import { isPlacementAbnormal } from '../utils/history'
 
@@ -59,22 +62,31 @@ export function collectNearHardFlags(
       )
     }
 
-    const explicitBackToBack =
-      workItem.backToBackWith !== null &&
-      assignment.courseId === workItem.backToBackWith
-    if (explicitBackToBack && isBackToBack(assignment, candidate.slot)) {
+    const pairedCourseIds = new Set(
+      [workItem.backToBackWith, ...workItem.preferredBackToBackWith]
+        .filter((value): value is string => value !== null)
+        .map((value) => normalizeCourseReference(value).scheduledCourseId),
+    )
+    if (
+      pairedCourseIds.size > 0 &&
+      pairedCourseIds.has(assignment.courseId) &&
+      !isBackToBack(assignment, candidate.slot) &&
+      !isBackToBack(candidate.slot, assignment)
+    ) {
       flags.push(
         makeFlag(
           courseId,
-          `Back-to-back with preferred paired course ${workItem.backToBackWith}`,
+          `Preferred back-to-back pairing could not be preserved with course ${assignment.courseId}.`,
         ),
       )
     }
 
-    const corequisiteCourseIds = new Set([
-      ...workItem.coreqWith,
-      ...workItem.course.corequisites,
-    ])
+    const corequisiteCourseIds = new Set(
+      [...workItem.coreqWith, ...workItem.course.corequisites].map(
+        (courseReference) =>
+          normalizeCourseReference(courseReference).scheduledCourseId,
+      ),
+    )
     if (
       corequisiteCourseIds.has(assignment.courseId) &&
       slotsOverlap(assignment, candidate.slot)

@@ -1,4 +1,13 @@
-export type DayPattern = 'MWF' | 'TR' | 'MW' | 'MTWF' | 'MWRF' | 'M' | 'W' | 'T' | 'R'
+export type DayPattern =
+  | 'MWF'
+  | 'TR'
+  | 'MW'
+  | 'MTWF'
+  | 'MWRF'
+  | 'M'
+  | 'W'
+  | 'T'
+  | 'R'
 
 export type ScheduleStatus = 'draft' | 'under_review' | 'approved' | 'exported'
 
@@ -117,6 +126,7 @@ export interface CourseWorkItem {
   preferredBuilding: string | null
   preferredRoomId: string | null
   backToBackWith: string | null
+  preferredBackToBackWith: string[]
   coreqWith: string[]
 }
 
@@ -193,6 +203,7 @@ export interface CandidateSlot {
   room: Room
   slot: TimeSlot
   avoidsBackToBackSameCourse?: boolean
+  preferredBackToBackMatchCount?: number
 }
 
 export interface ConstraintEvaluation {
@@ -201,6 +212,34 @@ export interface ConstraintEvaluation {
   candidateSlots: TimeSlot[]
   candidates: CandidateSlot[]
   conflict: ScheduleConflict | null
+}
+
+export interface PlacementTrace {
+  courseId: string
+  catalogCourseId: string
+  professorId: string
+  status: 'assigned' | 'conflict'
+  stage:
+    | 'single_candidate'
+    | 'optimized'
+    | 'constraint_conflict'
+    | 'evaluation_failed'
+    | 'optimization_failed'
+    | 'assignment_failed'
+  chosen?: {
+    roomId: string
+    days: DayPattern
+    startTime: string
+    endTime: string
+  }
+  candidateRooms: string[]
+  candidateSlots: Array<{
+    days: DayPattern
+    startTime: string
+    endTime: string
+  }>
+  candidateCount: number
+  reasons: string[]
 }
 
 /**

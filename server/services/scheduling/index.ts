@@ -1,8 +1,8 @@
 import type {
   NearHardFlag,
+  PlacementTrace,
   ScheduleAssignment,
   ScheduleConflict,
-  ScheduleResult,
 } from './types'
 import { collectInputs } from './phases/phase1-collect'
 import { sortByDifficulty } from './phases/phase2-generate'
@@ -11,7 +11,6 @@ import {
   evaluatePlacementOptions,
 } from './phases/phase3-constrain'
 import { optimizeCandidatePlacement } from './phases/phase4-optimize'
-import { persistAndReturn } from './phases/phase5-output'
 
 function makeAssignment(
   workItem: Parameters<typeof evaluatePlacementOptions>[0],
@@ -39,6 +38,7 @@ async function buildPlan(term: string): Promise<{
   conflicts: ScheduleConflict[]
   nearHardFlags: NearHardFlag[]
   warnings: string[]
+  traces: PlacementTrace[]
 }> {
   const collected = await collectInputs(term)
   const orderedWorkItems = sortByDifficulty(collected.workItems)
@@ -46,6 +46,7 @@ async function buildPlan(term: string): Promise<{
   const assignments: ScheduleAssignment[] = []
   const conflicts: ScheduleConflict[] = [...collected.conflicts]
   const nearHardFlags: NearHardFlag[] = []
+  const traces: PlacementTrace[] = []
 
   function makeRuntimeConflict(
     courseId: string,
@@ -55,6 +56,48 @@ async function buildPlan(term: string): Promise<{
     return {
       courseId,
       reason: `[${code}] ${detail}`,
+    }
+  }
+
+  function buildTrace(
+    workItem: Parameters<typeof evaluatePlacementOptions>[0],
+    status: PlacementTrace['status'],
+    stage: PlacementTrace['stage'],
+    reasons: string[],
+    evaluation?: ReturnType<typeof evaluatePlacementOptions>,
+    chosen?: {
+      room: { _id: string }
+      slot: {
+        days: ScheduleAssignment['days']
+        startTime: string
+        endTime: string
+      }
+    },
+  ): PlacementTrace {
+    return {
+      courseId: workItem.scheduledCourseId,
+      catalogCourseId: workItem.catalogCourseId,
+      professorId: workItem.professor._id,
+      status,
+      stage,
+      chosen: chosen
+        ? {
+            roomId: chosen.room._id,
+            days: chosen.slot.days,
+            startTime: chosen.slot.startTime,
+            endTime: chosen.slot.endTime,
+          }
+        : undefined,
+      candidateRooms: (evaluation?.candidateRooms ?? []).map(
+        (room) => room._id,
+      ),
+      candidateSlots: (evaluation?.candidateSlots ?? []).map((slot) => ({
+        days: slot.days,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+      })),
+      candidateCount: evaluation?.candidates.length ?? 0,
+      reasons,
     }
   }
 
@@ -80,19 +123,32 @@ async function buildPlan(term: string): Promise<{
       } catch (error) {
         const detail =
           error instanceof Error ? error.message : 'Unknown constraint error'
-        conflicts.push(
-          makeRuntimeConflict(
-            workItem.scheduledCourseId,
-            'PLACEMENT_EVALUATION_FAILED',
-            `Constraint evaluation failed. ${detail}`,
-          ),
+        const conflict = makeRuntimeConflict(
+          workItem.scheduledCourseId,
+          'PLACEMENT_EVALUATION_FAILED',
+          `Constraint evaluation failed. ${detail}`,
         )
+        traces.push(
+          buildTrace(workItem, 'conflict', 'evaluation_failed', [
+            conflict.reason,
+          ]),
+        )
+        conflicts.push(conflict)
         pending.splice(index, 1)
         madeProgress = true
         continue
       }
 
       if (evaluation.conflict !== null) {
+        traces.push(
+          buildTrace(
+            workItem,
+            'conflict',
+            'constraint_conflict',
+            [evaluation.conflict.reason],
+            evaluation,
+          ),
+        )
         conflicts.push(evaluation.conflict)
         pending.splice(index, 1)
         madeProgress = true
@@ -115,17 +171,36 @@ async function buildPlan(term: string): Promise<{
               assignments.slice(0, -1),
             ),
           )
+          traces.push(
+            buildTrace(
+              workItem,
+              'assigned',
+              'single_candidate',
+              ['Assigned from single surviving candidate.'],
+              evaluation,
+              chosen,
+            ),
+          )
         } catch (error) {
           assignments.pop()
           const detail =
             error instanceof Error ? error.message : 'Unknown assignment error'
-          conflicts.push(
-            makeRuntimeConflict(
-              workItem.scheduledCourseId,
-              'ASSIGNMENT_APPLICATION_FAILED',
-              `The selected placement could not be applied. ${detail}`,
+          const conflict = makeRuntimeConflict(
+            workItem.scheduledCourseId,
+            'ASSIGNMENT_APPLICATION_FAILED',
+            `The selected placement could not be applied. ${detail}`,
+          )
+          traces.push(
+            buildTrace(
+              workItem,
+              'conflict',
+              'assignment_failed',
+              [conflict.reason],
+              evaluation,
+              chosen,
             ),
           )
+          conflicts.push(conflict)
           pending.splice(index, 1)
           madeProgress = true
           continue
@@ -150,17 +225,30 @@ async function buildPlan(term: string): Promise<{
     } catch (error) {
       const detail =
         error instanceof Error ? error.message : 'Unknown constraint error'
-      conflicts.push(
-          makeRuntimeConflict(
-          workItem.scheduledCourseId,
-          'PLACEMENT_EVALUATION_FAILED',
-          `Constraint evaluation failed. ${detail}`,
-        ),
+      const conflict = makeRuntimeConflict(
+        workItem.scheduledCourseId,
+        'PLACEMENT_EVALUATION_FAILED',
+        `Constraint evaluation failed. ${detail}`,
       )
+      traces.push(
+        buildTrace(workItem, 'conflict', 'evaluation_failed', [
+          conflict.reason,
+        ]),
+      )
+      conflicts.push(conflict)
       continue
     }
 
     if (evaluation.conflict !== null) {
+      traces.push(
+        buildTrace(
+          workItem,
+          'conflict',
+          'constraint_conflict',
+          [evaluation.conflict.reason],
+          evaluation,
+        ),
+      )
       conflicts.push(evaluation.conflict)
       continue
     }
@@ -175,21 +263,39 @@ async function buildPlan(term: string): Promise<{
     } catch (error) {
       const detail =
         error instanceof Error ? error.message : 'Unknown optimization error'
-      conflicts.push(
-        makeRuntimeConflict(
-          workItem.scheduledCourseId,
-          'PLACEMENT_OPTIMIZATION_FAILED',
-          `Candidate ranking failed. ${detail}`,
+      const conflict = makeRuntimeConflict(
+        workItem.scheduledCourseId,
+        'PLACEMENT_OPTIMIZATION_FAILED',
+        `Candidate ranking failed. ${detail}`,
+      )
+      traces.push(
+        buildTrace(
+          workItem,
+          'conflict',
+          'optimization_failed',
+          [conflict.reason],
+          evaluation,
         ),
       )
+      conflicts.push(conflict)
       continue
     }
 
     if (chosen === null) {
-      conflicts.push({
+      const conflict = {
         courseId: workItem.scheduledCourseId,
         reason: 'No valid slot found after applying all hard constraints',
-      })
+      }
+      traces.push(
+        buildTrace(
+          workItem,
+          'conflict',
+          'optimization_failed',
+          [conflict.reason],
+          evaluation,
+        ),
+      )
+      conflicts.push(conflict)
       continue
     }
 
@@ -199,17 +305,36 @@ async function buildPlan(term: string): Promise<{
       nearHardFlags.push(
         ...collectPlacementFlags(workItem, chosen, assignments.slice(0, -1)),
       )
+      traces.push(
+        buildTrace(
+          workItem,
+          'assigned',
+          'optimized',
+          ['Assigned after candidate ranking.'],
+          evaluation,
+          chosen,
+        ),
+      )
     } catch (error) {
       assignments.pop()
       const detail =
         error instanceof Error ? error.message : 'Unknown assignment error'
-      conflicts.push(
-        makeRuntimeConflict(
-          workItem.scheduledCourseId,
-          'ASSIGNMENT_APPLICATION_FAILED',
-          `The selected placement could not be applied. ${detail}`,
+      const conflict = makeRuntimeConflict(
+        workItem.scheduledCourseId,
+        'ASSIGNMENT_APPLICATION_FAILED',
+        `The selected placement could not be applied. ${detail}`,
+      )
+      traces.push(
+        buildTrace(
+          workItem,
+          'conflict',
+          'assignment_failed',
+          [conflict.reason],
+          evaluation,
+          chosen,
         ),
       )
+      conflicts.push(conflict)
     }
   }
 
@@ -218,43 +343,29 @@ async function buildPlan(term: string): Promise<{
     conflicts,
     nearHardFlags,
     warnings: collected.warnings,
+    traces,
   }
 }
 
 /**
- * Runs all scheduling phases and persists the final result.
+ * Builds a schedule plan without persisting it so the admin page can review and approve it.
  *
  * @param term - Academic term to schedule.
- * @param adminId - Administrator running the schedule.
- * @returns The persisted schedule result.
- */
-export async function runSchedulingAlgorithm(
-  term: string,
-  adminId: string,
-): Promise<ScheduleResult> {
-  const plan = await buildPlan(term)
-  return persistAndReturn(
-    term,
-    adminId,
-    plan.assignments,
-    plan.conflicts,
-    plan.nearHardFlags,
-  )
-}
-
-/**
- * Builds a schedule plan without persisting it, which keeps the legacy route compatible.
- *
- * @param term - Academic term to schedule.
- * @returns The computed assignments and conflicts.
+ * @returns The computed plan with debug traces.
  */
 export async function runSchedulingPlan(term: string): Promise<{
   assignments: ScheduleAssignment[]
   conflicts: ScheduleConflict[]
+  nearHardFlags: NearHardFlag[]
+  warnings: string[]
+  traces: PlacementTrace[]
 }> {
   const plan = await buildPlan(term)
   return {
     assignments: plan.assignments,
     conflicts: plan.conflicts,
+    nearHardFlags: plan.nearHardFlags,
+    warnings: plan.warnings,
+    traces: plan.traces,
   }
 }
