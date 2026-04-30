@@ -10,9 +10,6 @@ type User = {
   preferred?: string
   last?: string
   lastLogin?: Date
-  settings?: {
-    dark: boolean
-  }
   name_id?: string
   session_index?: string
 }
