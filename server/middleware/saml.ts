@@ -32,9 +32,7 @@ const REGISTRAR_ONLY = [
   '/api/schedule',
 ]
 
-const FACULTY_OR_REGISTRAR = [
-  '/api/preferences',
-]
+const FACULTY_OR_REGISTRAR = ['/api/preferences']
 
 // Temporary hardcoded list of registrar covenantIds until we have a proper Registrar collection in the database.
 const REGISTRAR_USERNAMES = [
@@ -217,7 +215,10 @@ export default defineEventHandler(async (event: H3Event) => {
               session_index,
               attributes: samlUser,
             } = samlResponse.user
-            console.log('SAML user attributes:', JSON.stringify(samlUser, null, 2)) // Log the raw SAML user attributes for debugging. TODO: remove
+            console.log(
+              'SAML user attributes:',
+              JSON.stringify(samlUser, null, 2),
+            ) // Log the raw SAML user attributes for debugging. TODO: remove
 
             for (const field in samlUser) {
               if (
@@ -325,11 +326,11 @@ export default defineEventHandler(async (event: H3Event) => {
     const isRegistrar = roles.includes('REGISTRAR')
     const isFaculty = roles.includes('FACULTY')
 
-    const isRegistrarOnly = REGISTRAR_ONLY.some(route => 
-      urlObj.pathname.startsWith(route)
+    const isRegistrarOnly = REGISTRAR_ONLY.some((route) =>
+      urlObj.pathname.startsWith(route),
     )
-    const isFacultyRoute = FACULTY_OR_REGISTRAR.some(route => 
-      urlObj.pathname.startsWith(route)
+    const isFacultyRoute = FACULTY_OR_REGISTRAR.some((route) =>
+      urlObj.pathname.startsWith(route),
     )
 
     if (isRegistrarOnly && !isRegistrar) {
