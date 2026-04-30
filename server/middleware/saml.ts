@@ -26,7 +26,10 @@ const UsersCollection = Users as any
 
 let providers: SAMLProviders | null = null
 
-const REGISTRAR_ONLY: string[] = []
+const REGISTRAR_ONLY: string[] = (process.env.REGISTRAR_ONLY_ROUTES ?? '')
+  .split(',')
+  .map(route => route.trim())
+  .filter(Boolean)
 
 const FACULTY_READ_ONLY = [
   '/api/professors',
