@@ -7,7 +7,8 @@
     "contrast:check": "node scripts/validate-contrast.mjs",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
-    "lint": "npx --yes prettier --check .",
+    "format": "prettier --write .",
+    "lint": "prettier --check .",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "seed:inmemory": "node scripts/seed-mongo.mjs --inmemory-file ./inmemory-export.json --wipe",
@@ -17,6 +18,7 @@
   "devDependencies": {
     "@types/node": "^22.18.12",
     "@vue/language-core": "^3.2.6",
+    "prettier": "^3.8.3",
     "vue-tsc": "^3.2.6"
   },
   "dependencies": {

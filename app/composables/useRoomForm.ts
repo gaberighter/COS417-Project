@@ -14,7 +14,9 @@ interface RoomEquipment {
 }
 
 interface Room {
-  buildingCode: string
+  buildingName: string
+  abbreviation: string
+  buildingCode?: string
   roomNumber: string
   displayName: string
   capacity: number
@@ -60,6 +62,10 @@ export const useRoomForm = (onRoomSaved: () => Promise<void>) => {
 
   const newRoomForm = reactive<NewRoomForm>(createEmptyRoomForm())
 
+  const deriveBuildingCode = (abbreviation: string): string => {
+    return abbreviation.trim().split(/\s+/)[0]?.toUpperCase() ?? ''
+  }
+
   const validateBuildingCode = (): boolean => {
     const regex = /^[A-Z]{2,4}$/
     if (!regex.test(newRoomForm.buildingCode)) {
@@ -92,7 +98,9 @@ export const useRoomForm = (onRoomSaved: () => Promise<void>) => {
     isEditMode.value = true
     actionMessage.value = ''
     Object.assign(newRoomForm, {
-      buildingCode: room.buildingCode,
+      buildingCode:
+        room.buildingCode?.trim().toUpperCase() ||
+        deriveBuildingCode(room.abbreviation),
       roomNumber: room.roomNumber,
       displayName: room.displayName,
       capacity: room.capacity,

@@ -14,6 +14,8 @@ interface RoomEquipment {
 }
 
 interface Room {
+  buildingName: string
+  abbreviation: string
   buildingCode: string
   roomNumber: string
   displayName: string

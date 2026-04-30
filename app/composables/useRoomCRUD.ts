@@ -14,7 +14,8 @@ interface RoomEquipment {
 }
 
 interface Room {
-  abbreviation?: string
+  buildingName: string
+  abbreviation: string
   buildingCode: string
   roomNumber: string
   displayName: string
@@ -24,19 +25,37 @@ interface Room {
   equipment: RoomEquipment
 }
 
+type ApiRoom = Omit<Room, 'buildingCode'> & {
+  buildingCode?: string
+}
+
 export const useRoomCRUD = () => {
   const rooms = ref<Room[]>([])
   const pending = ref(false)
   const error = ref<Error | null>(null)
   const deleteMessage = ref('')
 
+  const deriveBuildingCode = (room: ApiRoom): string => {
+    return (
+      room.buildingCode?.trim().toUpperCase() ||
+      room.abbreviation.trim().split(/\s+/)[0]?.toUpperCase() ||
+      ''
+    )
+  }
+
+  const normalizeRoom = (room: ApiRoom): Room => ({
+    ...room,
+    buildingCode: deriveBuildingCode(room),
+  })
+
   const loadRooms = async () => {
     pending.value = true
     error.value = null
     try {
-      rooms.value = await $fetch<Room[]>('/api/rooms', {
+      const fetchedRooms = await $fetch<ApiRoom[]>('/api/rooms', {
         headers: { 'x-dev-role': 'Admin' },
       })
+      rooms.value = fetchedRooms.map(normalizeRoom)
     } catch (e) {
       error.value = e as Error
     } finally {
@@ -47,20 +66,14 @@ export const useRoomCRUD = () => {
   const retryLoad = () => loadRooms()
 
   const buildRoomId = (room: Room) => {
-    if (room.abbreviation?.trim()) {
-      return room.abbreviation.trim().toUpperCase()
-    }
-
-    const buildingCode = room.buildingCode?.trim().toUpperCase()
-    const roomNumber = room.roomNumber?.trim()
-    return `${buildingCode} ${roomNumber}`.trim()
+    return room.abbreviation.trim().toUpperCase()
   }
 
   const deleteRoom = async (room: Room) => {
     const roomId = buildRoomId(room)
     deleteMessage.value = ''
     const shouldDelete = window.confirm(
-      `Delete room ${room.buildingCode} ${room.roomNumber}?`,
+      `Delete room ${room.abbreviation} ${room.roomNumber}?`,
     )
     if (!shouldDelete) {
       return
