@@ -210,8 +210,12 @@ function buildWorkItem(
     departmentTypicalRoomIds,
     expectedEnrollment,
     preferredDays:
-      effectivePreference?.preferredDays ??
-      (course.typicalDays !== null ? [course.typicalDays] : []),
+      effectivePreference?.preferredDays != null &&
+      effectivePreference.preferredDays.length > 0
+        ? effectivePreference.preferredDays
+        : course.typicalDays !== null
+          ? [course.typicalDays]
+          : [],
     preferredTimes:
       effectivePreference?.preferredTimes ??
       (course.typicalTime !== null ? [course.typicalTime] : []),
