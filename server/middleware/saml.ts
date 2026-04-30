@@ -182,7 +182,7 @@ export default defineEventHandler(async (event: H3Event) => {
         })
 
       case 'assert': {
-        const method = getMethod(event)
+        const method = (event.method ?? 'GET').toUpperCase()
         if (method !== 'POST' && method !== 'GET') {
           throw createError({
             statusCode: 405,
@@ -329,9 +329,17 @@ export default defineEventHandler(async (event: H3Event) => {
               )
             } catch (e: any) {
               try {
-                const attemptedId =
-                  (samlUser && (samlUser.oracleUser ?? samlUser.email)) ||
-                  'unknown'
+                let attemptedId = 'unknown'
+                if (samlUser) {
+                  if (samlUser.oracleUser) {
+                    attemptedId = samlUser.oracleUser
+                  } else if (samlUser.email) {
+                    // Normalize email to covenantId format (local part lowercased) to avoid PII in audit logs
+                    attemptedId = samlUser.email
+                      .substring(0, samlUser.email.indexOf('@'))
+                      .toLowerCase()
+                  }
+                }
                 const clientIp = getClientIp(event)
                 await logAuthEvent(
                   String(attemptedId),
