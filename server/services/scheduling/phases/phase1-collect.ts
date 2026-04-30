@@ -20,33 +20,12 @@ import {
   fetchProfessors,
   fetchRooms,
 } from '../utils/dataFetchers'
-import { buildPreferenceUploadPreview } from '../utils/preferenceUploads'
 import {
   areDepartmentsSimilar,
   buildPlacementProfile,
   isSimilarCourse,
 } from '../utils/history'
 import { computeEndTime, isBackToBack } from '../utils/timeSlots'
-
-interface CollectInputsOptions {
-  uploadedPreferences?: PreferenceRecord[]
-}
-
-function mergeById<T extends { _id: string }>(base: T[], overlay: T[]): T[] {
-  const merged = [...base]
-  const seen = new Set(base.map((item) => item._id))
-
-  for (const item of overlay) {
-    if (seen.has(item._id)) {
-      continue
-    }
-
-    seen.add(item._id)
-    merged.push(item)
-  }
-
-  return merged
-}
 
 const NULL_PROFESSOR_ID = 'null-professor'
 
@@ -414,10 +393,7 @@ function resolveDepartmentTypicalRoomIds(
  * @returns The filtered inventory, active catalog data, and work items to schedule.
  * @throws SchedulingInputError when the run cannot begin safely.
  */
-export async function collectInputs(
-  term: string,
-  options: CollectInputsOptions = {},
-): Promise<CollectedInputs> {
+export async function collectInputs(term: string): Promise<CollectedInputs> {
   const [rooms, courses, professors, preferences, historicalPreferences] =
     await Promise.all([
       fetchRooms(),
@@ -427,29 +403,20 @@ export async function collectInputs(
       fetchHistoricalPreferences(term),
     ])
 
-  const uploadPreview = buildPreferenceUploadPreview(
-    options.uploadedPreferences ?? [],
-  )
-  const mergedRooms = rooms
-  const mergedCourses = mergeById(courses, uploadPreview.courses)
-  const mergedProfessors = mergeById(professors, uploadPreview.professors)
-  const mergedPreferences = [...preferences, ...uploadPreview.preferences]
-
   const warnings: string[] = []
   const conflicts: ScheduleConflict[] = []
-  warnings.push(...uploadPreview.warnings)
 
-  if (mergedRooms.length === 0) {
+  if (rooms.length === 0) {
     throw new SchedulingInputError(['No active rooms available'])
   }
 
-  if (mergedCourses.length === 0) {
+  if (courses.length === 0) {
     throw new SchedulingInputError([
       `No active courses available for term ${term}`,
     ])
   }
 
-  if (mergedProfessors.length === 0) {
+  if (professors.length === 0) {
     throw new SchedulingInputError([
       `No active professors available for term ${term}`,
     ])
@@ -475,7 +442,7 @@ export async function collectInputs(
     }
   }
 
-  const preferenceLookup = buildPreferenceLookup(mergedPreferences)
+  const preferenceLookup = buildPreferenceLookup(preferences)
   const submittedCourseIds = [...preferenceLookup.keys()]
   const submittedPreferences = [...preferenceLookup.values()]
   if (submittedCourseIds.length === 0) {
@@ -486,7 +453,7 @@ export async function collectInputs(
 
   const missingScheduledCourseIds = submittedPreferences.filter(
     (preference) =>
-      !mergedCourses.some((course) => course._id === preference.catalogCourseId),
+      !courses.some((course) => course._id === preference.catalogCourseId),
   )
 
   if (missingScheduledCourseIds.length > 0) {
@@ -501,20 +468,18 @@ export async function collectInputs(
   }
 
   const historyByCourse = await fetchHistoricalAssignments(
-    mergedCourses.map((course) => course._id),
+    courses.map((course) => course._id),
     term,
     schedulingConfig.maxHistoryRuns,
   )
 
-  const roomsById = new Map<string, Room>(
-    mergedRooms.map((room) => [room._id, room]),
-  )
+  const roomsById = new Map<string, Room>(rooms.map((room) => [room._id, room]))
 
   const historyByProfessor = new Map<string, HistoricalAssignment[]>()
   const historyByDepartment = new Map<string, HistoricalAssignment[]>()
 
   for (const [courseId, assignments] of historyByCourse.entries()) {
-    const course = mergedCourses.find((entry) => entry._id === courseId)
+    const course = courses.find((entry) => entry._id === courseId)
     const departmentCode = course?.deptCode ?? null
 
     for (const assignment of assignments) {
@@ -537,17 +502,11 @@ export async function collectInputs(
     historicalPreferencesByCourse.set(record.catalogCourseId, list)
   }
 
-  for (const record of uploadPreview.preferences) {
-    const list = historicalPreferencesByCourse.get(record.catalogCourseId) ?? []
-    list.push(record)
-    historicalPreferencesByCourse.set(record.catalogCourseId, list)
-  }
-
   const scheduledCourses = submittedPreferences
     .map((preference) => ({
       preference,
       course:
-        mergedCourses.find((course) => course._id === preference.catalogCourseId) ??
+        courses.find((course) => course._id === preference.catalogCourseId) ??
         null,
     }))
     .filter(
@@ -555,7 +514,7 @@ export async function collectInputs(
         entry,
       ): entry is {
         preference: PreferenceRecord
-        course: NonNullable<(typeof mergedCourses)[number]>
+        course: NonNullable<(typeof courses)[number]>
       } => entry.course !== null,
     )
 
@@ -569,13 +528,13 @@ export async function collectInputs(
   for (const scheduledCourse of scheduledCourses) {
     try {
       const { course, preference } = scheduledCourse
-      const professor = resolveProfessor(course, preference, mergedProfessors)
+      const professor = resolveProfessor(course, preference, professors)
       const historicalAssignments = historyByCourse.get(course._id) ?? []
 
       const professorHistory = historyByProfessor.get(professor._id) ?? []
 
       const similarProfessorHistory: HistoricalAssignment[] = []
-      for (const peer of mergedProfessors) {
+      for (const peer of professors) {
         if (peer._id === professor._id) {
           continue
         }
@@ -590,7 +549,7 @@ export async function collectInputs(
 
       const baseEnrollment =
         preference?.expectedEnrollment ?? course.typicalEnrollment ?? null
-      const similarCourses = mergedCourses.filter(
+      const similarCourses = courses.filter(
         (candidate) =>
           candidate._id !== course._id &&
           isSimilarCourse(course, baseEnrollment, candidate),
@@ -615,7 +574,7 @@ export async function collectInputs(
         historicalPreferencesByCourse.get(course._id) ?? []
       const departmentTypicalRoomIds = resolveDepartmentTypicalRoomIds(
         course.deptCode,
-        mergedRooms,
+        rooms,
         warnings,
       )
 
@@ -669,9 +628,9 @@ export async function collectInputs(
   derivePreferredBackToBackPairs(workItems)
 
   return {
-    rooms: mergedRooms,
-    courses: mergedCourses,
-    professors: mergedProfessors,
+    rooms,
+    courses,
+    professors,
     workItems,
     conflicts,
     warnings,

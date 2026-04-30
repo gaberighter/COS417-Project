@@ -1,7 +1,6 @@
 import type {
   NearHardFlag,
   PlacementTrace,
-  PreferenceRecord,
   ScheduleAssignment,
   ScheduleConflict,
 } from './types'
@@ -12,10 +11,6 @@ import {
   evaluatePlacementOptions,
 } from './phases/phase3-constrain'
 import { optimizeCandidatePlacement } from './phases/phase4-optimize'
-
-export interface SchedulingRunOptions {
-  uploadedPreferences?: PreferenceRecord[]
-}
 
 function makeAssignment(
   workItem: Parameters<typeof evaluatePlacementOptions>[0],
@@ -38,17 +33,14 @@ function makeAssignment(
   }
 }
 
-async function buildPlan(
-  term: string,
-  options: SchedulingRunOptions = {},
-): Promise<{
+async function buildPlan(term: string): Promise<{
   assignments: ScheduleAssignment[]
   conflicts: ScheduleConflict[]
   nearHardFlags: NearHardFlag[]
   warnings: string[]
   traces: PlacementTrace[]
 }> {
-  const collected = await collectInputs(term, options)
+  const collected = await collectInputs(term)
   const orderedWorkItems = sortByDifficulty(collected.workItems)
   const pending = [...orderedWorkItems]
   const assignments: ScheduleAssignment[] = []
@@ -361,17 +353,14 @@ async function buildPlan(
  * @param term - Academic term to schedule.
  * @returns The computed plan with debug traces.
  */
-export async function runSchedulingPlan(
-  term: string,
-  options: SchedulingRunOptions = {},
-): Promise<{
+export async function runSchedulingPlan(term: string): Promise<{
   assignments: ScheduleAssignment[]
   conflicts: ScheduleConflict[]
   nearHardFlags: NearHardFlag[]
   warnings: string[]
   traces: PlacementTrace[]
 }> {
-  const plan = await buildPlan(term, options)
+  const plan = await buildPlan(term)
   return {
     assignments: plan.assignments,
     conflicts: plan.conflicts,
