@@ -199,6 +199,19 @@ export interface CollectedInputs {
   warnings: string[]
 }
 
+export interface PreferenceUploadPreview {
+  courses: Course[]
+  professors: Professor[]
+  preferences: PreferenceRecord[]
+  warnings: string[]
+}
+
+export interface PreferenceUploadMongoStub {
+  ok: false
+  message: string
+  preview: PreferenceUploadPreview
+}
+
 export interface CandidateSlot {
   room: Room
   slot: TimeSlot
