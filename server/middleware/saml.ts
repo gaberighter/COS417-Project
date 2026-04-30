@@ -74,9 +74,11 @@ async function getRoles(username: string, email: string): Promise<string[]> {
     roles.push('Admin')
   }
 
-  const professor = await mongoose.connection.db
-    .collection('professors')
-    .findOne({ covenantId })
+  const db = mongoose.connection.db
+  if (!db) {
+    throw new Error('Database connection not established')
+  }
+  const professor = await db.collection('professors').findOne({ covenantId })
 
   if (professor) {
     roles.push('Faculty')
@@ -351,7 +353,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
   if (apiIndex !== -1 && !urlObj.pathname.endsWith('/api/_auth/session')) {
     const session = await requireUserSession(event)
-    const roles: string[] = session.user.roles as string[]
+    const roles: string[] = (session.user as any).roles ?? []
 
     const isRegistrar = roles.includes('Admin')
     const isFaculty = roles.includes('Faculty')
