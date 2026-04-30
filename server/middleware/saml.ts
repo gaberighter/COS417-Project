@@ -51,6 +51,14 @@ const REGISTRAR_USERNAMES = [
   'matthew.luther',
 ]
 
+// Maps Microsoft/Azure AD namespaced SAML attribute keys to friendly names.
+const FIELD_MAP: Record<string, string> = {
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress': 'email',
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname': 'firstName',
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname': 'lastName',
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name': 'displayName',
+}
+
 // The Oracle username is the first letter of the first name and then the last name, in all caps.
 function lookupOracleUser(email: string) {
   return (
@@ -61,7 +69,6 @@ function lookupOracleUser(email: string) {
 
 async function getRoles(username: string, email: string): Promise<string[]> {
   const roles: string[] = []
-
   const covenantId = email.substring(0, email.indexOf('@'))
 
   if (REGISTRAR_USERNAMES.includes(covenantId)) {
@@ -87,7 +94,6 @@ function readFileOrThrow(path: string, label: string) {
       statusMessage: `${label} not configured`,
     })
   }
-
   return fs.readFileSync(path, 'utf8')
 }
 
@@ -108,10 +114,8 @@ function getProviders() {
     })
   }
 
-  const privateKeyPath =
-    process.env.SAML_PRIVATE_KEY_PATH || 'wildcard_covenant_edu.key'
-  const certificatePath =
-    process.env.SAML_PUBLIC_CERT_PATH || 'wildcard_covenant_edu.pem'
+  const privateKeyPath = process.env.SAML_PRIVATE_KEY_PATH || 'wildcard_covenant_edu.key'
+  const certificatePath = process.env.SAML_PUBLIC_CERT_PATH || 'wildcard_covenant_edu.pem'
   const idpCertificatePath = process.env.SAML_CERT || 'microsoft_saml.cer'
 
   const spOptions = {
@@ -155,18 +159,13 @@ export default defineEventHandler(async (event: H3Event) => {
             {},
             (err: Error | null, login_url: string) => {
               if (err) {
-                return reject(
-                  createError({
-                    statusCode: 500,
-                    statusMessage: err.message,
-                  }),
-                )
+                return reject(createError({ statusCode: 500, statusMessage: err.message }))
               }
-
               return resolve(sendRedirect(event, login_url))
             },
           )
         })
+
       case 'assert': {
         const method = getMethod(event)
         if (method !== 'POST' && method !== 'GET') {
@@ -177,8 +176,7 @@ export default defineEventHandler(async (event: H3Event) => {
           })
         }
 
-        const requestPayload =
-          method === 'POST' ? await readBody(event) : getQuery(event)
+        const requestPayload = method === 'POST' ? await readBody(event) : getQuery(event)
 
         const hasSamlPayload =
           typeof requestPayload === 'object' &&
@@ -190,7 +188,6 @@ export default defineEventHandler(async (event: H3Event) => {
             typeof requestPayload === 'object' && requestPayload !== null
               ? Object.keys(requestPayload as Record<string, unknown>)
               : []
-
           throw createError({
             statusCode: 400,
             statusMessage:
@@ -202,90 +199,90 @@ export default defineEventHandler(async (event: H3Event) => {
 
         return new Promise((resolve, reject) => {
           const onAssert = async (err: Error | null, samlResponse: any) => {
-            if (err) {
-              return reject(
-                createError({
+            try {
+              if (err) {
+                return reject(createError({ statusCode: 500, statusMessage: err.message }))
+              }
+
+              // Save name_id and session_index for logout.
+              const { name_id, session_index, attributes: samlUser } = samlResponse.user
+
+              // Log only attribute keys by default to avoid leaking PII in logs.
+              const samlAttributeKeys = Object.keys(samlUser || {})
+              console.log('[SAML] attribute keys:', samlAttributeKeys.join(', '))
+
+              // Allow full attribute logging only when explicitly enabled for debugging.
+              if (process.env.SAML_DEBUG_ATTRIBUTES === 'true') {
+                console.log('[SAML] raw attributes:', JSON.stringify(samlResponse.user.attributes, null, 2))
+              }
+
+              // Normalize attributes — flatten single-element arrays and remap namespaced keys.
+              for (const field in samlUser) {
+                if (Array.isArray(samlUser[field]) && samlUser[field].length === 1) {
+                  samlUser[field] = samlUser[field][0]
+                }
+                const friendlyName = FIELD_MAP[field]
+                if (friendlyName) {
+                  samlUser[friendlyName] = samlUser[field]
+                }
+                if (field.substring(0, 7) === 'http://') {
+                  delete samlUser[field]
+                }
+              }
+
+              // Validate email exists.
+              if (!('oracleUser' in samlUser) && !samlUser.email) {
+                return reject(createError({
                   statusCode: 500,
-                  statusMessage: err.message,
-                }),
-              )
-            }
-
-            // Save name_id and session_index for logout.
-            const {
-              name_id,
-              session_index,
-              attributes: samlUser,
-            } = samlResponse.user
-            console.log('SAML user attributes:', JSON.stringify(samlUser, null, 2)) // Log the raw SAML user attributes for debugging. TODO: remove
-
-            for (const field in samlUser) {
-              if (
-                Array.isArray(samlUser[field]) &&
-                samlUser[field].length === 1
-              ) {
-                samlUser[field] = samlUser[field][0]
+                  statusMessage: `SAML response has no email or oracleUser. Keys present: ${Object.keys(samlUser).join(', ')}`,
+                }))
               }
 
-              if (field.substring(0, 7) === 'http://') {
-                delete samlUser[field]
+              const username =
+                'oracleUser' in samlUser
+                  ? samlUser.oracleUser
+                  : lookupOracleUser(samlUser.email)
+
+              const roles = await getRoles(username, samlUser.email)
+
+              // Look up the user and create the session payload.
+              const user: Record<string, unknown> = {
+                ...samlUser,
+                username,
+                roles,
+                lastLogin: new Date(),
+                name_id,
+                session_index,
               }
+
+              // See if this user exists in the Users collection.
+              const existingUser = await UsersCollection.findOne({ username: user.username })
+              if (!existingUser) {
+                const createdUser = await UsersCollection.create(user)
+                user._id = createdUser._id?.toString?.() || createdUser._id
+              } else {
+                user._id = existingUser._id?.toString?.() || existingUser._id
+                await UsersCollection.updateOne({ _id: existingUser._id }, user)
+              }
+
+              await setUserSession(event, { user, loggedInAt: Date.now() })
+
+              return resolve(sendRedirect(event, process.env.SAML_REDIRECT_TO || '/'))
+            } catch (e: any) {
+              return reject(createError({
+                statusCode: 500,
+                statusMessage: e?.message || 'Unexpected error during SAML assertion',
+              }))
             }
-
-            // Look up the user from Banner to get their Oracle username.
-            const username =
-              'oracleUser' in samlUser
-                ? samlUser.oracleUser
-                : lookupOracleUser(samlUser.email)
-            const roles = await getRoles(username, samlUser.email)
-
-            // Look up the user and create the session payload.
-            const user: Record<string, unknown> = {
-              ...samlUser,
-              username,
-              roles,
-              lastLogin: new Date(),
-              name_id,
-              session_index,
-            }
-
-            // See if this user exists in the Users collection.
-            const existingUser = await UsersCollection.findOne({
-              username: user.username,
-            })
-            if (!existingUser) {
-              const createdUser = await UsersCollection.create(user)
-              user._id = createdUser._id?.toString?.() || createdUser._id
-            } else {
-              user._id = existingUser._id?.toString?.() || existingUser._id
-              await UsersCollection.updateOne({ _id: existingUser._id }, user)
-            }
-
-            await setUserSession(event, {
-              user,
-              loggedInAt: Date.now(),
-            })
-
-            return resolve(
-              sendRedirect(event, process.env.SAML_REDIRECT_TO || '/'),
-            )
           }
 
           if (method === 'POST') {
-            return sp.post_assert(
-              idp,
-              { request_body: requestPayload },
-              onAssert,
-            )
+            return sp.post_assert(idp, { request_body: requestPayload }, onAssert)
           }
-
-          return sp.redirect_assert(
-            idp,
-            { request_body: requestPayload },
-            onAssert,
-          )
+          return sp.redirect_assert(idp, { request_body: requestPayload }, onAssert)
         })
       }
+
       case 'logout': {
         const query = getQuery(event)
         return new Promise((resolve, reject) => {
@@ -294,25 +291,21 @@ export default defineEventHandler(async (event: H3Event) => {
             query,
             (err: Error | null, logoutRequestUrl: string) => {
               if (err) {
-                return reject(
-                  createError({
-                    statusCode: 500,
-                    statusMessage: err.message,
-                  }),
-                )
+                return reject(createError({ statusCode: 500, statusMessage: err.message }))
               }
-
               return resolve(sendRedirect(event, logoutRequestUrl))
             },
           )
         })
       }
+
       case 'manifest.xml':
         setResponseHeaders(event, {
           'Content-Disposition': 'attachment; filename=manifest.xml',
           'Content-Type': 'text/xml; charset=latin1',
         })
         return sp.create_metadata()
+
       default:
         return
     }
@@ -325,12 +318,8 @@ export default defineEventHandler(async (event: H3Event) => {
     const isRegistrar = roles.includes('REGISTRAR')
     const isFaculty = roles.includes('FACULTY')
 
-    const isRegistrarOnly = REGISTRAR_ONLY.some(route => 
-      urlObj.pathname.startsWith(route)
-    )
-    const isFacultyRoute = FACULTY_OR_REGISTRAR.some(route => 
-      urlObj.pathname.startsWith(route)
-    )
+    const isRegistrarOnly = REGISTRAR_ONLY.some(route => urlObj.pathname.startsWith(route))
+    const isFacultyRoute = FACULTY_OR_REGISTRAR.some(route => urlObj.pathname.startsWith(route))
 
     if (isRegistrarOnly && !isRegistrar) {
       throw createError({ statusCode: 403, statusMessage: 'Access denied' })

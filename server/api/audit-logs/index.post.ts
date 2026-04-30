@@ -27,15 +27,22 @@ interface ActorIdentity {
 
 const ALLOWED_ACTIONS = new Set([
   'COURSE_UPSERT',
+  'COURSE_DELETE',
   'PROFESSOR_UPSERT',
+  'PROFESSOR_DELETE',
   'PREFERENCE_SUBMIT',
+  'PREFERENCE_DELETE',
   'ROOM_UPSERT',
+  'ROOM_DELETE',
   'SCHEDULE_RUN',
   'SCHEDULE_UPSERT',
   'SCHEDULE_UPDATE',
   'SCHEDULE_OVERRIDE',
+  'SCHEDULE_DELETE',
   'SCHEDULE_EXPORT',
   'AUDIT_IMPORT',
+  'LOGIN_SUCCESS',
+  'LOGIN_FAILURE',
 ])
 
 function isObject(value: unknown): value is Record<string, unknown> {
