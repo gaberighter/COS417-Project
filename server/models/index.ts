@@ -295,6 +295,20 @@ professorSchema.pre('validate', function setProfessorId() {
   }
 })
 
+professorSchema.pre('validate', function normalizeLegacyPreferenceStatuses() {
+  const legacyMap: Record<string, 'not_submitted' | 'submitted'> = {
+    empty: 'not_submitted',
+    draft: 'not_submitted',
+    approved: 'submitted',
+  }
+  for (const pref of this.preferences) {
+    const mapped = legacyMap[pref.status as string]
+    if (mapped) {
+      pref.status = mapped
+    }
+  }
+})
+
 const assignmentSchema = new Schema<IAssignment>(
   {
     courseId: { type: String, required: true, trim: true },
