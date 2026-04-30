@@ -71,7 +71,7 @@ async function getRoles(username: string, email: string): Promise<string[]> {
   const covenantId = email.substring(0, email.indexOf('@'))
 
   if (REGISTRAR_USERNAMES.includes(covenantId)) {
-    roles.push('REGISTRAR')
+    roles.push('Admin')
   }
 
   const professor = await mongoose.connection.db
@@ -79,7 +79,7 @@ async function getRoles(username: string, email: string): Promise<string[]> {
     .findOne({ covenantId })
 
   if (professor) {
-    roles.push('FACULTY')
+    roles.push('Faculty')
   }
 
   return roles
@@ -363,8 +363,8 @@ export default defineEventHandler(async (event: H3Event) => {
     const session = await requireUserSession(event)
     const roles: string[] = session.user.roles as string[]
 
-    const isRegistrar = roles.includes('REGISTRAR')
-    const isFaculty = roles.includes('FACULTY')
+    const isRegistrar = roles.includes('Admin')
+    const isFaculty = roles.includes('Faculty')
 
     const isRegistrarOnly = REGISTRAR_ONLY.some((route) =>
       urlObj.pathname.startsWith(route),
