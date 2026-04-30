@@ -1,6 +1,6 @@
 // server/api/schedule/[term]/export.get.ts
 // GET /api/schedule/:term/export — §4.5.2
-// Role: Admin — download Banner-compatible CSV.
+// Role: Admin | Faculty — download Banner-compatible CSV.
 
 import { defineEventHandler, getRouterParam, createError, setHeader } from 'h3'
 import { requireAuth } from '../../../utils/auth'
@@ -125,7 +125,7 @@ function buildBannerRows(
 }
 
 export default defineEventHandler(async (event) => {
-  const auth = requireAuth(event, ['Admin'])
+  const auth = requireAuth(event, ['Admin', 'Faculty'])
   await connectDB()
 
   const term = getRouterParam(event, 'term')

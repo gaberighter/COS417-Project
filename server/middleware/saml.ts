@@ -4,7 +4,6 @@ import {
   defineEventHandler,
   createError,
   getRequestURL,
-  getMethod,
   readBody,
   getQuery,
   setResponseHeaders,
@@ -16,6 +15,8 @@ import saml2 from 'saml2-js'
 
 import { Users } from '../models/user.model'
 import type { AuthContext, UserRole } from '../utils/auth'
+import { logAuthEvent } from '../services/auditService'
+import { getClientIp } from '../utils/ip'
 type SAMLProviders = {
   sp: InstanceType<typeof saml2.ServiceProvider>
   idp: InstanceType<typeof saml2.IdentityProvider>
@@ -25,11 +26,15 @@ const UsersCollection = Users as any
 
 let providers: SAMLProviders | null = null
 
-const REGISTRAR_ONLY = [
+const REGISTRAR_ONLY: string[] = (process.env.REGISTRAR_ONLY_ROUTES ?? '')
+  .split(',')
+  .map((route) => route.trim())
+  .filter(Boolean)
+
+const FACULTY_READ_ONLY = [
   '/api/professors',
   '/api/rooms',
   '/api/courses',
-  '/api/audit-logs',
   '/api/schedule',
 ]
 
@@ -177,7 +182,7 @@ export default defineEventHandler(async (event: H3Event) => {
         })
 
       case 'assert': {
-        const method = getMethod(event)
+        const method = (event.method ?? 'GET').toUpperCase()
         if (method !== 'POST' && method !== 'GET') {
           throw createError({
             statusCode: 405,
@@ -210,6 +215,10 @@ export default defineEventHandler(async (event: H3Event) => {
 
         return new Promise((resolve, reject) => {
           const onAssert = async (err: Error | null, samlResponse: any) => {
+            let samlUser: any
+            let name_id: any
+            let session_index: any
+
             try {
               if (err) {
                 return reject(
@@ -218,11 +227,10 @@ export default defineEventHandler(async (event: H3Event) => {
               }
 
               // Save name_id and session_index for logout.
-              const {
-                name_id,
-                session_index,
-                attributes: samlUser,
-              } = samlResponse.user
+              const extracted = samlResponse.user
+              name_id = extracted.name_id
+              session_index = extracted.session_index
+              samlUser = extracted.attributes
 
               // Log only attribute keys by default to avoid leaking PII in logs.
               const samlAttributeKeys = Object.keys(samlUser || {})
@@ -300,10 +308,52 @@ export default defineEventHandler(async (event: H3Event) => {
 
               await setUserSession(event, { user, loggedInAt: Date.now() })
 
+              try {
+                const clientIp = getClientIp(event)
+                await logAuthEvent(
+                  String(user.username ?? user._id ?? 'unknown'),
+                  'LOGIN_SUCCESS',
+                  clientIp,
+                  'SAML assertion success',
+                )
+              } catch (auditErr) {
+                // Do not block login on audit failures; log to console for diagnostics.
+                console.error(
+                  '[AUDIT] failed to record login success',
+                  auditErr,
+                )
+              }
+
               return resolve(
                 sendRedirect(event, process.env.SAML_REDIRECT_TO || '/'),
               )
             } catch (e: any) {
+              try {
+                let attemptedId = 'unknown'
+                if (samlUser) {
+                  if (samlUser.oracleUser) {
+                    attemptedId = samlUser.oracleUser
+                  } else if (samlUser.email) {
+                    // Normalize email to covenantId format (local part lowercased) to avoid PII in audit logs
+                    attemptedId = samlUser.email
+                      .substring(0, samlUser.email.indexOf('@'))
+                      .toLowerCase()
+                  }
+                }
+                const clientIp = getClientIp(event)
+                await logAuthEvent(
+                  String(attemptedId),
+                  'LOGIN_FAILURE',
+                  clientIp,
+                  e?.message ?? 'SAML assertion error',
+                )
+              } catch (auditErr) {
+                console.error(
+                  '[AUDIT] failed to record login failure',
+                  auditErr,
+                )
+              }
+
               return reject(
                 createError({
                   statusCode: 500,
@@ -363,6 +413,7 @@ export default defineEventHandler(async (event: H3Event) => {
     const session = await requireUserSession(event)
     const roles: string[] = (session.user as any).roles ?? []
     const username: string = (session.user as any).username ?? ''
+    const method = (event.method ?? 'GET').toUpperCase()
 
     if (!username) {
       throw createError({
@@ -388,11 +439,18 @@ export default defineEventHandler(async (event: H3Event) => {
     const isRegistrarOnly = REGISTRAR_ONLY.some((route) =>
       urlObj.pathname.startsWith(route),
     )
+    const isFacultyReadOnly = FACULTY_READ_ONLY.some((route) =>
+      urlObj.pathname.startsWith(route),
+    )
     const isFacultyRoute = FACULTY_OR_REGISTRAR.some((route) =>
       urlObj.pathname.startsWith(route),
     )
 
     if (isRegistrarOnly && !isRegistrar) {
+      throw createError({ statusCode: 403, statusMessage: 'Access denied' })
+    }
+
+    if (isFacultyReadOnly && method !== 'GET' && !isRegistrar) {
       throw createError({ statusCode: 403, statusMessage: 'Access denied' })
     }
 
