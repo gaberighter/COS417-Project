@@ -1,6 +1,6 @@
 // server/api/schedule/[term]/all.get.ts
 // GET /api/schedule/:term/all — retrieve all schedules (all runs) for a specific term
-// Role: Admin
+// Role: Admin | Faculty
 
 import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { requireAuth } from '../../../utils/auth'
@@ -10,7 +10,7 @@ import { Schedule } from '../../../models/index'
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 
 export default defineEventHandler(async (event) => {
-  requireAuth(event, ['Admin'])
+  requireAuth(event, ['Admin', 'Faculty'])
   await connectDB()
 
   const term = getRouterParam(event, 'term')

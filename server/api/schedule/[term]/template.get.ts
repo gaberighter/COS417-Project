@@ -1,7 +1,7 @@
 // server/api/schedule/[term]/template.get.ts
 // GET /api/schedule/:term/template — retrieve template with current schedule structure for easier PATCH
 // Allows users to see the exact format needed for PATCH requests
-// Role: Admin
+// Role: Admin | Faculty
 
 import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { requireAuth } from '../../../utils/auth'
@@ -11,7 +11,7 @@ import { Schedule } from '../../../models/index'
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 
 export default defineEventHandler(async (event) => {
-  requireAuth(event, ['Admin'])
+  requireAuth(event, ['Admin', 'Faculty'])
   await connectDB()
 
   const term = getRouterParam(event, 'term')

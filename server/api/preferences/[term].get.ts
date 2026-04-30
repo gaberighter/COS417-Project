@@ -1,6 +1,6 @@
 // server/api/preferences/[term].get.ts
 // GET /api/preferences/:term — §4.3.2
-// Role: Admin — retrieve all preference submissions for a term.
+// Role: Admin | Faculty — retrieve all preference submissions for a term.
 // Note: preferences are embedded in professor documents, so this queries
 //       active professors and filters embedded submissions by term.
 
@@ -10,7 +10,7 @@ import { connectDB } from '../../utils/db'
 import { Professor } from '../../models/index'
 
 export default defineEventHandler(async (event) => {
-  requireAuth(event, ['Admin'])
+  requireAuth(event, ['Admin', 'Faculty'])
   await connectDB()
 
   const term = getRouterParam(event, 'term')

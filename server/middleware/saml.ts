@@ -4,7 +4,6 @@ import {
   defineEventHandler,
   createError,
   getRequestURL,
-  getMethod,
   readBody,
   getQuery,
   setResponseHeaders,
@@ -25,11 +24,12 @@ const UsersCollection = Users as any
 
 let providers: SAMLProviders | null = null
 
-const REGISTRAR_ONLY = [
+const REGISTRAR_ONLY: string[] = []
+
+const FACULTY_READ_ONLY = [
   '/api/professors',
   '/api/rooms',
   '/api/courses',
-  '/api/audit-logs',
   '/api/schedule',
 ]
 
@@ -363,6 +363,7 @@ export default defineEventHandler(async (event: H3Event) => {
     const session = await requireUserSession(event)
     const roles: string[] = (session.user as any).roles ?? []
     const username: string = (session.user as any).username ?? ''
+    const method = (event.method ?? 'GET').toUpperCase()
 
     if (!username) {
       throw createError({
@@ -388,11 +389,18 @@ export default defineEventHandler(async (event: H3Event) => {
     const isRegistrarOnly = REGISTRAR_ONLY.some((route) =>
       urlObj.pathname.startsWith(route),
     )
+    const isFacultyReadOnly = FACULTY_READ_ONLY.some((route) =>
+      urlObj.pathname.startsWith(route),
+    )
     const isFacultyRoute = FACULTY_OR_REGISTRAR.some((route) =>
       urlObj.pathname.startsWith(route),
     )
 
     if (isRegistrarOnly && !isRegistrar) {
+      throw createError({ statusCode: 403, statusMessage: 'Access denied' })
+    }
+
+    if (isFacultyReadOnly && method !== 'GET' && !isRegistrar) {
       throw createError({ statusCode: 403, statusMessage: 'Access denied' })
     }
 
