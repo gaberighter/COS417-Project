@@ -10,7 +10,12 @@ import { Schedule, type ISchedule } from '../../../models/index'
 import { logAction } from '../../../services/auditService'
 
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
-const VALID_STATUSES: ISchedule['status'][] = ['draft', 'under_review', 'approved', 'exported']
+const VALID_STATUSES: ISchedule['status'][] = [
+  'draft',
+  'under_review',
+  'approved',
+  'exported',
+]
 const VALID_DAYS: string[] = ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'W', 'T', 'R']
 const TIME_PATTERN = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
 
@@ -44,10 +49,18 @@ function validateAssignments(assignments: unknown): string | null {
     if (!a.days || typeof a.days !== 'string' || !VALID_DAYS.includes(a.days)) {
       return `Assignment ${i}: days must be one of: ${VALID_DAYS.join(', ')}`
     }
-    if (!a.startTime || typeof a.startTime !== 'string' || !TIME_PATTERN.test(a.startTime)) {
+    if (
+      !a.startTime ||
+      typeof a.startTime !== 'string' ||
+      !TIME_PATTERN.test(a.startTime)
+    ) {
       return `Assignment ${i}: startTime must be in HH:MM format (24-hour)`
     }
-    if (!a.endTime || typeof a.endTime !== 'string' || !TIME_PATTERN.test(a.endTime)) {
+    if (
+      !a.endTime ||
+      typeof a.endTime !== 'string' ||
+      !TIME_PATTERN.test(a.endTime)
+    ) {
       return `Assignment ${i}: endTime must be in HH:MM format (24-hour)`
     }
   }
@@ -88,7 +101,8 @@ export default defineEventHandler(async (event) => {
   } catch {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Invalid JSON body. Try GET /api/schedule/:term/template for formatting help.',
+      statusMessage:
+        'Invalid JSON body. Try GET /api/schedule/:term/template for formatting help.',
     })
   }
 
@@ -166,7 +180,8 @@ export default defineEventHandler(async (event) => {
   if (changes === 0) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'No mutable schedule fields were provided. Try GET /api/schedule/:term/template to see available fields.',
+      statusMessage:
+        'No mutable schedule fields were provided. Try GET /api/schedule/:term/template to see available fields.',
     })
   }
 

@@ -60,7 +60,8 @@ export default defineEventHandler(async (event) => {
         },
       },
       description: {
-        runNumber: 'Optional: specific run number to update. Omit to update latest.',
+        runNumber:
+          'Optional: specific run number to update. Omit to update latest.',
         status: 'Optional: schedule status',
         createdBy: 'Optional: admin email or identifier',
         assignments: 'Optional: array of course-professor-room assignments',
@@ -106,11 +107,14 @@ export default defineEventHandler(async (event) => {
     },
     validDayPatterns: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'W', 'T', 'R'],
     description: {
-      runNumber: 'Optional: specific run number to update. Omit to update latest.',
+      runNumber:
+        'Optional: specific run number to update. Omit to update latest.',
       status: 'Optional: schedule status (must be one of the valid statuses)',
       createdBy: 'Optional: admin email or identifier',
-      assignments: 'Optional: complete array of course-professor-room assignments. Format shown in assignmentExample.',
-      conflicts: 'Optional: complete array of scheduling conflicts. Format shown in conflictExample.',
+      assignments:
+        'Optional: complete array of course-professor-room assignments. Format shown in assignmentExample.',
+      conflicts:
+        'Optional: complete array of scheduling conflicts. Format shown in conflictExample.',
     },
     instructions: {
       _: 'How to use this template:',
