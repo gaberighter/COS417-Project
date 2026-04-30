@@ -15,6 +15,8 @@ import saml2 from 'saml2-js'
 
 import { Users } from '../models/user.model'
 import type { AuthContext, UserRole } from '../utils/auth'
+import { logAuthEvent } from '../services/auditService'
+import { getClientIp } from '../utils/ip'
 type SAMLProviders = {
   sp: InstanceType<typeof saml2.ServiceProvider>
   idp: InstanceType<typeof saml2.IdentityProvider>
@@ -300,10 +302,26 @@ export default defineEventHandler(async (event: H3Event) => {
 
               await setUserSession(event, { user, loggedInAt: Date.now() })
 
+              try {
+                const clientIp = getClientIp(event)
+                await logAuthEvent(String(user.username ?? user._id ?? 'unknown'), 'LOGIN_SUCCESS', clientIp, 'SAML assertion success')
+              } catch (auditErr) {
+                // Do not block login on audit failures; log to console for diagnostics.
+                console.error('[AUDIT] failed to record login success', auditErr)
+              }
+
               return resolve(
                 sendRedirect(event, process.env.SAML_REDIRECT_TO || '/'),
               )
             } catch (e: any) {
+              try {
+                const attemptedId = (samlUser && (samlUser.oracleUser ?? samlUser.email)) || 'unknown'
+                const clientIp = getClientIp(event)
+                await logAuthEvent(String(attemptedId), 'LOGIN_FAILURE', clientIp, e?.message ?? 'SAML assertion error')
+              } catch (auditErr) {
+                console.error('[AUDIT] failed to record login failure', auditErr)
+              }
+
               return reject(
                 createError({
                   statusCode: 500,
