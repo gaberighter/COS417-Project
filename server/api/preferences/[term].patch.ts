@@ -174,7 +174,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const submission = prof.preferences[submissionIndex]
+  const submission = prof.preferences[submissionIndex]!
   let changes = 0
 
   if (hasOwn(body, 'status')) {
