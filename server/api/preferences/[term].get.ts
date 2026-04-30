@@ -1,6 +1,6 @@
 // server/api/preferences/[term].get.ts
 // GET /api/preferences/:term — §4.3.2
-// Role: Admin | Faculty — retrieve all preference submissions for a term.
+// Role: Admin | Faculty
 // Note: preferences are embedded in professor documents, so this queries
 //       active professors and filters embedded submissions by term.
 
@@ -8,14 +8,72 @@ import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Professor } from '../../models/index'
+import { normalizePreferenceStatus } from '../../utils/preferenceValidation'
+
+function formatSubmissionStatus<
+  T extends { status: unknown; submittedAt?: unknown },
+>(submission: T) {
+  const status = normalizePreferenceStatus(submission.status)
+  return {
+    ...submission,
+    status,
+    submittedAt:
+      status === 'submitted' ? (submission.submittedAt ?? null) : null,
+  }
+}
 
 export default defineEventHandler(async (event) => {
-  requireAuth(event, ['Admin', 'Faculty'])
+  const auth = requireAuth(event, ['Admin', 'Faculty'])
   await connectDB()
 
   const term = getRouterParam(event, 'term')
   if (!term) {
     throw createError({ statusCode: 400, statusMessage: 'term is required' })
+  }
+
+  if (auth.role === 'Faculty') {
+    const professor = await Professor.findOne(
+      {
+        active: true,
+        $or: [
+          { covenantId: auth.userId.toLowerCase() },
+          { _id: auth.userId.toLowerCase() },
+          { _id: auth.userId },
+        ],
+      },
+      {
+        _id: 1,
+        covenantId: 1,
+        displayName: 1,
+        departmentCode: 1,
+        preferences: 1,
+      },
+    )
+      .lean()
+      .exec()
+
+    if (!professor) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Professor record not found',
+      })
+    }
+
+    const submission = (professor.preferences ?? []).find(
+      (candidate) => candidate.term === term,
+    )
+
+    if (!submission) {
+      return null
+    }
+
+    return {
+      professorId: professor._id ?? professor.covenantId,
+      covenantId: professor.covenantId,
+      displayName: professor.displayName,
+      departmentCode: professor.departmentCode,
+      ...formatSubmissionStatus(submission),
+    }
   }
 
   const professors = await Professor.find(
@@ -39,7 +97,7 @@ export default defineEventHandler(async (event) => {
         covenantId: professor.covenantId,
         displayName: professor.displayName,
         departmentCode: professor.departmentCode,
-        ...submission,
+        ...formatSubmissionStatus(submission),
       })),
   )
 
