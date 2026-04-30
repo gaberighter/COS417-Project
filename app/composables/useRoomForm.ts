@@ -151,7 +151,11 @@ export const useRoomForm = (onRoomSaved: () => Promise<void>) => {
       closeAddRoomModal()
     } catch (e) {
       console.error('Failed to create room:', e)
-      throw e
+      actionMessage.value =
+        e instanceof Error && e.message
+          ? `Failed to save room: ${e.message}`
+          : 'Failed to save room.'
+      return
     }
   }
 
