@@ -1710,6 +1710,24 @@ function normalizeCsvHeader(raw: string): string {
     .replace(/^_+|_+$/g, '') // trim leading/trailing underscores
 }
 
+function findHeaderLineIndex(lines: string[]): number {
+  // Scan the first few lines and pick the one with the most recognized column names.
+  // This skips title rows like "Covenant College" or "Spring 2026 Course Offerings".
+  let best = 0
+  let bestCount = 0
+  const limit = Math.min(lines.length, 8)
+  for (let i = 0; i < limit; i++) {
+    const count = parseCsvLine(lines[i]!)
+      .map(normalizeCsvHeader)
+      .filter((h) => h.length > 0 && h in CSV_COLUMN_MAP).length
+    if (count > bestCount) {
+      bestCount = count
+      best = i
+    }
+  }
+  return best
+}
+
 function handleCsvUpload(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -1722,18 +1740,25 @@ function handleCsvUpload(event: Event) {
     if (!text) return
 
     const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0)
-    if (lines.length < 2) {
-      statusMessage.value =
-        'CSV must have a header row and at least one data row.'
+    if (lines.length === 0) {
+      statusMessage.value = 'The file is empty.'
       statusTone.value = 'error'
       return
     }
 
-    const headers = parseCsvLine(lines[0]!).map(normalizeCsvHeader)
+    const headerIdx = findHeaderLineIndex(lines)
+    const headers = parseCsvLine(lines[headerIdx]!).map(normalizeCsvHeader)
     const fieldMap = headers.map((h) => CSV_COLUMN_MAP[h] ?? null)
 
+    if (fieldMap.every((f) => f === null)) {
+      statusMessage.value =
+        'No recognized column headers found. Check the CSV format.'
+      statusTone.value = 'error'
+      return
+    }
+
     const newRows: PreferenceRow[] = []
-    for (let i = 1; i < lines.length; i++) {
+    for (let i = headerIdx + 1; i < lines.length; i++) {
       const values = parseCsvLine(lines[i]!)
       if (values.every((v) => v.trim().length === 0)) continue
       const row = createEmptyRow()
@@ -1754,6 +1779,8 @@ function handleCsvUpload(event: Event) {
           ? `${row.subject} ${courseNumber}`.trim()
           : courseNumber
       }
+      // Skip rows that produced no recognizable field values
+      if (!rowHasAnyContent(row)) continue
       newRows.push(row)
     }
 
