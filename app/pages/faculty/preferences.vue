@@ -1150,7 +1150,7 @@ async function loadSavedSubmission(
     const response = await $fetch<
       FacultyPreferenceSubmission | FacultyPreferenceSubmission[] | null
     >(`/api/preferences/${encodeURIComponent(nt)}`)
-    const sub = Array.isArray(response) ? response[0] ?? null : response
+    const sub = Array.isArray(response) ? (response[0] ?? null) : response
     if (reqId !== latestLoadRequest) return
     setLoadedState(nt, sub)
     if (sub && !options.silent) {
