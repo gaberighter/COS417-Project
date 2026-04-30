@@ -33,6 +33,7 @@ function normalizeDayPattern(value: string): DayPattern {
     value === 'MW' ||
     value === 'MTWF' ||
     value === 'MWRF' ||
+    value === 'M' ||
     value === 'W' ||
     value === 'T' ||
     value === 'R'

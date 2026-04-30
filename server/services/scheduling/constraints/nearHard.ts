@@ -34,6 +34,17 @@ export function collectNearHardFlags(
   const flags: NearHardFlag[] = []
   const courseId = workItem.scheduledCourseId
   const professorId = workItem.professor._id
+  const pairedCourseIds = new Set(
+    [workItem.backToBackWith, ...workItem.preferredBackToBackWith]
+      .filter((value): value is string => value !== null)
+      .map((value) => normalizeCourseReference(value).scheduledCourseId),
+  )
+  const corequisiteCourseIds = new Set(
+    [...workItem.coreqWith, ...workItem.course.corequisites].map(
+      (courseReference) =>
+        normalizeCourseReference(courseReference).scheduledCourseId,
+    ),
+  )
 
   const abnormalCheck = isPlacementAbnormal(
     candidate.room,
@@ -62,11 +73,6 @@ export function collectNearHardFlags(
       )
     }
 
-    const pairedCourseIds = new Set(
-      [workItem.backToBackWith, ...workItem.preferredBackToBackWith]
-        .filter((value): value is string => value !== null)
-        .map((value) => normalizeCourseReference(value).scheduledCourseId),
-    )
     if (
       pairedCourseIds.size > 0 &&
       pairedCourseIds.has(assignment.courseId) &&
@@ -81,12 +87,6 @@ export function collectNearHardFlags(
       )
     }
 
-    const corequisiteCourseIds = new Set(
-      [...workItem.coreqWith, ...workItem.course.corequisites].map(
-        (courseReference) =>
-          normalizeCourseReference(courseReference).scheduledCourseId,
-      ),
-    )
     if (
       corequisiteCourseIds.has(assignment.courseId) &&
       slotsOverlap(assignment, candidate.slot)

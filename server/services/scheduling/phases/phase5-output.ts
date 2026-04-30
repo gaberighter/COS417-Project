@@ -8,6 +8,8 @@ import type {
   ScheduleStatus,
 } from '../types'
 
+const MAX_SCHEDULE_CREATE_RETRIES = 3
+
 function computeStatus(
   conflicts: ScheduleConflict[],
   assignments: ScheduleAssignment[],
@@ -34,6 +36,14 @@ async function nextRunNumber(term: string): Promise<number> {
   return (latest?.runNumber ?? 0) + 1
 }
 
+function isDuplicateKeyError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false
+  }
+
+  return 'code' in error && (error as { code?: number }).code === 11000
+}
+
 /**
  * Persists the finished schedule and returns the stored run metadata.
  *
@@ -52,19 +62,32 @@ export async function persistAndReturn(
   nearHardFlags: NearHardFlag[] = [],
 ): Promise<ScheduleResult> {
   await connectDB()
-  const runNumber = await nextRunNumber(term)
-  const status = computeStatus(conflicts, assignments, nearHardFlags)
 
-  const schedule: ScheduleResult = {
-    term,
-    runNumber,
-    status,
-    createdBy: adminId,
-    assignments,
-    conflicts,
+  for (let attempt = 0; attempt < MAX_SCHEDULE_CREATE_RETRIES; attempt += 1) {
+    const runNumber = await nextRunNumber(term)
+    const status = computeStatus(conflicts, assignments, nearHardFlags)
+
+    const schedule: ScheduleResult = {
+      term,
+      runNumber,
+      status,
+      createdBy: adminId,
+      assignments,
+      conflicts,
+    }
+
+    try {
+      await Schedule.create(schedule as unknown as Record<string, unknown>)
+      return schedule
+    } catch (error) {
+      if (
+        !isDuplicateKeyError(error) ||
+        attempt === MAX_SCHEDULE_CREATE_RETRIES - 1
+      ) {
+        throw error
+      }
+    }
   }
 
-  await Schedule.create(schedule as unknown as Record<string, unknown>)
-
-  return schedule
+  throw new Error(`Failed to persist schedule for term ${term}`)
 }

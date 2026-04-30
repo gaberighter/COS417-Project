@@ -156,6 +156,12 @@ function normalizeCoursePreferences(
   }
 }
 
+function mergeUniqueStrings(
+  ...lists: Array<string[] | null | undefined>
+): string[] {
+  return [...new Set(lists.flatMap((list) => list ?? []))]
+}
+
 function buildWorkItem(
   course: Awaited<ReturnType<typeof fetchCourses>>[number],
   professor: Professor,
@@ -217,23 +223,25 @@ function buildWorkItem(
           ? [course.typicalDays]
           : [],
     preferredTimes:
-      effectivePreference?.preferredTimes ??
-      (course.typicalTime !== null ? [course.typicalTime] : []),
+      effectivePreference?.preferredTimes != null &&
+      effectivePreference.preferredTimes.length > 0
+        ? effectivePreference.preferredTimes
+        : course.typicalTime !== null
+          ? [course.typicalTime]
+          : [],
     avoidTimes: effectivePreference?.avoidTimes ?? [],
-    requiredEquipment:
-      effectivePreference?.requiredEquipment &&
-      effectivePreference.requiredEquipment.length > 0
-        ? effectivePreference.requiredEquipment
-        : [...course.requiredEquipment],
+    requiredEquipment: mergeUniqueStrings(
+      course.requiredEquipment,
+      effectivePreference?.requiredEquipment,
+    ),
     preferredBuilding: effectivePreference?.preferredBuilding ?? null,
     preferredRoomId: effectivePreference?.preferredRoomId ?? null,
     backToBackWith: effectivePreference?.backToBackWith ?? null,
     preferredBackToBackWith: [],
-    coreqWith:
-      effectivePreference?.coreqWith &&
-      effectivePreference.coreqWith.length > 0
-        ? effectivePreference.coreqWith
-        : [...course.corequisites],
+    coreqWith: mergeUniqueStrings(
+      course.corequisites,
+      effectivePreference?.coreqWith,
+    ),
   }
 }
 

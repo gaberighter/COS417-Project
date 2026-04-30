@@ -76,11 +76,18 @@ function buildBannerRows(
       lookups.professorsById.get(assignment.professorId) ??
       lookups.professorsById.get(assignment.professorId.toLowerCase())
     const room = lookups.roomsById.get(assignment.roomId)
-    const enrollmentKey = `${assignment.professorId}::${assignment.courseId}`
+    const normalizedReference = normalizeCourseReference(assignment.courseId)
+    const enrollmentKey = `${assignment.professorId}::${normalizedReference.scheduledCourseId}`
     const estimatedEnrollment =
       lookups.estimatedEnrollmentByKey.get(enrollmentKey) ??
       lookups.estimatedEnrollmentByKey.get(
-        `${assignment.professorId.toLowerCase()}::${assignment.courseId}`,
+        `${assignment.professorId.toLowerCase()}::${normalizedReference.scheduledCourseId}`,
+      ) ??
+      lookups.estimatedEnrollmentByKey.get(
+        `${assignment.professorId}::${normalizedReference.catalogCourseId}`,
+      ) ??
+      lookups.estimatedEnrollmentByKey.get(
+        `${assignment.professorId.toLowerCase()}::${normalizedReference.catalogCourseId}`,
       )
 
     const values = [
@@ -228,7 +235,15 @@ export default defineEventHandler(async (event) => {
           coursePreference.expectedEnrollment,
         )
         estimatedEnrollmentByKey.set(
+          `${professor._id}::${normalizedReference.catalogCourseId}`,
+          coursePreference.expectedEnrollment,
+        )
+        estimatedEnrollmentByKey.set(
           `${professor.covenantId}::${normalizedReference.scheduledCourseId}`,
+          coursePreference.expectedEnrollment,
+        )
+        estimatedEnrollmentByKey.set(
+          `${professor.covenantId}::${normalizedReference.catalogCourseId}`,
           coursePreference.expectedEnrollment,
         )
       }

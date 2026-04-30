@@ -147,6 +147,11 @@ function buildCandidatePairs(
   currentAssignments: ScheduleAssignment[],
 ): CandidateSlot[] {
   const candidates: CandidateSlot[] = []
+  const pairedCourseIds = new Set(
+    [workItem.backToBackWith, ...workItem.preferredBackToBackWith]
+      .filter((value): value is string => value !== null)
+      .map((value) => normalizeCourseReference(value).scheduledCourseId),
+  )
 
   for (const room of candidateRooms) {
     for (const slot of candidateSlots) {
@@ -162,11 +167,6 @@ function buildCandidatePairs(
           ) &&
           assignment.professorId === workItem.professor._id &&
           isBackToBack(assignment, slot),
-      )
-      const pairedCourseIds = new Set(
-        [workItem.backToBackWith, ...workItem.preferredBackToBackWith]
-          .filter((value): value is string => value !== null)
-          .map((value) => normalizeCourseReference(value).scheduledCourseId),
       )
       const preferredBackToBackMatchCount = currentAssignments.filter(
         (assignment) =>
