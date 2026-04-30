@@ -11,6 +11,19 @@ import { logAction } from '../../../services/auditService'
 
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 
+type AssignmentPatchPayload = Partial<IAssignment> & {
+  courseId?: string
+  originalCourseId?: string
+  previousCourseId?: string
+  assignment?: Partial<IAssignment> & {
+    courseId?: string
+  }
+}
+
+function hasOwn(obj: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(obj, key)
+}
+
 export default defineEventHandler(async (event) => {
   let auth: AuthContext
   if (process.env.DISABLE_SSO_FOR_SCHEDULES === 'true') {
@@ -29,11 +42,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
   }
 
-  let body: Partial<IAssignment> & { courseId?: string }
+  let body: AssignmentPatchPayload
   try {
-    body =
-      (await readBody<Partial<IAssignment> & { courseId?: string }>(event)) ??
-      {}
+    body = (await readBody<AssignmentPatchPayload>(event)) ?? {}
   } catch {
     throw createError({
       statusCode: 400,
@@ -41,13 +52,29 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (!body || typeof body !== 'object' || typeof body.courseId !== 'string') {
+  const patchSource =
+    body.assignment && typeof body.assignment === 'object'
+      ? body.assignment
+      : body
+
+  const targetCourseId =
+    typeof body.originalCourseId === 'string'
+      ? body.originalCourseId.trim()
+      : typeof body.previousCourseId === 'string'
+        ? body.previousCourseId.trim()
+        : typeof body.courseId === 'string'
+          ? body.courseId.trim()
+          : typeof patchSource.courseId === 'string'
+            ? patchSource.courseId.trim()
+            : ''
+
+  if (!body || typeof body !== 'object' || !targetCourseId) {
     throw createError({
       statusCode: 400,
       statusMessage: 'courseId is required to identify assignment',
     })
   }
-  const courseId = body.courseId.trim()
+  const courseId = targetCourseId
   if (!courseId) {
     throw createError({
       statusCode: 400,
@@ -83,6 +110,24 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const nextAssignment: IAssignment = {
+    ...current,
+  }
+
+  for (const field of [
+    'courseId',
+    'professorId',
+    'roomId',
+    'days',
+    'startTime',
+    'endTime',
+    'overrideBy',
+  ] as const) {
+    if (hasOwn(patchSource, field) && patchSource[field] !== undefined) {
+      nextAssignment[field] = patchSource[field] as never
+    }
+  }
+
   const adminProfessor = await Professor.findOne({
     $or: [
       { covenantId: auth.userId.toLowerCase() },
@@ -95,12 +140,7 @@ export default defineEventHandler(async (event) => {
     .exec()
 
   schedule.assignments[assignmentIndex] = {
-    ...current,
-    ...Object.fromEntries(
-      Object.entries(body).filter(
-        ([key, value]) => key !== 'courseId' && value !== undefined,
-      ),
-    ),
+    ...nextAssignment,
     overrideBy: adminProfessor?._id ?? auth.userId.toLowerCase(),
   }
   schedule.status = 'under_review'

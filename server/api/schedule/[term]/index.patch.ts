@@ -1,5 +1,6 @@
 // server/api/schedule/[term]/index.patch.ts
 // PATCH /api/schedule/:term — update mutable schedule fields.
+// GET /api/schedule/:term/template for help with request formatting
 // Role: Admin
 
 import { createError, defineEventHandler, getRouterParam, readBody } from 'h3'
@@ -9,6 +10,14 @@ import { Schedule, type ISchedule } from '../../../models/index'
 import { logAction } from '../../../services/auditService'
 
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
+const VALID_STATUSES: ISchedule['status'][] = [
+  'draft',
+  'under_review',
+  'approved',
+  'exported',
+]
+const VALID_DAYS: string[] = ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'W', 'T', 'R']
+const TIME_PATTERN = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
 
 type SchedulePatchPayload = {
   runNumber?: number
@@ -20,6 +29,85 @@ type SchedulePatchPayload = {
 
 function hasOwn(obj: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(obj, key)
+}
+
+function validateAssignments(assignments: unknown): string | null {
+  if (!Array.isArray(assignments)) {
+    return 'assignments must be an array'
+  }
+  for (let i = 0; i < assignments.length; i++) {
+    const entry = assignments[i]
+    if (typeof entry !== 'object' || entry === null) {
+      return `Assignment ${i}: must be an object, got ${typeof entry}`
+    }
+    const a = entry as Record<string, unknown>
+    if (!a.courseId || typeof a.courseId !== 'string') {
+      return `Assignment ${i}: courseId is required and must be a string`
+    }
+    if (!a.professorId || typeof a.professorId !== 'string') {
+      return `Assignment ${i}: professorId is required and must be a string`
+    }
+    if (!a.roomId || typeof a.roomId !== 'string') {
+      return `Assignment ${i}: roomId is required and must be a string`
+    }
+    if (!a.days || typeof a.days !== 'string' || !VALID_DAYS.includes(a.days)) {
+      return `Assignment ${i}: days must be one of: ${VALID_DAYS.join(', ')}`
+    }
+    if (
+      !a.startTime ||
+      typeof a.startTime !== 'string' ||
+      !TIME_PATTERN.test(a.startTime)
+    ) {
+      return `Assignment ${i}: startTime must be in HH:MM format (24-hour)`
+    }
+    if (
+      !a.endTime ||
+      typeof a.endTime !== 'string' ||
+      !TIME_PATTERN.test(a.endTime)
+    ) {
+      return `Assignment ${i}: endTime must be in HH:MM format (24-hour)`
+    }
+    // Validate optional overrideBy field
+    if (a.overrideBy !== undefined && a.overrideBy !== null) {
+      if (typeof a.overrideBy !== 'string') {
+        return `Assignment ${i}: overrideBy must be a string or null`
+      }
+    }
+  }
+  return null
+}
+
+function validateConflicts(conflicts: unknown): string | null {
+  if (!Array.isArray(conflicts)) {
+    return 'conflicts must be an array'
+  }
+  for (let i = 0; i < conflicts.length; i++) {
+    const entry = conflicts[i]
+    if (typeof entry !== 'object' || entry === null) {
+      return `Conflict ${i}: must be an object, got ${typeof entry}`
+    }
+    const c = entry as Record<string, unknown>
+    if (!c.courseId || typeof c.courseId !== 'string') {
+      return `Conflict ${i}: courseId is required and must be a string`
+    }
+    if (!c.reason || typeof c.reason !== 'string') {
+      return `Conflict ${i}: reason is required and must be a string`
+    }
+    // Validate optional resolvedBy field
+    if (c.resolvedBy !== undefined && c.resolvedBy !== null) {
+      if (typeof c.resolvedBy !== 'string') {
+        return `Conflict ${i}: resolvedBy must be a string or null`
+      }
+    }
+    // Validate optional resolvedAt field
+    if (c.resolvedAt !== undefined && c.resolvedAt !== null) {
+      const dateStr = String(c.resolvedAt)
+      if (isNaN(Date.parse(dateStr))) {
+        return `Conflict ${i}: resolvedAt must be a valid ISO date string or null`
+      }
+    }
+  }
+  return null
 }
 
 export default defineEventHandler(async (event) => {
@@ -46,7 +134,8 @@ export default defineEventHandler(async (event) => {
   } catch {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Missing or invalid JSON body',
+      statusMessage:
+        'Invalid JSON body. Try GET /api/schedule/:term/template for formatting help.',
     })
   }
 
@@ -58,6 +147,36 @@ export default defineEventHandler(async (event) => {
       statusCode: 400,
       statusMessage: 'runNumber must be an integer >= 1',
     })
+  }
+
+  // Validate status if provided
+  if (body.status !== undefined && !VALID_STATUSES.includes(body.status)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `status must be one of: ${VALID_STATUSES.join(', ')}. Got: ${body.status}`,
+    })
+  }
+
+  // Validate assignments if provided
+  if (hasOwn(body, 'assignments') && body.assignments !== undefined) {
+    const assignmentError = validateAssignments(body.assignments)
+    if (assignmentError) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Invalid assignments: ${assignmentError}. Try GET /api/schedule/:term/template for examples.`,
+      })
+    }
+  }
+
+  // Validate conflicts if provided
+  if (hasOwn(body, 'conflicts') && body.conflicts !== undefined) {
+    const conflictError = validateConflicts(body.conflicts)
+    if (conflictError) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Invalid conflicts: ${conflictError}. Try GET /api/schedule/:term/template for examples.`,
+      })
+    }
   }
 
   const filter = body.runNumber ? { term, runNumber: body.runNumber } : { term }
@@ -94,7 +213,8 @@ export default defineEventHandler(async (event) => {
   if (changes === 0) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'No mutable schedule fields were provided',
+      statusMessage:
+        'No mutable schedule fields were provided. Try GET /api/schedule/:term/template to see available fields.',
     })
   }
 
