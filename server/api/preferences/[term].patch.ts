@@ -207,18 +207,25 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Validate professorId is required and non-empty
+  if (typeof body.professorId !== 'string' || body.professorId.trim() === '') {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'professorId is required and must be a non-empty string',
+    })
+  }
+
+  const professorId = body.professorId.trim()
+
   // Find the professor to update
   let prof = await Professor.findOne({
-    $or: [
-      { _id: body.professorId },
-      { covenantId: body.professorId?.toLowerCase() },
-    ],
+    $or: [{ _id: professorId }, { covenantId: professorId.toLowerCase() }],
   }).exec()
 
   if (!prof) {
     throw createError({
       statusCode: 404,
-      statusMessage: `Professor not found: ${body.professorId}`,
+      statusMessage: `Professor not found: ${professorId}`,
     })
   }
 
