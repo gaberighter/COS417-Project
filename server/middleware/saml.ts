@@ -304,10 +304,18 @@ export default defineEventHandler(async (event: H3Event) => {
 
               try {
                 const clientIp = getClientIp(event)
-                await logAuthEvent(String(user.username ?? user._id ?? 'unknown'), 'LOGIN_SUCCESS', clientIp, 'SAML assertion success')
+                await logAuthEvent(
+                  String(user.username ?? user._id ?? 'unknown'),
+                  'LOGIN_SUCCESS',
+                  clientIp,
+                  'SAML assertion success',
+                )
               } catch (auditErr) {
                 // Do not block login on audit failures; log to console for diagnostics.
-                console.error('[AUDIT] failed to record login success', auditErr)
+                console.error(
+                  '[AUDIT] failed to record login success',
+                  auditErr,
+                )
               }
 
               return resolve(
@@ -315,11 +323,21 @@ export default defineEventHandler(async (event: H3Event) => {
               )
             } catch (e: any) {
               try {
-                const attemptedId = (samlUser && (samlUser.oracleUser ?? samlUser.email)) || 'unknown'
+                const attemptedId =
+                  (samlUser && (samlUser.oracleUser ?? samlUser.email)) ||
+                  'unknown'
                 const clientIp = getClientIp(event)
-                await logAuthEvent(String(attemptedId), 'LOGIN_FAILURE', clientIp, e?.message ?? 'SAML assertion error')
+                await logAuthEvent(
+                  String(attemptedId),
+                  'LOGIN_FAILURE',
+                  clientIp,
+                  e?.message ?? 'SAML assertion error',
+                )
               } catch (auditErr) {
-                console.error('[AUDIT] failed to record login failure', auditErr)
+                console.error(
+                  '[AUDIT] failed to record login failure',
+                  auditErr,
+                )
               }
 
               return reject(
