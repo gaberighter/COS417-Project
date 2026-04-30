@@ -41,7 +41,11 @@
       </div>
 
       <div class="filter-actions">
-        <button class="btn-primary" :disabled="pending" @click="loadPreferences">
+        <button
+          class="btn-primary"
+          :disabled="pending"
+          @click="loadPreferences"
+        >
           {{ pending ? 'Loading…' : 'Load' }}
         </button>
         <button class="btn-secondary" @click="resetFilters">
@@ -92,10 +96,7 @@
               <td>{{ formatDate(sub.submittedAt) }}</td>
               <td>{{ sub.courses?.length ?? 0 }}</td>
               <td class="row-actions">
-                <button
-                  class="action-btn"
-                  @click="openDetail(sub)"
-                >
+                <button class="action-btn" @click="openDetail(sub)">
                   View Courses
                 </button>
               </td>
@@ -110,11 +111,7 @@
   </div>
 
   <!-- ── Course detail modal ── -->
-  <div
-    v-if="detailSub"
-    class="modal-overlay"
-    @click.self="detailSub = null"
-  >
+  <div v-if="detailSub" class="modal-overlay" @click.self="detailSub = null">
     <div class="modal-content pref-modal">
       <div class="modal-header">
         <div>
@@ -164,7 +161,13 @@
                 <td>{{ fmt(c.instructor) }}</td>
                 <td>{{ fmt(c.preferredBuilding) }}</td>
                 <td>{{ fmt(c.preferredRoomId) }}</td>
-                <td>{{ c.courseFee != null ? `$${Number(c.courseFee).toFixed(2)}` : '—' }}</td>
+                <td>
+                  {{
+                    c.courseFee != null
+                      ? `$${Number(c.courseFee).toFixed(2)}`
+                      : '—'
+                  }}
+                </td>
               </tr>
             </tbody>
           </table>
