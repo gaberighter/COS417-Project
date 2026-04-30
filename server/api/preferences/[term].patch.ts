@@ -57,8 +57,11 @@ function validateCoursePreference(
   if (c.expectedEnrollment < 0) {
     return `Course ${index}: expectedEnrollment must be >= 0`
   }
-  if (!Number.isInteger(c.creditHours) || typeof c.creditHours !== 'number') {
-    return `Course ${index}: creditHours is required and must be an integer`
+  if (
+    typeof c.creditHours !== 'number' ||
+    !Number.isFinite(c.creditHours)
+  ) {
+    return `Course ${index}: creditHours is required and must be a number`
   }
   if (c.creditHours < 0) {
     return `Course ${index}: creditHours must be >= 0`
