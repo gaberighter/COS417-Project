@@ -60,10 +60,6 @@ export const useRoomForm = (onRoomSaved: () => Promise<void>) => {
 
   const newRoomForm = reactive<NewRoomForm>(createEmptyRoomForm())
 
-  const deriveBuildingCode = (abbreviation: string): string => {
-    return abbreviation.trim().split(/\s+/)[0]?.toUpperCase() ?? ''
-  }
-
   const validateBuildingCode = (): boolean => {
     const regex = /^[A-Z]{2,4}$/
     if (!regex.test(newRoomForm.buildingCode)) {
@@ -95,8 +91,6 @@ export const useRoomForm = (onRoomSaved: () => Promise<void>) => {
   const openEditRoomModal = (room: Room) => {
     isEditMode.value = true
     actionMessage.value = ''
-    // Derive the building code from the room's abbreviation (first space-delimited token)
-    const derivedBuildingCode = room.abbreviation.trim().split(/\s+/)[0] || ''
     Object.assign(newRoomForm, {
       buildingCode: room.buildingCode,
       roomNumber: room.roomNumber,
