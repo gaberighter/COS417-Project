@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const nextAssignment: Partial<IAssignment> = {
+  const nextAssignment: IAssignment = {
     ...current,
   }
 
