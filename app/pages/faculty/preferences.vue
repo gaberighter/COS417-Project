@@ -1624,50 +1624,75 @@ function parseCsvLine(line: string): string[] {
   return fields
 }
 
-const CSV_COLUMN_MAP: Record<string, keyof PreferenceRow> = {
+// 'courseNumber' is a virtual field — combined with 'subject' to form "DEPT NUM"
+type CsvFieldTarget = keyof PreferenceRow | 'courseNumber'
+
+const CSV_COLUMN_MAP: Record<string, CsvFieldTarget> = {
+  // subject / dept
   subject: 'subject',
   dept: 'subject',
   department: 'subject',
   course_code: 'subject',
+  // course number (separate column, e.g. "course #" or "course number")
+  course_number: 'courseNumber',
+  course_num: 'courseNumber',
+  coursenum: 'courseNumber',
+  coursenumber: 'courseNumber',
+  num: 'courseNumber',
+  number: 'courseNumber',
+  // crn
   crn: 'crn',
   course_reference_number: 'crn',
+  // section
   section: 'section',
   sec: 'section',
+  // course title / name
+  course_title: 'courseName',
+  coursetitle: 'courseName',
   course_name: 'courseName',
   coursename: 'courseName',
-  course: 'courseName',
   title: 'courseName',
-  name: 'courseName',
-  credits: 'creditHours',
+  // credit hours
   credit_hours: 'creditHours',
   credithours: 'creditHours',
+  credits: 'creditHours',
   credit: 'creditHours',
+  hours: 'creditHours',
+  // max enrollment — "class max" in Covenant sheet
+  class_max: 'maxEnrollment',
+  classmax: 'maxEnrollment',
   max_enrollment: 'maxEnrollment',
   maxenrollment: 'maxEnrollment',
   max_enroll: 'maxEnrollment',
+  max: 'maxEnrollment',
   enrollment: 'maxEnrollment',
   capacity: 'maxEnrollment',
   max_capacity: 'maxEnrollment',
+  // days
   days: 'days',
   day_pattern: 'days',
   meeting_days: 'days',
+  // time
   time: 'time',
   start_time: 'time',
   meeting_time: 'time',
+  // instructor
   instructor: 'instructor',
   professor: 'instructor',
   faculty: 'instructor',
-  building: 'buildingPreference',
+  // building
   building_preference: 'buildingPreference',
   buildingpreference: 'buildingPreference',
+  building: 'buildingPreference',
   bldg: 'buildingPreference',
-  room: 'roomPreference',
+  // room
   room_preference: 'roomPreference',
   roompreference: 'roomPreference',
-  room_number: 'roomPreference',
-  fee: 'courseFee',
+  room: 'roomPreference',
+  // fee
   course_fee: 'courseFee',
   coursefee: 'courseFee',
+  fee: 'courseFee',
 }
 
 const NON_EDITABLE_FIELDS = new Set<keyof PreferenceRow>([
@@ -1675,6 +1700,15 @@ const NON_EDITABLE_FIELDS = new Set<keyof PreferenceRow>([
   'courseId',
   'error',
 ])
+
+function normalizeCsvHeader(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/#/g, 'number') // "course #" → "course number"
+    .replace(/[^a-z0-9]+/g, '_') // spaces/special chars → underscore
+    .replace(/^_+|_+$/g, '') // trim leading/trailing underscores
+}
 
 function handleCsvUpload(event: Event) {
   const input = event.target as HTMLInputElement
@@ -1695,9 +1729,7 @@ function handleCsvUpload(event: Event) {
       return
     }
 
-    const headers = parseCsvLine(lines[0]!).map((h) =>
-      h.trim().toLowerCase().replace(/\s+/g, '_'),
-    )
+    const headers = parseCsvLine(lines[0]!).map(normalizeCsvHeader)
     const fieldMap = headers.map((h) => CSV_COLUMN_MAP[h] ?? null)
 
     const newRows: PreferenceRow[] = []
@@ -1705,13 +1737,22 @@ function handleCsvUpload(event: Event) {
       const values = parseCsvLine(lines[i]!)
       if (values.every((v) => v.trim().length === 0)) continue
       const row = createEmptyRow()
+      let courseNumber = ''
       for (let j = 0; j < headers.length; j++) {
-        const field = fieldMap[j]
-        if (field && !NON_EDITABLE_FIELDS.has(field)) {
-          ;(row as unknown as Record<string, string>)[field] = (
-            values[j] ?? ''
-          ).trim()
+        const target = fieldMap[j]
+        if (!target) continue
+        const val = (values[j] ?? '').trim()
+        if (target === 'courseNumber') {
+          courseNumber = val
+        } else if (!NON_EDITABLE_FIELDS.has(target as keyof PreferenceRow)) {
+          ;(row as unknown as Record<string, string>)[target] = val
         }
+      }
+      // Merge separate dept + course# columns into a single subject string
+      if (courseNumber) {
+        row.subject = row.subject
+          ? `${row.subject} ${courseNumber}`.trim()
+          : courseNumber
       }
       newRows.push(row)
     }
