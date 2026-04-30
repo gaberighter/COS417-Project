@@ -14,6 +14,7 @@ import {
   catalogCourseIdOf,
   normalizeCourseReference,
 } from '../../../utils/courseReferences'
+import { normalizePreferenceStatus } from '../../../utils/preferenceValidation'
 import { connectDB } from '../../../utils/db'
 import type {
   Course,
@@ -111,14 +112,17 @@ function cloneCourse(course: ICourse): Course {
 function clonePreferenceSubmission(
   submission: IPreferenceSubmission,
 ): PreferenceSubmission {
+  const status = normalizePreferenceStatus(submission.status)
+
   return {
     term: submission.term,
     department: submission.department,
     submittedBy: submission.submittedBy,
-    submittedAt: submission.submittedAt
-      ? new Date(submission.submittedAt)
-      : null,
-    status: submission.status,
+    submittedAt:
+      status === 'submitted' && submission.submittedAt
+        ? new Date(submission.submittedAt)
+        : null,
+    status,
     courses: submission.courses.map((course) => ({
       courseId: course.courseId,
       section: course.section ?? null,
@@ -217,6 +221,8 @@ export async function fetchPreferences(
               course.courseId,
               course.section ?? null,
             )
+            const status = normalizePreferenceStatus(submission.status)
+
             return {
               courseId: normalized.rawCourseId,
               catalogCourseId: normalized.catalogCourseId,
@@ -243,10 +249,11 @@ export async function fetchPreferences(
               professorId: professor._id ?? professor.covenantId,
               professorName: professor.displayName,
               departmentCode: professor.departmentCode,
-              submittedAt: submission.submittedAt
-                ? new Date(submission.submittedAt)
-                : null,
-              status: submission.status,
+              submittedAt:
+                status === 'submitted' && submission.submittedAt
+                  ? new Date(submission.submittedAt)
+                  : null,
+              status,
               term: submission.term,
             }
           }),
@@ -282,6 +289,8 @@ export async function fetchHistoricalPreferences(
               course.courseId,
               course.section ?? null,
             )
+            const status = normalizePreferenceStatus(submission.status)
+
             return {
               courseId: normalized.rawCourseId,
               catalogCourseId: normalized.catalogCourseId,
@@ -308,10 +317,11 @@ export async function fetchHistoricalPreferences(
               professorId: professor._id ?? professor.covenantId,
               professorName: professor.displayName,
               departmentCode: professor.departmentCode,
-              submittedAt: submission.submittedAt
-                ? new Date(submission.submittedAt)
-                : null,
-              status: submission.status,
+              submittedAt:
+                status === 'submitted' && submission.submittedAt
+                  ? new Date(submission.submittedAt)
+                  : null,
+              status,
               term: submission.term,
             }
           }),

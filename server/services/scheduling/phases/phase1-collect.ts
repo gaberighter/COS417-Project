@@ -101,22 +101,8 @@ function buildPreferenceLookup(
       continue
     }
 
-    const currentPriority =
-      current.status === 'approved'
-        ? 3
-        : current.status === 'submitted'
-          ? 2
-          : current.status === 'draft'
-            ? 1
-            : 0
-    const nextPriority =
-      record.status === 'approved'
-        ? 3
-        : record.status === 'submitted'
-          ? 2
-          : record.status === 'draft'
-            ? 1
-            : 0
+    const currentPriority = current.status === 'submitted' ? 1 : 0
+    const nextPriority = record.status === 'submitted' ? 1 : 0
 
     if (nextPriority > currentPriority) {
       lookup.set(record.scheduledCourseId, record)
