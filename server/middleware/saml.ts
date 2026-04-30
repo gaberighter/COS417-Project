@@ -10,10 +10,12 @@ import {
   setResponseHeaders,
 } from 'h3'
 import fs from 'fs'
+import mongoose from 'mongoose'
 // @ts-expect-error - saml2-js does not currently publish TypeScript definitions.
 import saml2 from 'saml2-js'
 
 import { Users } from '../models/user.model'
+import type { AuthContext, UserRole } from '../utils/auth'
 type SAMLProviders = {
   sp: InstanceType<typeof saml2.ServiceProvider>
   idp: InstanceType<typeof saml2.IdentityProvider>
@@ -23,6 +25,73 @@ const UsersCollection = Users as any
 
 let providers: SAMLProviders | null = null
 
+const REGISTRAR_ONLY = [
+  '/api/professors',
+  '/api/rooms',
+  '/api/courses',
+  '/api/audit-logs',
+  '/api/schedule',
+]
+
+const FACULTY_OR_REGISTRAR = ['/api/preferences']
+
+// Temporary hardcoded list of registrar covenantIds until we have a proper Registrar collection in the database.
+const REGISTRAR_USERNAMES = [
+  'maximus.mueller',
+  'jacob.eldridge',
+  'grant.widener',
+  'graham.widener',
+  'gabe.righter',
+  'jon.moon',
+  'ben.mitchell',
+  'rodney.miller',
+  'david.darden',
+  'barbara.wingard',
+  'matthew.luther',
+]
+
+// Maps Microsoft/Azure AD namespaced SAML attribute keys to friendly names.
+const FIELD_MAP: Record<string, string> = {
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress': 'email',
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname':
+    'firstName',
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname': 'lastName',
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name': 'displayName',
+}
+
+// The Oracle username is the first letter of the first name and then the last name, in all caps.
+function lookupOracleUser(email: string) {
+  return (
+    email.substring(0, 1) +
+    email.substring(email.indexOf('.') + 1, email.indexOf('@'))
+  ).toUpperCase()
+}
+
+async function getRoles(_username: string, email?: string): Promise<string[]> {
+  if (!email) return []
+  const roles: string[] = []
+  const covenantId = email.substring(0, email.indexOf('@')).toLowerCase()
+
+  if (REGISTRAR_USERNAMES.includes(covenantId)) {
+    roles.push('Admin')
+  }
+
+  const db = mongoose.connection.db
+  if (!db) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Database connection not established',
+    })
+  }
+  const professor = await db.collection('professors').findOne({ covenantId })
+
+  if (professor) {
+    roles.push('Faculty')
+  }
+
+  return roles
+}
+
 function readFileOrThrow(path: string, label: string) {
   if (!fs.existsSync(path)) {
     console.error(`${label} file not found`, { path })
@@ -31,7 +100,6 @@ function readFileOrThrow(path: string, label: string) {
       statusMessage: `${label} not configured`,
     })
   }
-
   return fs.readFileSync(path, 'utf8')
 }
 
@@ -80,15 +148,6 @@ function getProviders() {
   return providers
 }
 
-// Maps Microsoft/Azure AD namespaced SAML attribute keys to friendly names.
-const FIELD_MAP: Record<string, string> = {
-  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress': 'email',
-  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname':
-    'firstName',
-  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname': 'lastName',
-  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name': 'displayName',
-}
-
 export default defineEventHandler(async (event: H3Event) => {
   const urlObj = getRequestURL(event)
 
@@ -109,17 +168,14 @@ export default defineEventHandler(async (event: H3Event) => {
             (err: Error | null, login_url: string) => {
               if (err) {
                 return reject(
-                  createError({
-                    statusCode: 500,
-                    statusMessage: err.message,
-                  }),
+                  createError({ statusCode: 500, statusMessage: err.message }),
                 )
               }
-
               return resolve(sendRedirect(event, login_url))
             },
           )
         })
+
       case 'assert': {
         const method = getMethod(event)
         if (method !== 'POST' && method !== 'GET') {
@@ -143,7 +199,6 @@ export default defineEventHandler(async (event: H3Event) => {
             typeof requestPayload === 'object' && requestPayload !== null
               ? Object.keys(requestPayload as Record<string, unknown>)
               : []
-
           throw createError({
             statusCode: 400,
             statusMessage:
@@ -158,10 +213,7 @@ export default defineEventHandler(async (event: H3Event) => {
             try {
               if (err) {
                 return reject(
-                  createError({
-                    statusCode: 500,
-                    statusMessage: err.message,
-                  }),
+                  createError({ statusCode: 500, statusMessage: err.message }),
                 )
               }
 
@@ -187,8 +239,7 @@ export default defineEventHandler(async (event: H3Event) => {
                 )
               }
 
-              // Normalize attributes — flatten single-element arrays and remap
-              // namespaced keys to friendly names BEFORE deleting http:// fields.
+              // Normalize attributes — flatten single-element arrays and remap namespaced keys.
               for (const field in samlUser) {
                 if (
                   Array.isArray(samlUser[field]) &&
@@ -196,18 +247,16 @@ export default defineEventHandler(async (event: H3Event) => {
                 ) {
                   samlUser[field] = samlUser[field][0]
                 }
-
                 const friendlyName = FIELD_MAP[field]
                 if (friendlyName) {
                   samlUser[friendlyName] = samlUser[field]
                 }
-
                 if (field.substring(0, 7) === 'http://') {
                   delete samlUser[field]
                 }
               }
 
-              // Look up the user from Banner to get their Oracle username.
+              // Validate email exists.
               if (!('oracleUser' in samlUser) && !samlUser.email) {
                 return reject(
                   createError({
@@ -222,7 +271,10 @@ export default defineEventHandler(async (event: H3Event) => {
                   ? samlUser.oracleUser
                   : lookupOracleUser(samlUser.email)
 
-              const roles = getRoles(username)
+              const roles = await getRoles(
+                username,
+                samlUser.email as string | undefined,
+              )
 
               // Look up the user and create the session payload.
               const user: Record<string, unknown> = {
@@ -246,10 +298,7 @@ export default defineEventHandler(async (event: H3Event) => {
                 await UsersCollection.updateOne({ _id: existingUser._id }, user)
               }
 
-              await setUserSession(event, {
-                user,
-                loggedInAt: Date.now(),
-              })
+              await setUserSession(event, { user, loggedInAt: Date.now() })
 
               return resolve(
                 sendRedirect(event, process.env.SAML_REDIRECT_TO || '/'),
@@ -272,7 +321,6 @@ export default defineEventHandler(async (event: H3Event) => {
               onAssert,
             )
           }
-
           return sp.redirect_assert(
             idp,
             { request_body: requestPayload },
@@ -280,6 +328,7 @@ export default defineEventHandler(async (event: H3Event) => {
           )
         })
       }
+
       case 'logout': {
         const query = getQuery(event)
         return new Promise((resolve, reject) => {
@@ -289,51 +338,66 @@ export default defineEventHandler(async (event: H3Event) => {
             (err: Error | null, logoutRequestUrl: string) => {
               if (err) {
                 return reject(
-                  createError({
-                    statusCode: 500,
-                    statusMessage: err.message,
-                  }),
+                  createError({ statusCode: 500, statusMessage: err.message }),
                 )
               }
-
               return resolve(sendRedirect(event, logoutRequestUrl))
             },
           )
         })
       }
+
       case 'manifest.xml':
         setResponseHeaders(event, {
           'Content-Disposition': 'attachment; filename=manifest.xml',
           'Content-Type': 'text/xml; charset=latin1',
         })
         return sp.create_metadata()
+
       default:
         return
     }
   }
 
-  if (
-    apiIndex !== -1 &&
-    !urlObj.pathname.endsWith('/api/_auth/session') &&
-    !urlObj.pathname.includes('/api/rooms') &&
-    !(
-      process.env.DISABLE_SSO_FOR_SCHEDULES === 'true' &&
-      urlObj.pathname.includes('/api/schedule')
+  if (apiIndex !== -1 && !urlObj.pathname.endsWith('/api/_auth/session')) {
+    const session = await requireUserSession(event)
+    const roles: string[] = (session.user as any).roles ?? []
+    const username: string = (session.user as any).username ?? ''
+
+    if (!username) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Session missing user identity',
+      })
+    }
+
+    const isRegistrar = roles.includes('Admin')
+    const isFaculty = roles.includes('Faculty')
+
+    // Expose auth context so downstream route handlers and audit logging can use it.
+    // Only set a role when the user actually holds one; unrecognized roles default to Faculty
+    // (least-privileged) but are still subject to route-level checks below.
+    const primaryRole: UserRole = isRegistrar
+      ? 'Admin'
+      : isFaculty
+        ? 'Faculty'
+        : 'Faculty'
+    const authCtx: AuthContext = { userId: username, role: primaryRole }
+    event.context.auth = authCtx
+
+    const isRegistrarOnly = REGISTRAR_ONLY.some((route) =>
+      urlObj.pathname.startsWith(route),
     )
-  ) {
-    await requireUserSession(event)
+    const isFacultyRoute = FACULTY_OR_REGISTRAR.some((route) =>
+      urlObj.pathname.startsWith(route),
+    )
+
+    if (isRegistrarOnly && !isRegistrar) {
+      throw createError({ statusCode: 403, statusMessage: 'Access denied' })
+    }
+
+    if (isFacultyRoute && !isFaculty && !isRegistrar) {
+      throw createError({ statusCode: 403, statusMessage: 'Access denied' })
+    }
   }
 })
-
-// The Oracle username is the first letter of the first name and then the last name, in all caps.
-function lookupOracleUser(email: string) {
-  return (
-    email.substring(0, 1) +
-    email.substring(email.indexOf('.') + 1, email.indexOf('@'))
-  ).toUpperCase()
-}
-
-// Just a list of role names. Oracle roles are all-caps.
-function getRoles(_user: string) {
-  return ['REGISTRAR']
-}

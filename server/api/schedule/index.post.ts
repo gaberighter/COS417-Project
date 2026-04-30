@@ -32,13 +32,7 @@ function normalizeTerm(term: unknown): string {
 }
 
 export default defineEventHandler(async (event) => {
-  let auth: AuthContext
-  if (process.env.DISABLE_SSO_FOR_SCHEDULES === 'true') {
-    auth = { userId: 'sso-bypass', role: 'Admin' }
-    event.context.auth = auth
-  } else {
-    auth = requireAuth(event, ['Admin'])
-  }
+  const auth = requireAuth(event, ['Admin'])
   await connectDB()
 
   let body: Payload | ScheduleInput | ScheduleInput[]

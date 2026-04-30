@@ -23,13 +23,7 @@ function isDuplicateKeyError(error: unknown): boolean {
 }
 
 export default defineEventHandler(async (event) => {
-  let auth: AuthContext
-  if (process.env.DISABLE_SSO_FOR_SCHEDULES === 'true') {
-    auth = { userId: 'sso-bypass', role: 'Admin' }
-    event.context.auth = auth
-  } else {
-    auth = requireAuth(event, ['Admin'])
-  }
+  const auth = requireAuth(event, ['Admin'])
   await connectDB()
 
   // Capture client IP for audit logging (§4.7)
