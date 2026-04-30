@@ -1,6 +1,6 @@
 // server/api/preferences/[term].patch.ts
 // PATCH /api/preferences/:term — update preference submission for a term
-// GET /api/preferences/:term/template for help with request formatting
+// Request payload formatting is validated by this endpoint.
 // Role: Admin
 
 import { createError, defineEventHandler, getRouterParam, readBody } from 'h3'
