@@ -1,6 +1,15 @@
 import mongoose, { type Model, Schema } from 'mongoose'
 
-export type DayPattern = 'MWF' | 'TR' | 'MW' | 'MTWF' | 'MWRF' | 'W' | 'T' | 'R'
+export type DayPattern =
+  | 'MWF'
+  | 'TR'
+  | 'MW'
+  | 'MTWF'
+  | 'MWRF'
+  | 'M'
+  | 'W'
+  | 'T'
+  | 'R'
 export type RoomType = 'classroom' | 'lab'
 export type PreferenceStatus = 'empty' | 'draft' | 'submitted' | 'approved'
 export type ScheduleStatus = 'draft' | 'under_review' | 'approved' | 'exported'
@@ -46,6 +55,7 @@ export interface ICourse {
 
 export interface ICoursePreference {
   courseId: string
+  section?: string | null
   title: string
   expectedEnrollment: number
   maxCapacity?: number | null
@@ -192,7 +202,7 @@ const courseSchema = new Schema<ICourse>(
     typicalProfessor: { type: String, default: null, trim: true },
     typicalDays: {
       type: String,
-      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'W', 'T', 'R'],
+      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'M', 'W', 'T', 'R'],
       default: null,
     },
     typicalTime: { type: String, default: null, trim: true },
@@ -211,13 +221,14 @@ courseSchema.pre('validate', function setCourseId() {
 const coursePreferenceSchema = new Schema<ICoursePreference>(
   {
     courseId: { type: String, required: true, trim: true },
+    section: { type: String, default: null, trim: true },
     title: { type: String, required: true, trim: true },
     expectedEnrollment: { type: Number, required: true, min: 0 },
     maxCapacity: { type: Number, default: null, min: 0 },
     creditHours: { type: Number, required: true, min: 0 },
     preferredDays: {
       type: [String],
-      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'W', 'T', 'R'],
+      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'M', 'W', 'T', 'R'],
       default: [],
     },
     preferredTimes: { type: [String], default: [] },
@@ -286,7 +297,7 @@ const assignmentSchema = new Schema<IAssignment>(
     days: {
       type: String,
       required: true,
-      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'W', 'T', 'R'],
+      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'M', 'W', 'T', 'R'],
     },
     startTime: { type: String, required: true, trim: true },
     endTime: { type: String, required: true, trim: true },
