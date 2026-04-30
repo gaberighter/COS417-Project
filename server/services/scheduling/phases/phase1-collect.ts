@@ -227,7 +227,11 @@ function buildWorkItem(
     preferredRoomId: effectivePreference?.preferredRoomId ?? null,
     backToBackWith: effectivePreference?.backToBackWith ?? null,
     preferredBackToBackWith: [],
-    coreqWith: effectivePreference?.coreqWith ?? [...course.corequisites],
+    coreqWith:
+      effectivePreference?.coreqWith &&
+      effectivePreference.coreqWith.length > 0
+        ? effectivePreference.coreqWith
+        : [...course.corequisites],
   }
 }
 
