@@ -19,7 +19,9 @@
         <template #content>
           <div class="pref-hero-inner">
             <div class="pref-hero-copy">
-              <h1 class="pref-hero-copy__title">Faculty Preferences Submission Dashboard</h1>
+              <h1 class="pref-hero-copy__title">
+                Faculty Preferences Submission Dashboard
+              </h1>
             </div>
 
             <div class="pref-hero-controls">
@@ -106,7 +108,9 @@
         <template #header>
           <div class="pref-table-header">
             <div class="pref-table-header__info">
-              <h2 class="pref-table-header__title">{{ term || 'Current Term' }}</h2>
+              <h2 class="pref-table-header__title">
+                {{ term || 'Current Term' }}
+              </h2>
             </div>
           </div>
         </template>
@@ -126,7 +130,11 @@
               <div class="pref-empty">
                 <i class="pi pi-inbox pref-empty__icon" />
                 <p class="pref-empty__text">No preference rows yet.</p>
-                <Button label="Add Your First Row" severity="primary" @click="addRow" />
+                <Button
+                  label="Add Your First Row"
+                  severity="primary"
+                  @click="addRow"
+                />
               </div>
             </template>
 
@@ -136,11 +144,16 @@
                 <AutoComplete
                   v-model="data.subject"
                   :suggestions="subjectSuggestions"
-                  dropdown completeOnFocus :minLength="0"
-                  appendTo="body" fluid
+                  dropdown
+                  completeOnFocus
+                  :minLength="0"
+                  appendTo="body"
+                  fluid
                   inputClass="pref-cell-input"
                   panelClass="pref-autocomplete-panel"
-                  :placeholder="data.localId === rows[0]?.localId ? 'COR 100' : ''"
+                  :placeholder="
+                    data.localId === rows[0]?.localId ? 'COR 100' : ''
+                  "
                   @complete="searchSubjectSuggestions"
                   @update:modelValue="clearRowError(data)"
                   @blur="handleSubjectChange(data)"
@@ -154,11 +167,16 @@
                 <AutoComplete
                   v-model="data.crn"
                   :suggestions="crnSuggestions"
-                  dropdown completeOnFocus :minLength="0"
-                  appendTo="body" fluid
+                  dropdown
+                  completeOnFocus
+                  :minLength="0"
+                  appendTo="body"
+                  fluid
                   inputClass="pref-cell-input"
                   panelClass="pref-autocomplete-panel"
-                  :placeholder="data.localId === rows[0]?.localId ? '00000' : ''"
+                  :placeholder="
+                    data.localId === rows[0]?.localId ? '00000' : ''
+                  "
                   @complete="searchCrnSuggestions"
                   @update:modelValue="clearRowError(data)"
                   @blur="handleCrnChange(data)"
@@ -172,8 +190,11 @@
                 <AutoComplete
                   v-model="data.section"
                   :suggestions="sectionSuggestions"
-                  dropdown completeOnFocus :minLength="0"
-                  appendTo="body" fluid
+                  dropdown
+                  completeOnFocus
+                  :minLength="0"
+                  appendTo="body"
+                  fluid
                   inputClass="pref-cell-input"
                   panelClass="pref-autocomplete-panel"
                   :placeholder="data.localId === rows[0]?.localId ? '001' : ''"
@@ -190,11 +211,16 @@
                 <AutoComplete
                   v-model="data.courseName"
                   :suggestions="courseNameSuggestions[data.localId] ?? []"
-                  dropdown completeOnFocus :minLength="0"
-                  appendTo="body" fluid
+                  dropdown
+                  completeOnFocus
+                  :minLength="0"
+                  appendTo="body"
+                  fluid
                   inputClass="pref-cell-input"
                   panelClass="pref-autocomplete-panel"
-                  :placeholder="data.localId === rows[0]?.localId ? 'Cornerstone' : ''"
+                  :placeholder="
+                    data.localId === rows[0]?.localId ? 'Cornerstone' : ''
+                  "
                   @complete="searchCourseNameSuggestions(data, $event)"
                   @update:modelValue="clearRowError(data)"
                   @blur="handleCourseNameChange(data)"
@@ -208,8 +234,11 @@
                 <AutoComplete
                   v-model="data.creditHours"
                   :suggestions="creditHourSuggestions"
-                  dropdown completeOnFocus :minLength="0"
-                  appendTo="body" fluid
+                  dropdown
+                  completeOnFocus
+                  :minLength="0"
+                  appendTo="body"
+                  fluid
                   inputClass="pref-cell-input"
                   panelClass="pref-autocomplete-panel"
                   :placeholder="data.localId === rows[0]?.localId ? '3' : ''"
@@ -226,8 +255,11 @@
                 <AutoComplete
                   v-model="data.maxEnrollment"
                   :suggestions="enrollmentSuggestions"
-                  dropdown completeOnFocus :minLength="0"
-                  appendTo="body" fluid
+                  dropdown
+                  completeOnFocus
+                  :minLength="0"
+                  appendTo="body"
+                  fluid
                   inputClass="pref-cell-input"
                   panelClass="pref-autocomplete-panel"
                   :placeholder="data.localId === rows[0]?.localId ? '35' : ''"
@@ -244,8 +276,11 @@
                 <AutoComplete
                   v-model="data.days"
                   :suggestions="daySuggestions"
-                  dropdown completeOnFocus :minLength="0"
-                  appendTo="body" fluid
+                  dropdown
+                  completeOnFocus
+                  :minLength="0"
+                  appendTo="body"
+                  fluid
                   inputClass="pref-cell-input"
                   panelClass="pref-autocomplete-panel"
                   :placeholder="data.localId === rows[0]?.localId ? 'TR' : ''"
@@ -262,11 +297,16 @@
                 <AutoComplete
                   v-model="data.time"
                   :suggestions="timeSuggestions"
-                  dropdown completeOnFocus :minLength="0"
-                  appendTo="body" fluid
+                  dropdown
+                  completeOnFocus
+                  :minLength="0"
+                  appendTo="body"
+                  fluid
                   inputClass="pref-cell-input"
                   panelClass="pref-autocomplete-panel"
-                  :placeholder="data.localId === rows[0]?.localId ? '12:00' : ''"
+                  :placeholder="
+                    data.localId === rows[0]?.localId ? '12:00' : ''
+                  "
                   @complete="searchTimeSuggestions"
                   @update:modelValue="clearRowError(data)"
                   @blur="handleTimeChange(data)"
@@ -280,11 +320,18 @@
                 <AutoComplete
                   v-model="data.instructor"
                   :suggestions="instructorSuggestions"
-                  dropdown completeOnFocus :minLength="0"
-                  appendTo="body" fluid
+                  dropdown
+                  completeOnFocus
+                  :minLength="0"
+                  appendTo="body"
+                  fluid
                   inputClass="pref-cell-input"
                   panelClass="pref-autocomplete-panel"
-                  :placeholder="data.localId === rows[0]?.localId ? 'Firstname Lastname' : ''"
+                  :placeholder="
+                    data.localId === rows[0]?.localId
+                      ? 'Firstname Lastname'
+                      : ''
+                  "
                   @complete="searchInstructorSuggestions"
                   @update:modelValue="clearRowError(data)"
                   @blur="handleInstructorChange(data)"
@@ -298,8 +345,11 @@
                 <AutoComplete
                   v-model="data.buildingPreference"
                   :suggestions="buildingSuggestions"
-                  dropdown completeOnFocus :minLength="0"
-                  appendTo="body" fluid
+                  dropdown
+                  completeOnFocus
+                  :minLength="0"
+                  appendTo="body"
+                  fluid
                   inputClass="pref-cell-input"
                   panelClass="pref-autocomplete-panel"
                   :placeholder="data.localId === rows[0]?.localId ? 'MH' : ''"
@@ -316,11 +366,16 @@
                 <AutoComplete
                   v-model="data.roomPreference"
                   :suggestions="roomSuggestions[data.localId] ?? []"
-                  dropdown completeOnFocus :minLength="0"
-                  appendTo="body" fluid
+                  dropdown
+                  completeOnFocus
+                  :minLength="0"
+                  appendTo="body"
+                  fluid
                   inputClass="pref-cell-input"
                   panelClass="pref-autocomplete-panel"
-                  :placeholder="data.localId === rows[0]?.localId ? 'MH 270' : ''"
+                  :placeholder="
+                    data.localId === rows[0]?.localId ? 'MH 270' : ''
+                  "
                   @complete="searchRoomSuggestions(data, $event)"
                   @update:modelValue="clearRowError(data)"
                   @blur="handleRoomChange(data)"
@@ -334,11 +389,16 @@
                 <AutoComplete
                   v-model="data.courseFee"
                   :suggestions="courseFeeSuggestions"
-                  dropdown completeOnFocus :minLength="0"
-                  appendTo="body" fluid
+                  dropdown
+                  completeOnFocus
+                  :minLength="0"
+                  appendTo="body"
+                  fluid
                   inputClass="pref-cell-input"
                   panelClass="pref-autocomplete-panel"
-                  :placeholder="data.localId === rows[0]?.localId ? '00.00' : ''"
+                  :placeholder="
+                    data.localId === rows[0]?.localId ? '00.00' : ''
+                  "
                   @complete="searchCourseFeeSuggestions"
                   @update:modelValue="clearRowError(data)"
                   @blur="handleCourseFeeChange(data)"
@@ -516,8 +576,24 @@ const BUILDING_PATTERN = /^[A-Za-z]{2,8}$/
 const ROOM_PATTERN = /^[A-Za-z0-9-]{2,12}\s+[A-Za-z0-9-]{1,12}$/
 
 const defaultSectionSuggestions = ['001', '002', '003', '004', 'A1', 'B1']
-const defaultCourseFeeSuggestions = ['0.00', '25.00', '50.00', '75.00', '100.00']
-const dayPatternOptions = ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'M', 'W', 'T', 'R']
+const defaultCourseFeeSuggestions = [
+  '0.00',
+  '25.00',
+  '50.00',
+  '75.00',
+  '100.00',
+]
+const dayPatternOptions = [
+  'MWF',
+  'TR',
+  'MW',
+  'MTWF',
+  'MWRF',
+  'M',
+  'W',
+  'T',
+  'R',
+]
 
 const courseCatalog = ref<CourseRecord[]>([])
 const professors = ref<ProfessorRecord[]>([])
@@ -562,7 +638,8 @@ const termOptions = computed(() => {
   const suggestions = new Set<string>([current])
   for (let offset = 0; offset < 4; offset += 1) {
     const season = seasons[(seasonIndex + offset) % seasons.length]
-    const seasonYear = year + Math.floor((seasonIndex + offset) / seasons.length)
+    const seasonYear =
+      year + Math.floor((seasonIndex + offset) / seasons.length)
     suggestions.add(`${season}-${seasonYear}`)
   }
   return [...suggestions]
@@ -572,7 +649,10 @@ const subjectOptions = computed(() =>
   uniqueSortedStrings(courseCatalog.value.map((c) => subjectLabel(c))),
 )
 const creditHourOptions = computed(() =>
-  uniqueSortedStrings(courseCatalog.value.map((c) => String(c.creditHours)), true),
+  uniqueSortedStrings(
+    courseCatalog.value.map((c) => String(c.creditHours)),
+    true,
+  ),
 )
 const enrollmentOptions = computed(() =>
   uniqueSortedStrings(
@@ -592,12 +672,20 @@ const timeOptions = computed(() =>
   ),
 )
 const instructorOptions = computed(() => {
-  const names = professors.value.map((p) => p.displayName?.trim()).filter((v): v is string => Boolean(v))
-  const catalog = courseCatalog.value.map((c) => c.typicalProfessor?.trim()).filter((v): v is string => Boolean(v))
+  const names = professors.value
+    .map((p) => p.displayName?.trim())
+    .filter((v): v is string => Boolean(v))
+  const catalog = courseCatalog.value
+    .map((c) => c.typicalProfessor?.trim())
+    .filter((v): v is string => Boolean(v))
   return uniqueSortedStrings([...names, ...catalog])
 })
 const roomOptions = computed<RoomOption[]>(() =>
-  rooms.value.map((r) => ({ ...r, buildingCode: deriveBuildingCode(r), label: roomLabel(r) })),
+  rooms.value.map((r) => ({
+    ...r,
+    buildingCode: deriveBuildingCode(r),
+    label: roomLabel(r),
+  })),
 )
 const buildingOptions = computed<BuildingOption[]>(() => {
   const lookup = new Map<string, BuildingOption>()
@@ -605,7 +693,9 @@ const buildingOptions = computed<BuildingOption[]>(() => {
     if (!lookup.has(r.buildingCode)) {
       lookup.set(r.buildingCode, {
         code: r.buildingCode,
-        label: r.buildingName ? `${r.buildingCode} | ${r.buildingName}` : r.buildingCode,
+        label: r.buildingName
+          ? `${r.buildingCode} | ${r.buildingName}`
+          : r.buildingCode,
       })
     }
   }
@@ -615,7 +705,9 @@ const buildingLabels = computed(() => buildingOptions.value.map((o) => o.label))
 const sectionOptionValues = computed(() =>
   uniqueSortedStrings([
     ...defaultSectionSuggestions,
-    ...rows.value.map((r) => r.section.trim().toUpperCase()).filter((v) => v.length > 0),
+    ...rows.value
+      .map((r) => r.section.trim().toUpperCase())
+      .filter((v) => v.length > 0),
   ]),
 )
 const crnOptionValues = computed(() =>
@@ -626,13 +718,17 @@ const crnOptionValues = computed(() =>
 )
 const courseFeeOptionValues = computed(() =>
   uniqueSortedStrings(
-    [...defaultCourseFeeSuggestions, ...rows.value.map((r) => r.courseFee.trim()).filter((v) => v.length > 0)],
+    [
+      ...defaultCourseFeeSuggestions,
+      ...rows.value.map((r) => r.courseFee.trim()).filter((v) => v.length > 0),
+    ],
     true,
   ),
 )
 const courseBySubject = computed(() => {
   const m = new Map<string, CourseRecord>()
-  for (const c of courseCatalog.value) m.set(normalizeLookupValue(subjectLabel(c)), c)
+  for (const c of courseCatalog.value)
+    m.set(normalizeLookupValue(subjectLabel(c)), c)
   return m
 })
 const coursesByTitle = computed(() => {
@@ -675,23 +771,37 @@ const buildingLookup = computed(() => {
   return m
 })
 const rowSnapshot = computed(() => serializeRows(rows.value))
-const hasUnsavedChanges = computed(() => term.value.trim() !== loadedTerm.value || rowSnapshot.value !== loadedSnapshot.value)
-const filledRowCount = computed(() => rows.value.filter((r) => rowHasAnyContent(r)).length)
-const submissionModeLabel = computed(() => submissionExists.value ? 'Editing Saved' : 'New Submission')
+const hasUnsavedChanges = computed(
+  () =>
+    term.value.trim() !== loadedTerm.value ||
+    rowSnapshot.value !== loadedSnapshot.value,
+)
+const filledRowCount = computed(
+  () => rows.value.filter((r) => rowHasAnyContent(r)).length,
+)
+const submissionModeLabel = computed(() =>
+  submissionExists.value ? 'Editing Saved' : 'New Submission',
+)
 const submissionStatusTagValue = computed(() => {
   if (!submissionStatus.value) return 'Not Yet Saved'
   return submissionStatus.value === 'submitted' ? 'Submitted' : 'Not Submitted'
 })
-const submissionStatusSeverity = computed<'secondary' | 'success' | 'info' | 'warn' | 'danger' | 'contrast'>(() => {
+const submissionStatusSeverity = computed<
+  'secondary' | 'success' | 'info' | 'warn' | 'danger' | 'contrast'
+>(() => {
   if (!submissionStatus.value) return 'secondary'
   return submissionStatus.value === 'submitted' ? 'success' : 'info'
 })
-const statusMessageSeverity = computed<'success' | 'info' | 'warn' | 'error'>(() => {
-  if (statusTone.value === 'warning') return 'warn'
-  return statusTone.value
-})
-const saveNotSubmittedLabel = computed(() => savePending.value ? 'Saving…' : 'Save Draft')
-const submitLabel = computed(() => savePending.value ? 'Saving…' : 'Submit')
+const statusMessageSeverity = computed<'success' | 'info' | 'warn' | 'error'>(
+  () => {
+    if (statusTone.value === 'warning') return 'warn'
+    return statusTone.value
+  },
+)
+const saveNotSubmittedLabel = computed(() =>
+  savePending.value ? 'Saving…' : 'Save Draft',
+)
+const submitLabel = computed(() => (savePending.value ? 'Saving…' : 'Submit'))
 
 function currentSuggestedTerm(): string {
   const now = new Date()
@@ -755,16 +865,26 @@ function normalizeSubjectInput(v: string): string {
   return normalizeLookupValue(before ?? t)
 }
 
-function deriveBuildingCode(r: Pick<RoomRecord, 'abbreviation' | 'buildingName'>): string {
+function deriveBuildingCode(
+  r: Pick<RoomRecord, 'abbreviation' | 'buildingName'>,
+): string {
   const a = r.abbreviation?.trim()
   if (a) return (a.split(/\s+/)[0] ?? 'UNK').toUpperCase()
-  return r.buildingName.trim().split(/\s+/).filter(Boolean).map((t) => t[0] ?? '').join('').toUpperCase()
+  return r.buildingName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((t) => t[0] ?? '')
+    .join('')
+    .toUpperCase()
 }
 
 function roomLabel(r: RoomRecord): string {
-  const abbr = r.abbreviation?.trim() || `${deriveBuildingCode(r)} ${r.roomNumber}`.trim()
+  const abbr =
+    r.abbreviation?.trim() || `${deriveBuildingCode(r)} ${r.roomNumber}`.trim()
   const dn = r.displayName?.trim()
-  if (!dn || normalizeLookupValue(dn) === normalizeLookupValue(abbr)) return abbr
+  if (!dn || normalizeLookupValue(dn) === normalizeLookupValue(abbr))
+    return abbr
   return `${abbr} | ${dn}`
 }
 
@@ -779,7 +899,9 @@ function resolveCourse(row: PreferenceRow): CourseRecord | null {
   if (tk.length === 0) return null
   const matches = coursesByTitle.value.get(tk) ?? []
   if (matches.length === 1) return matches[0] ?? null
-  return matches.find((c) => normalizeLookupValue(subjectLabel(c)) === sk) ?? null
+  return (
+    matches.find((c) => normalizeLookupValue(subjectLabel(c)) === sk) ?? null
+  )
 }
 
 function resolveInstructor(value: string): string | null {
@@ -808,14 +930,27 @@ function resolveRoomOption(value: string): RoomOption | null {
   if (known) return known
   if (!ROOM_PATTERN.test(t)) return null
   const [bc, ...rp] = t.toUpperCase().split(/\s+/)
-  return { _id: t.toUpperCase(), abbreviation: t.toUpperCase(), buildingName: '', roomNumber: rp.join(' '), displayName: null, buildingCode: bc ?? '', label: t.toUpperCase() }
+  return {
+    _id: t.toUpperCase(),
+    abbreviation: t.toUpperCase(),
+    buildingName: '',
+    roomNumber: rp.join(' '),
+    displayName: null,
+    buildingCode: bc ?? '',
+    label: t.toUpperCase(),
+  }
 }
 
 function courseNameOptionsForRow(row: PreferenceRow): string[] {
   const sk = normalizeSubjectInput(row.subject)
-  const matches = sk.length === 0 ? courseCatalog.value : courseCatalog.value.filter(
-    (c) => normalizeLookupValue(subjectLabel(c)).includes(sk) || normalizeLookupValue(c.deptCode).includes(sk),
-  )
+  const matches =
+    sk.length === 0
+      ? courseCatalog.value
+      : courseCatalog.value.filter(
+          (c) =>
+            normalizeLookupValue(subjectLabel(c)).includes(sk) ||
+            normalizeLookupValue(c.deptCode).includes(sk),
+        )
   return uniqueSortedStrings(matches.map((c) => c.title))
 }
 
@@ -838,19 +973,36 @@ function syncRowFromCourse(row: PreferenceRow, course: CourseRecord) {
   row.subject = subjectLabel(course)
   row.courseName = course.title
   row.creditHours = String(course.creditHours)
-  if (!row.maxEnrollment && course.typicalEnrollment != null) row.maxEnrollment = String(course.typicalEnrollment)
+  if (!row.maxEnrollment && course.typicalEnrollment != null)
+    row.maxEnrollment = String(course.typicalEnrollment)
   if (!row.days && course.typicalDays) row.days = course.typicalDays
-  if (!row.time && course.typicalTime) row.time = normalizeTimeValue(course.typicalTime)
+  if (!row.time && course.typicalTime)
+    row.time = normalizeTimeValue(course.typicalTime)
   if (!row.instructor && course.typicalProfessor) {
-    row.instructor = instructorLookup.value.get(normalizeLookupValue(course.typicalProfessor)) ?? course.typicalProfessor
+    row.instructor =
+      instructorLookup.value.get(
+        normalizeLookupValue(course.typicalProfessor),
+      ) ?? course.typicalProfessor
   }
 }
 
 function mapSavedCourseToRow(course: ExistingPreferenceCourse): PreferenceRow {
-  const cc = courseCatalog.value.find((c) => c._id === course.courseId || normalizeLookupValue(subjectLabel(c)) === normalizeLookupValue(course.courseId)) ?? null
-  const room = course.preferredRoomId ? roomLookup.value.get(normalizeLookupValue(course.preferredRoomId)) ?? null : null
+  const cc =
+    courseCatalog.value.find(
+      (c) =>
+        c._id === course.courseId ||
+        normalizeLookupValue(subjectLabel(c)) ===
+          normalizeLookupValue(course.courseId),
+    ) ?? null
+  const room = course.preferredRoomId
+    ? (roomLookup.value.get(normalizeLookupValue(course.preferredRoomId)) ??
+      null)
+    : null
   const bc = course.preferredBuilding ?? room?.buildingCode ?? ''
-  const bl = bc.length > 0 ? buildingOptions.value.find((o) => o.code === bc)?.label ?? bc : ''
+  const bl =
+    bc.length > 0
+      ? (buildingOptions.value.find((o) => o.code === bc)?.label ?? bc)
+      : ''
   return createEmptyRow({
     courseId: cc?._id ?? course.courseId,
     subject: cc ? subjectLabel(cc) : course.courseId,
@@ -858,73 +1010,134 @@ function mapSavedCourseToRow(course: ExistingPreferenceCourse): PreferenceRow {
     section: course.section ?? '',
     courseName: cc?.title ?? course.title,
     creditHours: String(course.creditHours ?? cc?.creditHours ?? ''),
-    maxEnrollment: String(course.maxCapacity ?? course.expectedEnrollment ?? ''),
+    maxEnrollment: String(
+      course.maxCapacity ?? course.expectedEnrollment ?? '',
+    ),
     days: course.preferredDays?.[0] ?? cc?.typicalDays ?? '',
-    time: normalizeTimeValue(course.preferredTimes?.[0] ?? cc?.typicalTime ?? ''),
-    instructor: resolveInstructor(course.instructor ?? '') ?? course.instructor ?? cc?.typicalProfessor ?? '',
+    time: normalizeTimeValue(
+      course.preferredTimes?.[0] ?? cc?.typicalTime ?? '',
+    ),
+    instructor:
+      resolveInstructor(course.instructor ?? '') ??
+      course.instructor ??
+      cc?.typicalProfessor ??
+      '',
     buildingPreference: bl,
     roomPreference: room?.label ?? course.preferredRoomId ?? '',
-    courseFee: course.courseFee != null && Number.isFinite(course.courseFee) ? String(course.courseFee) : '',
+    courseFee:
+      course.courseFee != null && Number.isFinite(course.courseFee)
+        ? String(course.courseFee)
+        : '',
   })
 }
 
 function serializeRows(sourceRows: PreferenceRow[]): string {
   return JSON.stringify(
-    sourceRows.filter((r) => rowHasAnyContent(r)).map((r) => ({
-      subject: r.subject.trim(), crn: r.crn.trim(), section: r.section.trim(),
-      courseName: r.courseName.trim(), creditHours: r.creditHours.trim(),
-      maxEnrollment: r.maxEnrollment.trim(), days: r.days.trim(), time: r.time.trim(),
-      instructor: r.instructor.trim(), buildingPreference: r.buildingPreference.trim(),
-      roomPreference: r.roomPreference.trim(), courseFee: r.courseFee.trim(),
-    })),
+    sourceRows
+      .filter((r) => rowHasAnyContent(r))
+      .map((r) => ({
+        subject: r.subject.trim(),
+        crn: r.crn.trim(),
+        section: r.section.trim(),
+        courseName: r.courseName.trim(),
+        creditHours: r.creditHours.trim(),
+        maxEnrollment: r.maxEnrollment.trim(),
+        days: r.days.trim(),
+        time: r.time.trim(),
+        instructor: r.instructor.trim(),
+        buildingPreference: r.buildingPreference.trim(),
+        roomPreference: r.roomPreference.trim(),
+        courseFee: r.courseFee.trim(),
+      })),
   )
 }
 
 function rowHasAnyContent(row: PreferenceRow): boolean {
-  return [row.subject, row.crn, row.section, row.courseName, row.creditHours,
-    row.maxEnrollment, row.days, row.time, row.instructor, row.buildingPreference,
-    row.roomPreference, row.courseFee].some((v) => v.trim().length > 0)
+  return [
+    row.subject,
+    row.crn,
+    row.section,
+    row.courseName,
+    row.creditHours,
+    row.maxEnrollment,
+    row.days,
+    row.time,
+    row.instructor,
+    row.buildingPreference,
+    row.roomPreference,
+    row.courseFee,
+  ].some((v) => v.trim().length > 0)
 }
 
 function extractErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'data' in error && typeof (error as FetchLikeError).data?.statusMessage === 'string') {
-    return (error as FetchLikeError).data?.statusMessage ?? 'Unable to save preferences.'
+  if (
+    error &&
+    typeof error === 'object' &&
+    'data' in error &&
+    typeof (error as FetchLikeError).data?.statusMessage === 'string'
+  ) {
+    return (
+      (error as FetchLikeError).data?.statusMessage ??
+      'Unable to save preferences.'
+    )
   }
-  if (error instanceof Error && error.message.trim().length > 0) return error.message
+  if (error instanceof Error && error.message.trim().length > 0)
+    return error.message
   return 'Unable to save preferences.'
 }
 
 function isNotFoundError(error: unknown): boolean {
-  return typeof (error as FetchLikeError)?.data?.statusCode === 'number' && (error as FetchLikeError).data?.statusCode === 404
+  return (
+    typeof (error as FetchLikeError)?.data?.statusCode === 'number' &&
+    (error as FetchLikeError).data?.statusCode === 404
+  )
 }
 
-function setLoadedState(normalizedTerm: string, submission: FacultyPreferenceSubmission | null) {
+function setLoadedState(
+  normalizedTerm: string,
+  submission: FacultyPreferenceSubmission | null,
+) {
   term.value = normalizedTerm
   submissionExists.value = submission !== null
   submissionStatus.value = submission?.status ?? null
   submissionDepartment.value = submission?.department ?? null
-  rows.value = submission?.courses?.length ? submission.courses.map((c) => mapSavedCourseToRow(c)) : [createEmptyRow()]
+  rows.value = submission?.courses?.length
+    ? submission.courses.map((c) => mapSavedCourseToRow(c))
+    : [createEmptyRow()]
   loadedTerm.value = normalizedTerm
   loadedSnapshot.value = serializeRows(rows.value)
 }
 
-async function loadSavedSubmission(requestedTerm: string, options: { silent?: boolean } = {}) {
+async function loadSavedSubmission(
+  requestedTerm: string,
+  options: { silent?: boolean } = {},
+) {
   const nt = requestedTerm.trim()
   if (!TERM_PATTERN.test(nt)) return
   const reqId = ++latestLoadRequest
   loadPending.value = true
   try {
-    const res = await $fetch<FacultyPreferenceSubmission | FacultyPreferenceSubmission[] | null>(`/api/preferences/${encodeURIComponent(nt)}`)
+    const res = await $fetch<
+      FacultyPreferenceSubmission | FacultyPreferenceSubmission[] | null
+    >(`/api/preferences/${encodeURIComponent(nt)}`)
     if (reqId !== latestLoadRequest) return
     const sub = Array.isArray(res) ? (res[0] ?? null) : res
     setLoadedState(nt, sub)
-    if (sub && !options.silent) { statusMessage.value = `Loaded saved preferences for ${nt}.`; statusTone.value = 'info' }
-    else if (!sub && !options.silent) { statusMessage.value = `No saved preferences found for ${nt}.`; statusTone.value = 'info' }
+    if (sub && !options.silent) {
+      statusMessage.value = `Loaded saved preferences for ${nt}.`
+      statusTone.value = 'info'
+    } else if (!sub && !options.silent) {
+      statusMessage.value = `No saved preferences found for ${nt}.`
+      statusTone.value = 'info'
+    }
   } catch (error) {
     if (reqId !== latestLoadRequest) return
     if (isNotFoundError(error)) {
       setLoadedState(nt, null)
-      if (!options.silent) { statusMessage.value = `No saved preferences found for ${nt}.`; statusTone.value = 'info' }
+      if (!options.silent) {
+        statusMessage.value = `No saved preferences found for ${nt}.`
+        statusTone.value = 'info'
+      }
       return
     }
     statusMessage.value = extractErrorMessage(error)
@@ -934,33 +1147,96 @@ async function loadSavedSubmission(requestedTerm: string, options: { silent?: bo
   }
 }
 
-function filterStringOptions(options: string[], query: string, limit = 14): string[] {
+function filterStringOptions(
+  options: string[],
+  query: string,
+  limit = 14,
+): string[] {
   const nq = normalizeLookupValue(query.trim())
-  const filtered = nq.length === 0 ? options : options.filter((o) => normalizeLookupValue(o).includes(nq))
+  const filtered =
+    nq.length === 0
+      ? options
+      : options.filter((o) => normalizeLookupValue(o).includes(nq))
   return filtered.slice(0, limit)
 }
 
-function updateSuggestions(target: Ref<string[]>, options: string[], event: AutoCompleteCompleteEvent, limit = 14) {
+function updateSuggestions(
+  target: Ref<string[]>,
+  options: string[],
+  event: AutoCompleteCompleteEvent,
+  limit = 14,
+) {
   target.value = filterStringOptions(options, event.query, limit)
 }
 
-function updateRowSuggestions(target: Ref<Record<number, string[]>>, row: PreferenceRow, options: string[], event: AutoCompleteCompleteEvent, limit = 14) {
-  target.value = { ...target.value, [row.localId]: filterStringOptions(options, event.query, limit) }
+function updateRowSuggestions(
+  target: Ref<Record<number, string[]>>,
+  row: PreferenceRow,
+  options: string[],
+  event: AutoCompleteCompleteEvent,
+  limit = 14,
+) {
+  target.value = {
+    ...target.value,
+    [row.localId]: filterStringOptions(options, event.query, limit),
+  }
 }
 
-function searchTermSuggestions(e: AutoCompleteCompleteEvent) { updateSuggestions(termSuggestions, termOptions.value, e, 6) }
-function searchSubjectSuggestions(e: AutoCompleteCompleteEvent) { updateSuggestions(subjectSuggestions, subjectOptions.value, e) }
-function searchCrnSuggestions(e: AutoCompleteCompleteEvent) { updateSuggestions(crnSuggestions, crnOptionValues.value, e) }
-function searchSectionSuggestions(e: AutoCompleteCompleteEvent) { updateSuggestions(sectionSuggestions, sectionOptionValues.value, e) }
-function searchCourseNameSuggestions(row: PreferenceRow, e: AutoCompleteCompleteEvent) { updateRowSuggestions(courseNameSuggestions, row, courseNameOptionsForRow(row), e) }
-function searchCreditHourSuggestions(e: AutoCompleteCompleteEvent) { updateSuggestions(creditHourSuggestions, creditHourOptions.value, e) }
-function searchEnrollmentSuggestions(e: AutoCompleteCompleteEvent) { updateSuggestions(enrollmentSuggestions, enrollmentOptions.value, e) }
-function searchDaySuggestions(e: AutoCompleteCompleteEvent) { updateSuggestions(daySuggestions, dayPatternOptions, e, dayPatternOptions.length) }
-function searchTimeSuggestions(e: AutoCompleteCompleteEvent) { updateSuggestions(timeSuggestions, timeOptions.value, e) }
-function searchInstructorSuggestions(e: AutoCompleteCompleteEvent) { updateSuggestions(instructorSuggestions, instructorOptions.value, e) }
-function searchBuildingSuggestions(e: AutoCompleteCompleteEvent) { updateSuggestions(buildingSuggestions, buildingLabels.value, e) }
-function searchRoomSuggestions(row: PreferenceRow, e: AutoCompleteCompleteEvent) { updateRowSuggestions(roomSuggestions, row, roomLabelOptionsForRow(row), e) }
-function searchCourseFeeSuggestions(e: AutoCompleteCompleteEvent) { updateSuggestions(courseFeeSuggestions, courseFeeOptionValues.value, e) }
+function searchTermSuggestions(e: AutoCompleteCompleteEvent) {
+  updateSuggestions(termSuggestions, termOptions.value, e, 6)
+}
+function searchSubjectSuggestions(e: AutoCompleteCompleteEvent) {
+  updateSuggestions(subjectSuggestions, subjectOptions.value, e)
+}
+function searchCrnSuggestions(e: AutoCompleteCompleteEvent) {
+  updateSuggestions(crnSuggestions, crnOptionValues.value, e)
+}
+function searchSectionSuggestions(e: AutoCompleteCompleteEvent) {
+  updateSuggestions(sectionSuggestions, sectionOptionValues.value, e)
+}
+function searchCourseNameSuggestions(
+  row: PreferenceRow,
+  e: AutoCompleteCompleteEvent,
+) {
+  updateRowSuggestions(
+    courseNameSuggestions,
+    row,
+    courseNameOptionsForRow(row),
+    e,
+  )
+}
+function searchCreditHourSuggestions(e: AutoCompleteCompleteEvent) {
+  updateSuggestions(creditHourSuggestions, creditHourOptions.value, e)
+}
+function searchEnrollmentSuggestions(e: AutoCompleteCompleteEvent) {
+  updateSuggestions(enrollmentSuggestions, enrollmentOptions.value, e)
+}
+function searchDaySuggestions(e: AutoCompleteCompleteEvent) {
+  updateSuggestions(
+    daySuggestions,
+    dayPatternOptions,
+    e,
+    dayPatternOptions.length,
+  )
+}
+function searchTimeSuggestions(e: AutoCompleteCompleteEvent) {
+  updateSuggestions(timeSuggestions, timeOptions.value, e)
+}
+function searchInstructorSuggestions(e: AutoCompleteCompleteEvent) {
+  updateSuggestions(instructorSuggestions, instructorOptions.value, e)
+}
+function searchBuildingSuggestions(e: AutoCompleteCompleteEvent) {
+  updateSuggestions(buildingSuggestions, buildingLabels.value, e)
+}
+function searchRoomSuggestions(
+  row: PreferenceRow,
+  e: AutoCompleteCompleteEvent,
+) {
+  updateRowSuggestions(roomSuggestions, row, roomLabelOptionsForRow(row), e)
+}
+function searchCourseFeeSuggestions(e: AutoCompleteCompleteEvent) {
+  updateSuggestions(courseFeeSuggestions, courseFeeOptionValues.value, e)
+}
 
 function handleSubjectChange(row: PreferenceRow) {
   row.subject = row.subject.trim().toUpperCase()
@@ -972,96 +1248,190 @@ function handleCourseNameChange(row: PreferenceRow) {
   const c = resolveCourse(row)
   if (c) syncRowFromCourse(row, c)
 }
-function handleCrnChange(row: PreferenceRow) { row.crn = row.crn.trim() }
-function handleSectionChange(row: PreferenceRow) { row.section = row.section.trim().toUpperCase() }
-function handleCreditHoursChange(row: PreferenceRow) { row.creditHours = row.creditHours.trim() }
-function handleMaxEnrollmentChange(row: PreferenceRow) { row.maxEnrollment = row.maxEnrollment.trim() }
-function handleDaysChange(row: PreferenceRow) { row.days = row.days.trim().toUpperCase() }
-function handleTimeChange(row: PreferenceRow) { row.time = normalizeTimeValue(row.time) }
+function handleCrnChange(row: PreferenceRow) {
+  row.crn = row.crn.trim()
+}
+function handleSectionChange(row: PreferenceRow) {
+  row.section = row.section.trim().toUpperCase()
+}
+function handleCreditHoursChange(row: PreferenceRow) {
+  row.creditHours = row.creditHours.trim()
+}
+function handleMaxEnrollmentChange(row: PreferenceRow) {
+  row.maxEnrollment = row.maxEnrollment.trim()
+}
+function handleDaysChange(row: PreferenceRow) {
+  row.days = row.days.trim().toUpperCase()
+}
+function handleTimeChange(row: PreferenceRow) {
+  row.time = normalizeTimeValue(row.time)
+}
 function handleInstructorChange(row: PreferenceRow) {
   const i = resolveInstructor(row.instructor)
   row.instructor = i ?? row.instructor.trim()
 }
 function handleBuildingChange(row: PreferenceRow) {
   const bc = resolveBuildingCode(row.buildingPreference)
-  if (!bc) { row.buildingPreference = row.buildingPreference.trim(); return }
+  if (!bc) {
+    row.buildingPreference = row.buildingPreference.trim()
+    return
+  }
   const b = buildingOptions.value.find((o) => o.code === bc) ?? null
   row.buildingPreference = b?.label ?? bc
 }
 function handleRoomChange(row: PreferenceRow) {
   const r = resolveRoomOption(row.roomPreference)
-  if (!r) { row.roomPreference = row.roomPreference.trim().toUpperCase(); return }
+  if (!r) {
+    row.roomPreference = row.roomPreference.trim().toUpperCase()
+    return
+  }
   row.roomPreference = r.label
   if (!row.buildingPreference) {
-    row.buildingPreference = buildingOptions.value.find((o) => o.code === r.buildingCode)?.label ?? r.buildingCode
+    row.buildingPreference =
+      buildingOptions.value.find((o) => o.code === r.buildingCode)?.label ??
+      r.buildingCode
   }
 }
 function handleCourseFeeChange(row: PreferenceRow) {
   const t = row.courseFee.trim()
-  if (!t) { row.courseFee = ''; return }
+  if (!t) {
+    row.courseFee = ''
+    return
+  }
   row.courseFee = NUMBER_PATTERN.test(t) ? Number(t).toFixed(2) : t
 }
 async function handleTermChange() {
   const nt = term.value.trim()
-  if (!TERM_PATTERN.test(nt) || nt === loadedTerm.value) { term.value = nt; return }
+  if (!TERM_PATTERN.test(nt) || nt === loadedTerm.value) {
+    term.value = nt
+    return
+  }
   if (hasUnsavedChanges.value) {
-    const ok = window.confirm(`Load saved preferences for ${nt}? Unsaved changes will be replaced.`)
-    if (!ok) { term.value = loadedTerm.value || currentSuggestedTerm(); return }
+    const ok = window.confirm(
+      `Load saved preferences for ${nt}? Unsaved changes will be replaced.`,
+    )
+    if (!ok) {
+      term.value = loadedTerm.value || currentSuggestedTerm()
+      return
+    }
   }
   await loadSavedSubmission(nt)
 }
 
-function addRow() { rows.value.push(createEmptyRow()) }
+function addRow() {
+  rows.value.push(createEmptyRow())
+}
 function duplicateRow(row: PreferenceRow) {
-  rows.value.push(createEmptyRow({
-    courseId: row.courseId, subject: row.subject, crn: row.crn, section: row.section,
-    courseName: row.courseName, creditHours: row.creditHours, maxEnrollment: row.maxEnrollment,
-    days: row.days, time: row.time, instructor: row.instructor,
-    buildingPreference: row.buildingPreference, roomPreference: row.roomPreference, courseFee: row.courseFee,
-  }))
+  rows.value.push(
+    createEmptyRow({
+      courseId: row.courseId,
+      subject: row.subject,
+      crn: row.crn,
+      section: row.section,
+      courseName: row.courseName,
+      creditHours: row.creditHours,
+      maxEnrollment: row.maxEnrollment,
+      days: row.days,
+      time: row.time,
+      instructor: row.instructor,
+      buildingPreference: row.buildingPreference,
+      roomPreference: row.roomPreference,
+      courseFee: row.courseFee,
+    }),
+  )
 }
 function removeRow(localId: number) {
   rows.value = rows.value.filter((r) => r.localId !== localId)
   if (rows.value.length === 0) rows.value = [createEmptyRow()]
 }
 function resetTable() {
-  if (!window.confirm('Clear the table? This does not delete anything from the database until you save.')) return
+  if (
+    !window.confirm(
+      'Clear the table? This does not delete anything from the database until you save.',
+    )
+  )
+    return
   rows.value = [createEmptyRow()]
   statusMessage.value = 'Table cleared. Save to persist this change.'
   statusTone.value = 'info'
 }
 
-function validateRow(row: PreferenceRow, status: PreferenceStatus): PreferencePayloadCourse | null {
+function validateRow(
+  row: PreferenceRow,
+  status: PreferenceStatus,
+): PreferencePayloadCourse | null {
   row.error = ''
   if (!rowHasAnyContent(row)) return null
   const course = resolveCourse(row)
-  if (!course) { row.error = 'Select a valid course subject and name from the catalog.'; return null }
+  if (!course) {
+    row.error = 'Select a valid course subject and name from the catalog.'
+    return null
+  }
   const section = row.section.trim().toUpperCase()
-  if (!SECTION_PATTERN.test(section)) { row.error = 'Section must use 1–8 letters, numbers, or dashes.'; return null }
+  if (!SECTION_PATTERN.test(section)) {
+    row.error = 'Section must use 1–8 letters, numbers, or dashes.'
+    return null
+  }
   const crn = row.crn.trim()
-  if (status === 'submitted' && !CRN_PATTERN.test(crn)) { row.error = 'CRN is required for submission (4–10 digits).'; return null }
-  if (crn && !CRN_PATTERN.test(crn)) { row.error = 'CRN must contain 4–10 digits.'; return null }
+  if (status === 'submitted' && !CRN_PATTERN.test(crn)) {
+    row.error = 'CRN is required for submission (4–10 digits).'
+    return null
+  }
+  if (crn && !CRN_PATTERN.test(crn)) {
+    row.error = 'CRN must contain 4–10 digits.'
+    return null
+  }
   const creditHoursText = row.creditHours.trim()
   const creditHours = Number(creditHoursText)
-  if (!NUMBER_PATTERN.test(creditHoursText) || creditHours < 0) { row.error = 'Credits must be a non-negative number.'; return null }
+  if (!NUMBER_PATTERN.test(creditHoursText) || creditHours < 0) {
+    row.error = 'Credits must be a non-negative number.'
+    return null
+  }
   const meText = row.maxEnrollment.trim()
   const me = Number(meText)
-  if (!WHOLE_NUMBER_PATTERN.test(meText) || !Number.isFinite(me) || me < 0) { row.error = 'Max enrollment must be a non-negative whole number.'; return null }
+  if (!WHOLE_NUMBER_PATTERN.test(meText) || !Number.isFinite(me) || me < 0) {
+    row.error = 'Max enrollment must be a non-negative whole number.'
+    return null
+  }
   const days = row.days.trim().toUpperCase()
-  if (!dayPatternOptions.includes(days)) { row.error = 'Days must match a supported pattern such as MWF or TR.'; return null }
+  if (!dayPatternOptions.includes(days)) {
+    row.error = 'Days must match a supported pattern such as MWF or TR.'
+    return null
+  }
   const nt = normalizeTimeValue(row.time)
-  if (!TIME_PATTERN.test(nt)) { row.error = 'Time must be in HH:MM format.'; return null }
+  if (!TIME_PATTERN.test(nt)) {
+    row.error = 'Time must be in HH:MM format.'
+    return null
+  }
   const instructor = resolveInstructor(row.instructor)
-  if (!instructor) { row.error = 'Instructor must be a valid name matching the catalog.'; return null }
+  if (!instructor) {
+    row.error = 'Instructor must be a valid name matching the catalog.'
+    return null
+  }
   const pb = resolveBuildingCode(row.buildingPreference)
-  if (row.buildingPreference.trim() && !pb) { row.error = 'Building must be a valid building code.'; return null }
+  if (row.buildingPreference.trim() && !pb) {
+    row.error = 'Building must be a valid building code.'
+    return null
+  }
   const pr = resolveRoomOption(row.roomPreference)
-  if (row.roomPreference.trim() && !pr) { row.error = 'Room must match the format BUILDING ROOM.'; return null }
-  if (pb && pr?.buildingCode && pr.buildingCode !== pb) { row.error = 'Room must belong to the selected building.'; return null }
+  if (row.roomPreference.trim() && !pr) {
+    row.error = 'Room must match the format BUILDING ROOM.'
+    return null
+  }
+  if (pb && pr?.buildingCode && pr.buildingCode !== pb) {
+    row.error = 'Room must belong to the selected building.'
+    return null
+  }
   const cfText = row.courseFee.trim()
-  if (cfText && !NUMBER_PATTERN.test(cfText)) { row.error = 'Course fee must be a non-negative number.'; return null }
+  if (cfText && !NUMBER_PATTERN.test(cfText)) {
+    row.error = 'Course fee must be a non-negative number.'
+    return null
+  }
   const cf = cfText ? Number(cfText) : null
-  if (cf != null && cf < 0) { row.error = 'Course fee must be a non-negative number.'; return null }
+  if (cf != null && cf < 0) {
+    row.error = 'Course fee must be a non-negative number.'
+    return null
+  }
   row.courseId = course._id
   row.subject = subjectLabel(course)
   row.courseName = course.title
@@ -1071,33 +1441,87 @@ function validateRow(row: PreferenceRow, status: PreferenceStatus): PreferencePa
   row.days = days
   row.time = nt
   row.instructor = instructor
-  if (pb) row.buildingPreference = buildingOptions.value.find((o) => o.code === pb)?.label ?? pb
+  if (pb)
+    row.buildingPreference =
+      buildingOptions.value.find((o) => o.code === pb)?.label ?? pb
   if (pr) row.roomPreference = pr.label
   if (cf != null) row.courseFee = cf.toFixed(2)
-  return { courseId: course._id, section, crn: crn || null, title: course.title, expectedEnrollment: me, maxCapacity: me, creditHours, preferredDays: [days], preferredTimes: [nt], avoidTimes: [], requiredEquipment: [], instructor, preferredBuilding: pb, preferredRoomId: pr?._id ?? null, courseFee: cf, backToBackWith: null, coreqWith: [] }
+  return {
+    courseId: course._id,
+    section,
+    crn: crn || null,
+    title: course.title,
+    expectedEnrollment: me,
+    maxCapacity: me,
+    creditHours,
+    preferredDays: [days],
+    preferredTimes: [nt],
+    avoidTimes: [],
+    requiredEquipment: [],
+    instructor,
+    preferredBuilding: pb,
+    preferredRoomId: pr?._id ?? null,
+    courseFee: cf,
+    backToBackWith: null,
+    coreqWith: [],
+  }
 }
 
 async function savePreferences(status: PreferenceStatus) {
   statusMessage.value = ''
   statusTone.value = 'info'
   const nt = term.value.trim()
-  if (!TERM_PATTERN.test(nt)) { statusMessage.value = 'Enter a valid term (letters, numbers, dashes, underscores).'; statusTone.value = 'error'; return }
-  const courses = rows.value.map((r) => validateRow(r, status)).filter((c): c is PreferencePayloadCourse => c !== null)
-  if (rows.value.some((r) => r.error.length > 0)) { statusMessage.value = 'Fix the highlighted row errors before saving.'; statusTone.value = 'error'; return }
-  if (courses.length === 0) { statusMessage.value = 'Add at least one completed preference row before saving.'; statusTone.value = 'error'; return }
+  if (!TERM_PATTERN.test(nt)) {
+    statusMessage.value =
+      'Enter a valid term (letters, numbers, dashes, underscores).'
+    statusTone.value = 'error'
+    return
+  }
+  const courses = rows.value
+    .map((r) => validateRow(r, status))
+    .filter((c): c is PreferencePayloadCourse => c !== null)
+  if (rows.value.some((r) => r.error.length > 0)) {
+    statusMessage.value = 'Fix the highlighted row errors before saving.'
+    statusTone.value = 'error'
+    return
+  }
+  if (courses.length === 0) {
+    statusMessage.value =
+      'Add at least one completed preference row before saving.'
+    statusTone.value = 'error'
+    return
+  }
   savePending.value = true
   try {
     const patch = submissionExists.value && loadedTerm.value === nt
     if (patch) {
-      await $fetch(`/api/preferences/${encodeURIComponent(nt)}`, { method: 'PATCH', body: { department: submissionDepartment.value ?? undefined, status, courses } })
+      await $fetch(`/api/preferences/${encodeURIComponent(nt)}`, {
+        method: 'PATCH',
+        body: {
+          department: submissionDepartment.value ?? undefined,
+          status,
+          courses,
+        },
+      })
     } else {
-      await $fetch('/api/preferences', { method: 'POST', body: { term: nt, department: submissionDepartment.value ?? undefined, status, courses } })
+      await $fetch('/api/preferences', {
+        method: 'POST',
+        body: {
+          term: nt,
+          department: submissionDepartment.value ?? undefined,
+          status,
+          courses,
+        },
+      })
     }
     submissionExists.value = true
     submissionStatus.value = status
     loadedTerm.value = nt
     loadedSnapshot.value = serializeRows(rows.value)
-    statusMessage.value = status === 'submitted' ? `Submitted ${courses.length} row(s) for ${nt}.` : `Saved ${courses.length} row(s) as draft for ${nt}.`
+    statusMessage.value =
+      status === 'submitted'
+        ? `Submitted ${courses.length} row(s) for ${nt}.`
+        : `Saved ${courses.length} row(s) as draft for ${nt}.`
     statusTone.value = 'success'
   } catch (error) {
     statusMessage.value = extractErrorMessage(error)
@@ -1109,13 +1533,26 @@ async function savePreferences(status: PreferenceStatus) {
 
 async function loadReferenceData() {
   referenceWarnings.value = []
-  const [cr, pr, rr] = await Promise.allSettled([$fetch<CourseRecord[]>('/api/courses'), $fetch<ProfessorRecord[]>('/api/professors'), $fetch<RoomRecord[]>('/api/rooms')])
+  const [cr, pr, rr] = await Promise.allSettled([
+    $fetch<CourseRecord[]>('/api/courses'),
+    $fetch<ProfessorRecord[]>('/api/professors'),
+    $fetch<RoomRecord[]>('/api/rooms'),
+  ])
   if (cr.status === 'fulfilled') courseCatalog.value = cr.value ?? []
-  else referenceWarnings.value.push('Course catalog unavailable — catalog matching is disabled.')
+  else
+    referenceWarnings.value.push(
+      'Course catalog unavailable — catalog matching is disabled.',
+    )
   if (pr.status === 'fulfilled') professors.value = pr.value ?? []
-  else referenceWarnings.value.push('Instructor list unavailable — manual entry still works.')
+  else
+    referenceWarnings.value.push(
+      'Instructor list unavailable — manual entry still works.',
+    )
   if (rr.status === 'fulfilled') rooms.value = rr.value ?? []
-  else referenceWarnings.value.push('Room list unavailable — manual room entry still works.')
+  else
+    referenceWarnings.value.push(
+      'Room list unavailable — manual room entry still works.',
+    )
 }
 
 function preferenceRowClass(row: PreferenceRow): string {
@@ -1129,8 +1566,14 @@ async function loadPageData() {
   try {
     await loadReferenceData()
     await loadSavedSubmission(term.value, { silent: true })
-    if (submissionExists.value) { statusMessage.value = `Loaded saved preferences for ${term.value}.`; statusTone.value = 'info' }
-    else if (courseCatalog.value.length === 0) { statusMessage.value = 'Course catalog could not be loaded — preferences cannot be validated yet.'; statusTone.value = 'error' }
+    if (submissionExists.value) {
+      statusMessage.value = `Loaded saved preferences for ${term.value}.`
+      statusTone.value = 'info'
+    } else if (courseCatalog.value.length === 0) {
+      statusMessage.value =
+        'Course catalog could not be loaded — preferences cannot be validated yet.'
+      statusTone.value = 'error'
+    }
   } finally {
     referencePending.value = false
   }
@@ -1192,7 +1635,9 @@ onMounted(loadPageData)
 /* ─── Hero card ─── */
 .pref-hero-card {
   border-radius: 12px;
-  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.06), 0 8px 24px 0 rgba(15,23,42,0.05);
+  box-shadow:
+    0 1px 2px 0 rgba(0, 0, 0, 0.06),
+    0 8px 24px 0 rgba(15, 23, 42, 0.05);
   border: 1px solid var(--p-surface-200, #e2e8f0);
 }
 
@@ -1259,7 +1704,9 @@ onMounted(loadPageData)
 /* ─── Table card ─── */
 .pref-table-card {
   border-radius: 14px;
-  box-shadow: 0 1px 3px 0 rgba(0,0,0,0.07), 0 4px 16px 0 rgba(0,0,0,0.05);
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.07),
+    0 4px 16px 0 rgba(0, 0, 0, 0.05);
   border: 1px solid var(--p-surface-200, #e2e8f0);
   overflow: hidden;
 }
@@ -1362,7 +1809,9 @@ onMounted(loadPageData)
   border-radius: 6px !important;
   border-color: var(--p-surface-300, #cbd5e1) !important;
   background: var(--p-surface-0, #ffffff) !important;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 :deep(.pref-cell-input:hover) {
@@ -1382,7 +1831,7 @@ onMounted(loadPageData)
 
 :deep(.pref-autocomplete-panel) {
   border-radius: 10px !important;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.12) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12) !important;
   overflow: hidden;
 }
 

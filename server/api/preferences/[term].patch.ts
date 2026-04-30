@@ -78,7 +78,10 @@ export default defineEventHandler(async (event) => {
       ],
     }).exec()
   } else {
-    if (typeof body.professorId !== 'string' || body.professorId.trim() === '') {
+    if (
+      typeof body.professorId !== 'string' ||
+      body.professorId.trim() === ''
+    ) {
       throw createError({
         statusCode: 400,
         statusMessage: 'professorId is required and must be a non-empty string',
@@ -120,7 +123,8 @@ export default defineEventHandler(async (event) => {
 
   if (hasOwn(body, 'status')) {
     submission.status = body.status ?? submission.status
-    submission.submittedAt = submission.status === 'submitted' ? new Date() : null
+    submission.submittedAt =
+      submission.status === 'submitted' ? new Date() : null
     changes += 1
   }
 

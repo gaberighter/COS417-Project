@@ -10,14 +10,15 @@ import { connectDB } from '../../utils/db'
 import { Professor } from '../../models/index'
 import { normalizePreferenceStatus } from '../../utils/preferenceValidation'
 
-function formatSubmissionStatus<T extends { status: unknown; submittedAt?: unknown }>(
-  submission: T,
-) {
+function formatSubmissionStatus<
+  T extends { status: unknown; submittedAt?: unknown },
+>(submission: T) {
   const status = normalizePreferenceStatus(submission.status)
   return {
     ...submission,
     status,
-    submittedAt: status === 'submitted' ? (submission.submittedAt ?? null) : null,
+    submittedAt:
+      status === 'submitted' ? (submission.submittedAt ?? null) : null,
   }
 }
 
