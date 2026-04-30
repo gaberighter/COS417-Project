@@ -66,7 +66,7 @@ function lookupOracleUser(email: string) {
   ).toUpperCase()
 }
 
-async function getRoles(username: string, email: string): Promise<string[]> {
+async function getRoles(_username: string, email: string): Promise<string[]> {
   const roles: string[] = []
   const covenantId = email.substring(0, email.indexOf('@'))
 
