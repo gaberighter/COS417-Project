@@ -131,4 +131,19 @@ const { redirectToAdmin, redirectToFaculty } = useDebugNavigation()
     transform: translateY(0);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .login-card,
+  .login-button {
+    animation: none;
+  }
+
+  .login-button {
+    transition: none;
+  }
+
+  .login-button:hover:not(:disabled) {
+    transform: none;
+  }
+}
 </style>
