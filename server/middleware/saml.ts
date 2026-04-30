@@ -275,6 +275,15 @@ export default defineEventHandler(async (event: H3Event) => {
                 name_id,
                 session_index,
               }
+              // Look up the user and create the session payload.
+              const user: Record<string, unknown> = {
+                ...samlUser,
+                username,
+                roles,
+                lastLogin: new Date(),
+                name_id,
+                session_index,
+              }
 
               // See if this user exists in the Users collection.
               const existingUser = await UsersCollection.findOne({
@@ -288,6 +297,7 @@ export default defineEventHandler(async (event: H3Event) => {
                 await UsersCollection.updateOne({ _id: existingUser._id }, user)
               }
 
+              await setUserSession(event, { user, loggedInAt: Date.now() })
               await setUserSession(event, { user, loggedInAt: Date.now() })
 
               return resolve(

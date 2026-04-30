@@ -332,22 +332,83 @@ scheduleSchema.pre('validate', function setScheduleId() {
 const auditLogSchema = new Schema<IAuditLog>(
   {
     _id: { type: String },
-    userId: { type: String, default: null, trim: true },
-    covenantId: { type: String, default: null, trim: true },
-    action: { type: String, required: true, trim: true },
-    collectionName: { type: String, default: null, trim: true },
-    documentId: { type: String, default: null, trim: true },
-    detail: { type: String, required: true, trim: true },
-    ipAddress: { type: String, default: null, trim: true },
-    timestamp: { type: Date, required: true, default: () => new Date() },
+    userId: { type: String, default: null, trim: true, immutable: true },
+    covenantId: { type: String, default: null, trim: true, immutable: true },
+    action: { type: String, required: true, trim: true, immutable: true },
+    collectionName: {
+      type: String,
+      default: null,
+      trim: true,
+      immutable: true,
+    },
+    documentId: { type: String, default: null, trim: true, immutable: true },
+    detail: { type: String, required: true, trim: true, immutable: true },
+    ipAddress: { type: String, default: null, trim: true, immutable: true },
+    timestamp: {
+      type: Date,
+      required: true,
+      default: () => new Date(),
+      immutable: true,
+    },
   },
-  { collection: 'auditLogs', timestamps: true, versionKey: false },
+  { collection: 'auditLogs', timestamps: false, versionKey: false },
 )
 
 auditLogSchema.pre('validate', function setAuditId() {
   if (!this._id) {
     this._id = new mongoose.Types.ObjectId().toString()
   }
+})
+
+// Prevent deletion and mutation of audit logs (write-once enforcement)
+function preventAuditLogDelete() {
+  throw new Error('Audit logs cannot be deleted')
+}
+
+function preventAuditLogUpdate() {
+  throw new Error('Audit logs are immutable and cannot be updated')
+}
+
+// Register both query and document middleware where supported so the
+// prevention runs for calls like `Model.deleteOne()` and document method
+// calls like `doc.deleteOne()`.
+auditLogSchema.pre(
+  'deleteOne',
+  { query: true, document: true },
+  function preventDeleteOne() {
+    preventAuditLogDelete()
+  },
+)
+auditLogSchema.pre('findOneAndDelete', function preventFindOneAndDelete() {
+  preventAuditLogDelete()
+})
+auditLogSchema.pre('deleteMany', function preventDeleteMany() {
+  preventAuditLogDelete()
+})
+
+auditLogSchema.pre(
+  'updateOne',
+  { query: true, document: true },
+  function preventUpdateOne() {
+    preventAuditLogUpdate()
+  },
+)
+auditLogSchema.pre('findOneAndUpdate', function preventFindOneAndUpdate() {
+  preventAuditLogUpdate()
+})
+auditLogSchema.pre('updateMany', function preventUpdateMany() {
+  preventAuditLogUpdate()
+})
+
+// Cover replacements and bulk operations as well
+auditLogSchema.pre('replaceOne', function preventReplaceOne() {
+  preventAuditLogUpdate()
+})
+auditLogSchema.pre('findOneAndReplace', function preventFindOneAndReplace() {
+  preventAuditLogUpdate()
+})
+auditLogSchema.pre('bulkWrite', function preventBulkWrite() {
+  preventAuditLogUpdate()
 })
 
 roomSchema.index({ abbreviation: 1 }, { unique: true })
