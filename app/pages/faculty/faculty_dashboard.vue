@@ -1,12 +1,12 @@
 <template>
-  <div class="faculty-dashboard">
-    <div class="button-wrapper">
-      <button @click="viewChangePreferences">
+  <div class="dashboard-page">
+    <div class="dashboard-actions">
+      <button class="dashboard-button" @click="viewChangePreferences">
         View/Change Existing Preferences
       </button>
-    </div>
-    <div class="button-wrapper">
-      <button @click="addNewPreference">Enter Preferences</button>
+      <button class="dashboard-button" @click="addNewPreference">
+        Enter Preferences
+      </button>
     </div>
   </div>
   <div class="temporary-debug-buttons">

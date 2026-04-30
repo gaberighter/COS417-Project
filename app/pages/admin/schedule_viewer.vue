@@ -527,8 +527,18 @@ async function deleteAssignment(assignment: Assignment) {
 
 .schedule-buttons button {
   text-align: left;
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 8px 16px rgba(0, 51, 153, 0.12);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.schedule-buttons button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px rgba(0, 51, 153, 0.16);
 }
 
 .schedule-details {
@@ -583,9 +593,9 @@ thead {
 }
 
 .action-btn {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8rem;
-  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+  border-radius: 8px;
   border: 1px solid var(--color-action-secondary-border);
   background: var(--color-action-secondary-bg);
   color: var(--color-action-secondary-text);
@@ -599,6 +609,7 @@ thead {
 
 .action-btn:hover {
   background: var(--color-action-secondary-bg-hover);
+  transform: translateY(-1px);
 }
 
 .action-btn--delete {
@@ -622,6 +633,12 @@ thead {
 .action-btn--cancel {
   border-color: rgba(148, 163, 184, 0.6);
   color: var(--color-text-secondary);
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .schedule-table-input {
