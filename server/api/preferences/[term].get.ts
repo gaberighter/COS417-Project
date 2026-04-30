@@ -4,7 +4,7 @@
 // Note: preferences are embedded in professor documents, so this queries
 //       active professors and filters embedded submissions by term.
 
-import { defineEventHandler, getRouterParam, createError } from 'h3'
+import { defineEventHandler, getRouterParam, createError, getQuery } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Professor } from '../../models/index'
@@ -31,7 +31,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'term is required' })
   }
 
-  if (auth.role === 'Faculty') {
+  const roles = auth.roles ?? [auth.role]
+  const canReadOwnSubmission = roles.includes('Faculty')
+  const canReadAllSubmissions = roles.includes('Admin')
+  const query = getQuery(event)
+  const adminScope = query.scope === 'all' || query.all === 'true'
+
+  if (canReadOwnSubmission && (!canReadAllSubmissions || !adminScope)) {
     const professor = await Professor.findOne(
       {
         active: true,

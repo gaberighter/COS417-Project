@@ -69,7 +69,27 @@ export default defineEventHandler(async (event) => {
   }
 
   let prof
-  if (auth.role === 'Faculty') {
+  const roles = auth.roles ?? [auth.role]
+  const canUpdateOwnSubmission = roles.includes('Faculty')
+  const canUpdateAnySubmission = roles.includes('Admin')
+  const requestedProfessorId =
+    typeof body.professorId === 'string' ? body.professorId.trim() : ''
+
+  if (requestedProfessorId) {
+    if (!canUpdateAnySubmission) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Only admins can update another professor',
+      })
+    }
+
+    prof = await Professor.findOne({
+      $or: [
+        { _id: requestedProfessorId },
+        { covenantId: requestedProfessorId.toLowerCase() },
+      ],
+    }).exec()
+  } else if (canUpdateOwnSubmission) {
     prof = await Professor.findOne({
       $or: [
         { covenantId: auth.userId.toLowerCase() },
@@ -78,30 +98,19 @@ export default defineEventHandler(async (event) => {
       ],
     }).exec()
   } else {
-    if (
-      typeof body.professorId !== 'string' ||
-      body.professorId.trim() === ''
-    ) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'professorId is required and must be a non-empty string',
-      })
-    }
-
-    const professorId = body.professorId.trim()
-
-    prof = await Professor.findOne({
-      $or: [{ _id: professorId }, { covenantId: professorId.toLowerCase() }],
-    }).exec()
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'professorId is required and must be a non-empty string',
+    })
   }
 
   if (!prof) {
     throw createError({
       statusCode: 404,
       statusMessage:
-        auth.role === 'Faculty'
+        requestedProfessorId.length === 0
           ? 'Professor record not found'
-          : `Professor not found: ${String(body.professorId ?? '').trim()}`,
+          : `Professor not found: ${requestedProfessorId}`,
     })
   }
 
@@ -116,29 +125,38 @@ export default defineEventHandler(async (event) => {
   }
 
   const submission = prof.preferences[submissionIndex]!
+  const updatedSubmission: IPreferenceSubmission = {
+    term: submission.term,
+    department: submission.department,
+    submittedBy: submission.submittedBy,
+    submittedAt: submission.submittedAt ?? null,
+    status: submission.status,
+    courses: submission.courses,
+  }
   for (const existingSubmission of prof.preferences) {
     normalizePreferenceSubmissionStatus(existingSubmission)
   }
   let changes = 0
 
   if (hasOwn(body, 'status')) {
-    submission.status = body.status ?? submission.status
-    submission.submittedAt =
-      submission.status === 'submitted' ? new Date() : null
+    updatedSubmission.status = body.status ?? updatedSubmission.status
+    updatedSubmission.submittedAt =
+      updatedSubmission.status === 'submitted' ? new Date() : null
     changes += 1
   }
 
   if (hasOwn(body, 'department')) {
-    submission.department = body.department ?? submission.department
+    updatedSubmission.department =
+      body.department ?? updatedSubmission.department
     changes += 1
   }
 
   if (hasOwn(body, 'courses')) {
-    submission.courses = body.courses ?? []
+    updatedSubmission.courses = body.courses ?? []
     changes += 1
   }
 
-  normalizePreferenceSubmissionStatus(submission)
+  normalizePreferenceSubmissionStatus(updatedSubmission)
 
   if (changes === 0) {
     throw createError({
@@ -147,6 +165,9 @@ export default defineEventHandler(async (event) => {
         'No mutable preference fields were provided. Try GET /api/preferences/:term/template to see available fields.',
     })
   }
+
+  prof.preferences[submissionIndex] = updatedSubmission
+  prof.markModified('preferences')
 
   await prof.save()
 
@@ -158,5 +179,10 @@ export default defineEventHandler(async (event) => {
     `Updated preferences for ${prof.covenantId} (${term})`,
   )
 
-  return { ok: true, term, professorId: prof._id, status: submission.status }
+  return {
+    ok: true,
+    term,
+    professorId: prof._id,
+    status: updatedSubmission.status,
+  }
 })
