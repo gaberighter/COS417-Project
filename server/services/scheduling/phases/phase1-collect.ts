@@ -34,6 +34,7 @@ function makeNullProfessor(departmentCode: string): Professor {
     _id: NULL_PROFESSOR_ID,
     covenantId: NULL_PROFESSOR_ID,
     displayName: 'Unassigned Professor',
+    department: departmentCode,
     departmentCode,
     officeBuilding: null,
     officeRoom: null,

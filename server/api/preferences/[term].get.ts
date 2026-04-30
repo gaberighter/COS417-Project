@@ -22,6 +22,17 @@ function formatSubmissionStatus<
   }
 }
 
+function normalizeDepartment(value: string | null | undefined): string {
+  return (value ?? '').trim().toUpperCase()
+}
+
+function professorDepartment(professor: {
+  department?: string | null
+  departmentCode?: string | null
+}): string {
+  return normalizeDepartment(professor.department || professor.departmentCode)
+}
+
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin', 'Faculty'])
   await connectDB()
@@ -63,6 +74,7 @@ export default defineEventHandler(async (event) => {
         _id: 1,
         covenantId: 1,
         displayName: 1,
+        department: 1,
         departmentCode: 1,
         preferences: 1,
       },
@@ -77,8 +89,48 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const submission = (professor.preferences ?? []).find(
-      (candidate) => candidate.term === term,
+    const department = professorDepartment(professor)
+    const departmentProfessors = await Professor.find(
+      {
+        active: true,
+        'preferences.term': term,
+        $or: [{ department }, { departmentCode: department }],
+      },
+      {
+        _id: 1,
+        covenantId: 1,
+        displayName: 1,
+        department: 1,
+        departmentCode: 1,
+        preferences: 1,
+      },
+    )
+      .lean()
+      .exec()
+
+    const owner =
+      departmentProfessors.find((candidateProfessor) =>
+        (candidateProfessor.preferences ?? []).some(
+          (candidate) =>
+            candidate.term === term &&
+            normalizeDepartment(candidate.department) === department,
+        ),
+      ) ??
+      departmentProfessors.find((candidateProfessor) =>
+        (candidateProfessor.preferences ?? []).some(
+          (candidate) => candidate.term === term,
+        ),
+      )
+
+    if (!owner) {
+      return null
+    }
+
+    const submission = (owner.preferences ?? []).find(
+      (candidate) =>
+        candidate.term === term &&
+        (normalizeDepartment(candidate.department) === department ||
+          normalizeDepartment(candidate.department) === ''),
     )
 
     if (!submission) {
@@ -86,11 +138,12 @@ export default defineEventHandler(async (event) => {
     }
 
     return {
-      professorId: professor._id ?? professor.covenantId,
-      covenantId: professor.covenantId,
-      displayName: professor.displayName,
-      departmentCode: professor.departmentCode,
+      professorId: owner._id ?? owner.covenantId,
+      covenantId: owner.covenantId,
+      displayName: owner.displayName,
+      departmentCode: owner?.departmentCode ?? department,
       ...formatSubmissionStatus(submission),
+      department,
     }
   }
 
@@ -100,6 +153,7 @@ export default defineEventHandler(async (event) => {
       _id: 1,
       covenantId: 1,
       displayName: 1,
+      department: 1,
       departmentCode: 1,
       preferences: 1,
     },
@@ -116,6 +170,7 @@ export default defineEventHandler(async (event) => {
         displayName: professor.displayName,
         departmentCode: professor.departmentCode,
         ...formatSubmissionStatus(submission),
+        department: professorDepartment(professor),
       })),
   )
 

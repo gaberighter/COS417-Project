@@ -26,6 +26,10 @@ type PreferencePatchPayload = {
   courses?: ICoursePreference[]
 }
 
+function normalizeDepartment(value: string | null | undefined): string {
+  return (value ?? '').trim().toUpperCase()
+}
+
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin', 'Faculty'])
   await connectDB()
@@ -114,26 +118,39 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Find the preference submission for this term
-  const submissionIndex = prof.preferences.findIndex((p) => p.term === term)
+  const department = normalizeDepartment(prof.department ?? prof.departmentCode)
+  const targetProf =
+    (await Professor.findOne({
+      active: true,
+      'preferences.term': term,
+      $or: [{ department }, { departmentCode: department }],
+    }).exec()) ?? prof
+
+  // Find the department preference submission for this term
+  const submissionIndex = targetProf.preferences.findIndex(
+    (p) =>
+      p.term === term &&
+      (normalizeDepartment(p.department) === department ||
+        normalizeDepartment(p.department) === ''),
+  )
 
   if (submissionIndex < 0) {
     throw createError({
       statusCode: 404,
-      statusMessage: `No preferences found for term: ${term}`,
+      statusMessage: `No ${department} preferences found for term: ${term}`,
     })
   }
 
-  const submission = prof.preferences[submissionIndex]!
+  const submission = targetProf.preferences[submissionIndex]!
   const updatedSubmission: IPreferenceSubmission = {
     term: submission.term,
-    department: submission.department,
+    department,
     submittedBy: submission.submittedBy,
     submittedAt: submission.submittedAt ?? null,
     status: submission.status,
     courses: submission.courses,
   }
-  for (const existingSubmission of prof.preferences) {
+  for (const existingSubmission of targetProf.preferences) {
     normalizePreferenceSubmissionStatus(existingSubmission)
   }
   let changes = 0
@@ -146,8 +163,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (hasOwn(body, 'department')) {
-    updatedSubmission.department =
-      body.department ?? updatedSubmission.department
+    updatedSubmission.department = department
     changes += 1
   }
 
@@ -166,23 +182,24 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  prof.preferences[submissionIndex] = updatedSubmission
-  prof.markModified('preferences')
+  targetProf.preferences[submissionIndex] = updatedSubmission
+  targetProf.markModified('preferences')
 
-  await prof.save()
+  await targetProf.save()
 
   await logAction(
     auth,
     'PREFERENCE_UPDATE',
     'professors',
-    prof._id,
-    `Updated preferences for ${prof.covenantId} (${term})`,
+    targetProf._id,
+    `Updated ${department} preferences (${term})`,
   )
 
   return {
     ok: true,
     term,
-    professorId: prof._id,
+    professorId: targetProf._id,
+    department,
     status: updatedSubmission.status,
   }
 })

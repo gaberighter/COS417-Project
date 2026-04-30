@@ -257,6 +257,9 @@ function normalizeProfessor(input) {
     _id: covenantId,
     covenantId,
     displayName: String(input.displayName ?? '').trim(),
+    department: String(input.department ?? input.departmentCode ?? '')
+      .trim()
+      .toUpperCase(),
     departmentCode: String(input.departmentCode ?? '')
       .trim()
       .toUpperCase(),

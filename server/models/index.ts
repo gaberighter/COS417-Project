@@ -88,6 +88,7 @@ export interface IProfessor {
   _id?: string
   covenantId: string
   displayName: string
+  department: string
   departmentCode: string
   officeBuilding?: string | null
   officeRoom?: string | null
@@ -276,6 +277,12 @@ const professorSchema = new Schema<IProfessor>(
       trim: true,
       uppercase: true,
     },
+    department: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+    },
     officeBuilding: { type: String, default: null, trim: true },
     officeRoom: { type: String, default: null, trim: true },
     seniorityYear: { type: Number, default: null },
@@ -292,6 +299,9 @@ const professorSchema = new Schema<IProfessor>(
 professorSchema.pre('validate', function setProfessorId() {
   if (!this._id) {
     this._id = buildProfessorId(this)
+  }
+  if (!this.department) {
+    this.department = this.departmentCode
   }
 })
 

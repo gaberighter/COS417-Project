@@ -149,6 +149,7 @@ function cloneProfessor(professor: IProfessor): Professor {
     _id: String(professor._id ?? professor.covenantId),
     covenantId: professor.covenantId,
     displayName: professor.displayName,
+    department: professor.department ?? professor.departmentCode,
     departmentCode: professor.departmentCode,
     officeBuilding: professor.officeBuilding ?? null,
     officeRoom: professor.officeRoom ?? null,

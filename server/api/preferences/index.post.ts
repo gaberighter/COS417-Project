@@ -28,6 +28,10 @@ interface PreferencePayload {
   preferences?: ICoursePreference[]
 }
 
+function normalizeDepartment(value: string | null | undefined): string {
+  return (value ?? '').trim().toUpperCase()
+}
+
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Faculty'])
   await connectDB()
@@ -83,6 +87,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const department = normalizeDepartment(prof.department ?? prof.departmentCode)
   const now = new Date()
   const submittedBy = prof._id
   const status =
@@ -91,33 +96,44 @@ export default defineEventHandler(async (event) => {
       : normalizePreferenceStatus(body.status)
   const submission: IPreferenceSubmission = {
     term: body.term,
-    department: body.department ?? prof.departmentCode,
+    department,
     submittedBy,
     submittedAt: status === 'submitted' ? now : null,
     status,
     courses,
   }
 
-  const existingIndex = prof.preferences.findIndex(
-    (candidate) => candidate.term === body.term,
+  const targetProf =
+    (await Professor.findOne({
+      active: true,
+      'preferences.term': body.term,
+      $or: [{ department }, { departmentCode: department }],
+    }).exec()) ?? prof
+
+  const existingIndex = targetProf.preferences.findIndex(
+    (candidate) =>
+      candidate.term === body.term &&
+      (normalizeDepartment(candidate.department) === department ||
+        normalizeDepartment(candidate.department) === ''),
   )
   if (existingIndex >= 0) {
-    prof.preferences[existingIndex] = submission
+    targetProf.preferences[existingIndex] = submission
   } else {
-    prof.preferences.push(submission)
+    targetProf.preferences.push(submission)
   }
 
-  for (const existingSubmission of prof.preferences) {
+  for (const existingSubmission of targetProf.preferences) {
     normalizePreferenceSubmissionStatus(existingSubmission)
   }
 
-  await prof.save()
+  targetProf.markModified('preferences')
+  await targetProf.save()
 
   await logAction(
     auth,
     'PREFERENCE_SUBMIT',
     'professors',
-    submittedBy,
+    targetProf._id,
     `Updated ${courses.length} preference record(s) for ${body.term}`,
   )
   return { ok: true, term: body.term, count: courses.length, status }

@@ -78,12 +78,14 @@ function normalizePreferences(
 
 function normalizeProfessor(input: ProfessorInput): IProfessor {
   const key = parseProfessorKey(input)
+  const departmentCode = input.departmentCode?.trim().toUpperCase() ?? 'UNK'
 
   return {
     _id: key._id,
     covenantId: key.covenantId,
     displayName: input.displayName?.trim() ?? key.covenantId,
-    departmentCode: input.departmentCode?.trim().toUpperCase() ?? 'UNK',
+    department: input.department?.trim().toUpperCase() ?? departmentCode,
+    departmentCode,
     officeBuilding: input.officeBuilding ?? null,
     officeRoom: input.officeRoom ?? null,
     seniorityYear: input.seniorityYear ?? null,
@@ -107,6 +109,11 @@ function mergeProfessor(
     departmentCode: hasOwn(input, 'departmentCode')
       ? base.departmentCode
       : (existing?.departmentCode ?? base.departmentCode),
+    department: hasOwn(input, 'department')
+      ? base.department
+      : hasOwn(input, 'departmentCode')
+        ? base.departmentCode
+        : (existing?.department ?? base.department),
     officeBuilding: hasOwn(input, 'officeBuilding')
       ? (input.officeBuilding ?? null)
       : (existing?.officeBuilding ?? null),
@@ -216,6 +223,7 @@ export default defineEventHandler(async (event) => {
           $set: {
             covenantId: professor.covenantId,
             displayName: professor.displayName,
+            department: professor.department,
             departmentCode: professor.departmentCode,
             officeBuilding: professor.officeBuilding,
             officeRoom: professor.officeRoom,

@@ -80,6 +80,7 @@ export interface Professor {
   _id: string
   covenantId: string
   displayName: string
+  department: string
   departmentCode: string
   officeBuilding: string | null
   officeRoom: string | null
