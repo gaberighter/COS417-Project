@@ -289,7 +289,7 @@ function resolveConflictReason(
   if (workItem.course.labComponent && candidateRooms.length === 0) {
     return formatConflict(
       'LAB_CAPACITY',
-      'Lab capacity exhausted for this time slot.',
+      'No eligible lab rooms remain (capacity, equipment, or real-data constraints).',
       manualOptions,
       attemptSummary,
     )
