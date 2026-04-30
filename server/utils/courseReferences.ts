@@ -44,9 +44,11 @@ export function buildScheduledCourseId(
   catalogCourseId: string,
   section: string | null,
 ): string {
-  return section === null
+  const normalizedSection = normalizeSectionText(section)
+
+  return normalizedSection === null
     ? normalizeCourseIdText(catalogCourseId)
-    : `${normalizeCourseIdText(catalogCourseId)}-${section}`
+    : `${normalizeCourseIdText(catalogCourseId)}-${normalizedSection}`
 }
 
 export function normalizeCourseReference(
