@@ -294,23 +294,32 @@
             <!-- Time -->
             <Column header="Time" style="width: 5rem">
               <template #body="{ data }">
-                <AutoComplete
-                  v-model="data.time"
-                  :suggestions="timeSuggestions"
-                  dropdown
-                  completeOnFocus
-                  :minLength="0"
-                  appendTo="body"
-                  fluid
-                  inputClass="pref-cell-input"
-                  panelClass="pref-autocomplete-panel"
-                  :placeholder="
-                    data.localId === rows[0]?.localId ? '12:00' : ''
-                  "
-                  @complete="searchTimeSuggestions"
-                  @update:modelValue="clearRowError(data)"
-                  @blur="handleTimeChange(data)"
-                />
+                <div class="pref-time-cell">
+                  <AutoComplete
+                    v-model="data.time"
+                    :suggestions="timeSuggestions"
+                    dropdown
+                    completeOnFocus
+                    :minLength="0"
+                    appendTo="body"
+                    fluid
+                    inputClass="pref-cell-input"
+                    panelClass="pref-autocomplete-panel"
+                    :placeholder="
+                      data.localId === rows[0]?.localId ? '12:00' : ''
+                    "
+                    @complete="searchTimeSuggestions"
+                    @update:modelValue="clearRowError(data)"
+                    @blur="handleTimeChange(data)"
+                  />
+                  <SelectButton
+                    :modelValue="timePeriodForRow(data)"
+                    :options="timePeriodOptions"
+                    :allowEmpty="false"
+                    class="pref-time-period"
+                    @update:modelValue="setTimePeriod(data, $event)"
+                  />
+                </div>
               </template>
             </Column>
 
@@ -594,6 +603,7 @@ const dayPatternOptions = [
   'T',
   'R',
 ]
+const timePeriodOptions = ['AM', 'PM']
 
 const courseCatalog = ref<CourseRecord[]>([])
 const professors = ref<ProfessorRecord[]>([])
@@ -853,6 +863,26 @@ function normalizeTimeValue(v: string): string {
   if (!TIME_PATTERN.test(t)) return t
   const [h, m] = t.split(':')
   return `${String(Number(h)).padStart(2, '0')}:${m}`
+}
+
+function timePeriodForRow(row: PreferenceRow): 'AM' | 'PM' {
+  const nt = normalizeTimeValue(row.time)
+  if (!TIME_PATTERN.test(nt)) return 'AM'
+  const [h] = nt.split(':')
+  return Number(h) >= 12 ? 'PM' : 'AM'
+}
+
+function setTimePeriod(row: PreferenceRow, period: 'AM' | 'PM') {
+  const nt = normalizeTimeValue(row.time)
+  if (!TIME_PATTERN.test(nt)) {
+    row.time = row.time.trim()
+    return
+  }
+  const [h, m] = nt.split(':')
+  let hour = Number(h)
+  if (period === 'AM' && hour >= 12) hour = hour === 12 ? 0 : hour - 12
+  if (period === 'PM' && hour < 12) hour += 12
+  row.time = `${String(hour).padStart(2, '0')}:${m}`
 }
 
 function subjectLabel(c: CourseRecord): string {
@@ -1837,6 +1867,21 @@ onMounted(loadPageData)
 
 :deep(.pref-autocomplete-panel .p-autocomplete-option) {
   font-size: 0.84rem;
+}
+
+.pref-time-cell {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.pref-time-period {
+  min-width: 5.1rem;
+}
+
+:deep(.pref-time-period .p-button) {
+  padding: 0.35rem 0.45rem;
 }
 
 :deep(.pref-page .p-inputtext::placeholder) {
