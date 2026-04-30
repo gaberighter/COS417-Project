@@ -76,7 +76,10 @@ async function getRoles(username: string, email: string): Promise<string[]> {
 
   const db = mongoose.connection.db
   if (!db) {
-    throw new Error('Database connection not established')
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Database connection not established',
+    })
   }
   const professor = await db.collection('professors').findOne({ covenantId })
 
