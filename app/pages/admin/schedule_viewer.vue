@@ -36,6 +36,16 @@
           <p><strong>Term:</strong> {{ selectedScheduleDetails.term }}</p>
           <p><strong>Run:</strong> {{ selectedScheduleDetails.runNumber }}</p>
           <p><strong>Status:</strong> {{ selectedScheduleDetails.status }}</p>
+          <div>
+            <button
+              type="button"
+              class="action-btn"
+              :disabled="exportPending || !canExport"
+              @click="exportSchedule"
+            >
+              {{ exportPending ? 'Exporting...' : 'Export CSV' }}
+            </button>
+          </div>
         </div>
         <div class="table-container">
           <table>
@@ -258,6 +268,57 @@ const editingDraft = reactive<Assignment>({
   endTime: '',
   overrideBy: null,
 })
+
+const exportPending = ref(false)
+
+const canExport = computed(() => {
+  const status = selectedScheduleDetails.value?.status ?? ''
+  return status === 'approved' || status === 'exported'
+})
+
+async function exportSchedule() {
+  if (!selectedScheduleDetails.value) return
+  exportPending.value = true
+  actionMessage.value = ''
+  try {
+    const term = selectedScheduleDetails.value.term
+    const res = await fetch(`/api/schedule/${encodeURIComponent(term)}/export`, {
+      credentials: 'same-origin',
+    })
+    if (!res.ok) {
+      const txt = await res.text()
+      throw new Error(txt || res.statusText)
+    }
+
+    const blob = await res.blob()
+    const disposition = res.headers.get('Content-Disposition') || ''
+    let filename = `schedule_${term}.csv`
+    const m = /filename\*?=.*''([^;\n\r\"]+)/.exec(disposition)
+    if (m && m[1]) {
+      try {
+        filename = decodeURIComponent(m[1])
+      } catch (_) {
+        filename = m[1]
+      }
+    }
+
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+
+    actionMessage.value = 'Export started.'
+  } catch (err) {
+    actionMessage.value = 'Unable to export schedule.'
+    selectedScheduleError.value = err
+  } finally {
+    exportPending.value = false
+  }
+}
 
 const dayPatternOptions: Assignment['days'][] = [
   'MWF',
