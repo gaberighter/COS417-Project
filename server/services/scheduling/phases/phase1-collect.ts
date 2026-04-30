@@ -220,9 +220,11 @@ function buildWorkItem(
       effectivePreference?.preferredTimes ??
       (course.typicalTime !== null ? [course.typicalTime] : []),
     avoidTimes: effectivePreference?.avoidTimes ?? [],
-    requiredEquipment: effectivePreference?.requiredEquipment ?? [
-      ...course.requiredEquipment,
-    ],
+    requiredEquipment:
+      effectivePreference?.requiredEquipment &&
+      effectivePreference.requiredEquipment.length > 0
+        ? effectivePreference.requiredEquipment
+        : [...course.requiredEquipment],
     preferredBuilding: effectivePreference?.preferredBuilding ?? null,
     preferredRoomId: effectivePreference?.preferredRoomId ?? null,
     backToBackWith: effectivePreference?.backToBackWith ?? null,
