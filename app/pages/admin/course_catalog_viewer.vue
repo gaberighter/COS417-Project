@@ -137,6 +137,7 @@
             type="text"
             placeholder="e.g. COS"
             maxlength="4"
+            :disabled="isEditMode"
             required
           />
         </div>
@@ -147,6 +148,7 @@
             v-model="courseForm.courseNumber"
             type="text"
             placeholder="e.g. 126"
+            :disabled="isEditMode"
             required
           />
         </div>
@@ -384,6 +386,7 @@ const loadCourses = async () => {
 
   try {
     const fetchedCourses = await $fetch<Course[]>('/api/courses', {
+      query: { includeInactive: 'true' },
       headers: { 'x-dev-role': 'Admin' },
     })
     courses.value = fetchedCourses

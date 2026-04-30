@@ -310,6 +310,7 @@ const loadProfessors = async () => {
 
   try {
     const fetchedProfessors = await $fetch<Professor[]>('/api/professors', {
+      query: { includeInactive: 'true' },
       headers: { 'x-dev-role': 'Admin' },
     })
     professors.value = fetchedProfessors
