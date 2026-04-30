@@ -28,7 +28,9 @@
     <div class="schedule-content">
       <div v-if="!selectedScheduleId">Select a schedule to view details.</div>
       <div v-else-if="selectedSchedulePending">Loading schedule details...</div>
-      <div v-else-if="selectedScheduleError">Unable to load schedule details.</div>
+      <div v-else-if="selectedScheduleError">
+        Unable to load schedule details.
+      </div>
       <div v-else-if="selectedScheduleDetails" class="schedule-details">
         <div class="schedule-meta">
           <p><strong>Term:</strong> {{ selectedScheduleDetails.term }}</p>
@@ -293,7 +295,9 @@ async function selectSchedule(schedule: ScheduleSummary) {
     )
     const details =
       response.schedules.find((item) => item._id === schedule._id) ??
-      response.schedules.find((item) => item.runNumber === schedule.runNumber) ??
+      response.schedules.find(
+        (item) => item.runNumber === schedule.runNumber,
+      ) ??
       null
 
     if (requestId !== latestScheduleRequest) return

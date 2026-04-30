@@ -353,8 +353,15 @@ definePageMeta({
 })
 
 // Composables
-const { rooms, pending, error, loadRooms, retryLoad, deleteRoom, deleteMessage } =
-  useRoomCRUD()
+const {
+  rooms,
+  pending,
+  error,
+  loadRooms,
+  retryLoad,
+  deleteRoom,
+  deleteMessage,
+} = useRoomCRUD()
 const {
   filters,
   appliedFilters,
