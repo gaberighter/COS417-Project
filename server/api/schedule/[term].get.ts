@@ -3,19 +3,14 @@
 // Role: Admin — retrieve the latest schedule result for a term.
 
 import { defineEventHandler, getRouterParam, createError } from 'h3'
-import { requireAuth, type AuthContext } from '../../utils/auth'
+import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Schedule } from '../../models/index'
 
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 
 export default defineEventHandler(async (event) => {
-  if (process.env.DISABLE_SSO_FOR_SCHEDULES === 'true') {
-    const auth: AuthContext = { userId: 'sso-bypass', role: 'Admin' }
-    event.context.auth = auth
-  } else {
-    requireAuth(event, ['Admin'])
-  }
+  requireAuth(event, ['Admin'])
   await connectDB()
 
   const term = getRouterParam(event, 'term')

@@ -15,6 +15,7 @@ import mongoose from 'mongoose'
 import saml2 from 'saml2-js'
 
 import { Users } from '../models/user.model'
+import type { AuthContext, UserRole } from '../utils/auth'
 type SAMLProviders = {
   sp: InstanceType<typeof saml2.ServiceProvider>
   idp: InstanceType<typeof saml2.IdentityProvider>
@@ -66,9 +67,10 @@ function lookupOracleUser(email: string) {
   ).toUpperCase()
 }
 
-async function getRoles(_username: string, email: string): Promise<string[]> {
+async function getRoles(_username: string, email?: string): Promise<string[]> {
+  if (!email) return []
   const roles: string[] = []
-  const covenantId = email.substring(0, email.indexOf('@'))
+  const covenantId = email.substring(0, email.indexOf('@')).toLowerCase()
 
   if (REGISTRAR_USERNAMES.includes(covenantId)) {
     roles.push('Admin')
@@ -269,7 +271,10 @@ export default defineEventHandler(async (event: H3Event) => {
                   ? samlUser.oracleUser
                   : lookupOracleUser(samlUser.email)
 
-              const roles = await getRoles(username, samlUser.email)
+              const roles = await getRoles(
+                username,
+                samlUser.email as string | undefined,
+              )
 
               // Look up the user and create the session payload.
               const user: Record<string, unknown> = {
@@ -357,9 +362,28 @@ export default defineEventHandler(async (event: H3Event) => {
   if (apiIndex !== -1 && !urlObj.pathname.endsWith('/api/_auth/session')) {
     const session = await requireUserSession(event)
     const roles: string[] = (session.user as any).roles ?? []
+    const username: string = (session.user as any).username ?? ''
+
+    if (!username) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Session missing user identity',
+      })
+    }
 
     const isRegistrar = roles.includes('Admin')
     const isFaculty = roles.includes('Faculty')
+
+    // Expose auth context so downstream route handlers and audit logging can use it.
+    // Only set a role when the user actually holds one; unrecognized roles default to Faculty
+    // (least-privileged) but are still subject to route-level checks below.
+    const primaryRole: UserRole = isRegistrar
+      ? 'Admin'
+      : isFaculty
+        ? 'Faculty'
+        : 'Faculty'
+    const authCtx: AuthContext = { userId: username, role: primaryRole }
+    event.context.auth = authCtx
 
     const isRegistrarOnly = REGISTRAR_ONLY.some((route) =>
       urlObj.pathname.startsWith(route),
