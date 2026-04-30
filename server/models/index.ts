@@ -11,7 +11,7 @@ export type DayPattern =
   | 'T'
   | 'R'
 export type RoomType = 'classroom' | 'lab'
-export type PreferenceStatus = 'empty' | 'draft' | 'submitted' | 'approved'
+export type PreferenceStatus = 'not_submitted' | 'submitted'
 export type ScheduleStatus = 'draft' | 'under_review' | 'approved' | 'exported'
 
 export interface IRoomEquipment {
@@ -56,6 +56,7 @@ export interface ICourse {
 export interface ICoursePreference {
   courseId: string
   section?: string | null
+  crn?: string | null
   title: string
   expectedEnrollment: number
   maxCapacity?: number | null
@@ -64,8 +65,10 @@ export interface ICoursePreference {
   preferredTimes?: string[]
   avoidTimes?: string[]
   requiredEquipment?: string[]
+  instructor?: string | null
   preferredBuilding?: string | null
   preferredRoomId?: string | null
+  courseFee?: number | null
   backToBackWith?: string | null
   coreqWith?: string[]
 }
@@ -222,6 +225,7 @@ const coursePreferenceSchema = new Schema<ICoursePreference>(
   {
     courseId: { type: String, required: true, trim: true },
     section: { type: String, default: null, trim: true },
+    crn: { type: String, default: null, trim: true },
     title: { type: String, required: true, trim: true },
     expectedEnrollment: { type: Number, required: true, min: 0 },
     maxCapacity: { type: Number, default: null, min: 0 },
@@ -234,8 +238,10 @@ const coursePreferenceSchema = new Schema<ICoursePreference>(
     preferredTimes: { type: [String], default: [] },
     avoidTimes: { type: [String], default: [] },
     requiredEquipment: { type: [String], default: [] },
+    instructor: { type: String, default: null, trim: true },
     preferredBuilding: { type: String, default: null, trim: true },
     preferredRoomId: { type: String, default: null, trim: true },
+    courseFee: { type: Number, default: null, min: 0 },
     backToBackWith: { type: String, default: null, trim: true },
     coreqWith: { type: [String], default: [] },
   },
@@ -251,8 +257,8 @@ const preferenceSubmissionSchema = new Schema<IPreferenceSubmission>(
     status: {
       type: String,
       required: true,
-      enum: ['empty', 'draft', 'submitted', 'approved'],
-      default: 'draft',
+      enum: ['not_submitted', 'submitted'],
+      default: 'not_submitted',
     },
     courses: { type: [coursePreferenceSchema], required: true, default: [] },
   },

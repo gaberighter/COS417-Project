@@ -13,6 +13,12 @@ import {
   type IPreferenceSubmission,
 } from '../../models/index'
 import { logAction } from '../../services/auditService'
+import {
+  VALID_PREFERENCE_STATUSES,
+  normalizePreferenceSubmissionStatus,
+  normalizePreferenceStatus,
+  validateCourses,
+} from '../../utils/preferenceValidation'
 
 interface PreferencePayload {
   term: string
@@ -45,6 +51,24 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  if (
+    body.status !== undefined &&
+    !VALID_PREFERENCE_STATUSES.includes(body.status)
+  ) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `status must be one of: ${VALID_PREFERENCE_STATUSES.join(', ')}`,
+    })
+  }
+
+  const courseError = validateCourses(courses)
+  if (courseError) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Invalid courses: ${courseError}`,
+    })
+  }
+
   const prof = await Professor.findOne({
     $or: [
       { covenantId: auth.userId.toLowerCase() },
@@ -61,12 +85,15 @@ export default defineEventHandler(async (event) => {
 
   const now = new Date()
   const submittedBy = prof._id
-  const status = body.status ?? 'submitted'
+  const status =
+    body.status === undefined
+      ? 'submitted'
+      : normalizePreferenceStatus(body.status)
   const submission: IPreferenceSubmission = {
     term: body.term,
     department: body.department ?? prof.departmentCode,
     submittedBy,
-    submittedAt: status === 'submitted' || status === 'approved' ? now : null,
+    submittedAt: status === 'submitted' ? now : null,
     status,
     courses,
   }
@@ -78,6 +105,10 @@ export default defineEventHandler(async (event) => {
     prof.preferences[existingIndex] = submission
   } else {
     prof.preferences.push(submission)
+  }
+
+  for (const existingSubmission of prof.preferences) {
+    normalizePreferenceSubmissionStatus(existingSubmission)
   }
 
   await prof.save()

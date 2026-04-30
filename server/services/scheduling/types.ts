@@ -11,7 +11,12 @@ export type DayPattern =
 
 export type ScheduleStatus = 'draft' | 'under_review' | 'approved' | 'exported'
 
-export type PreferenceStatus = 'empty' | 'draft' | 'submitted' | 'approved'
+export type PreferenceStatus =
+  | 'empty'
+  | 'draft'
+  | 'submitted'
+  | 'approved'
+  | 'not_submitted'
 
 export interface Room {
   _id: string
