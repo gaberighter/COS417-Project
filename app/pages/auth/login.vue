@@ -36,6 +36,7 @@ const { redirectToAdmin, redirectToFaculty } = useDebugNavigation()
 .login-page {
   min-height: 100vh;
   position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
