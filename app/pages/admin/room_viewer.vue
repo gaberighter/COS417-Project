@@ -152,10 +152,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="room in filteredRooms"
-              :key="room.abbreviation"
-            >
+            <tr v-for="room in filteredRooms" :key="room.abbreviation">
               <td>{{ room.displayName }}</td>
               <td>{{ room.capacity }}</td>
               <td>{{ room.roomType }}</td>
