@@ -35,7 +35,19 @@ export default defineEventHandler(async (event) => {
   const canReadOwnSubmission = roles.includes('Faculty')
   const canReadAllSubmissions = roles.includes('Admin')
   const query = getQuery(event)
-  const adminScope = query.scope === 'all' || query.all === 'true'
+  const scope =
+    typeof query.scope === 'string'
+      ? query.scope
+      : Array.isArray(query.scope)
+        ? query.scope[0]
+        : undefined
+  const all =
+    typeof query.all === 'string'
+      ? query.all
+      : Array.isArray(query.all)
+        ? query.all[0]
+        : undefined
+  const adminScope = scope === 'all' || all === 'true'
 
   if (canReadOwnSubmission && (!canReadAllSubmissions || !adminScope)) {
     const professor = await Professor.findOne(
