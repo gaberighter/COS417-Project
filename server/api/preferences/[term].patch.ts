@@ -37,6 +37,9 @@ function validateCoursePreference(
   course: unknown,
   index: number,
 ): string | null {
+  if (typeof course !== 'object' || course === null) {
+    return `Course ${index}: must be an object, got ${typeof course}`
+  }
   const c = course as Record<string, unknown>
 
   if (!c.courseId || typeof c.courseId !== 'string') {
@@ -90,6 +93,58 @@ function validateCoursePreference(
             return `Course ${index}: ${timeField}[${i}] must be in HH:MM or HH:MM-HH:MM format`
           }
         }
+      }
+    }
+  }
+
+  // Validate optional maxCapacity
+  if (c.maxCapacity !== undefined && c.maxCapacity !== null) {
+    if (typeof c.maxCapacity !== 'number' || c.maxCapacity < 0) {
+      return `Course ${index}: maxCapacity must be a non-negative number or null`
+    }
+  }
+
+  // Validate optional requiredEquipment
+  if (c.requiredEquipment !== undefined) {
+    if (!Array.isArray(c.requiredEquipment)) {
+      return `Course ${index}: requiredEquipment must be an array of strings`
+    }
+    for (let i = 0; i < c.requiredEquipment.length; i++) {
+      if (typeof c.requiredEquipment[i] !== 'string') {
+        return `Course ${index}: requiredEquipment[${i}] must be a string`
+      }
+    }
+  }
+
+  // Validate optional preferredBuilding
+  if (c.preferredBuilding !== undefined && c.preferredBuilding !== null) {
+    if (typeof c.preferredBuilding !== 'string') {
+      return `Course ${index}: preferredBuilding must be a string or null`
+    }
+  }
+
+  // Validate optional preferredRoomId
+  if (c.preferredRoomId !== undefined && c.preferredRoomId !== null) {
+    if (typeof c.preferredRoomId !== 'string') {
+      return `Course ${index}: preferredRoomId must be a string or null`
+    }
+  }
+
+  // Validate optional backToBackWith
+  if (c.backToBackWith !== undefined && c.backToBackWith !== null) {
+    if (typeof c.backToBackWith !== 'string') {
+      return `Course ${index}: backToBackWith must be a string or null`
+    }
+  }
+
+  // Validate optional coreqWith
+  if (c.coreqWith !== undefined) {
+    if (!Array.isArray(c.coreqWith)) {
+      return `Course ${index}: coreqWith must be an array of strings`
+    }
+    for (let i = 0; i < c.coreqWith.length; i++) {
+      if (typeof c.coreqWith[i] !== 'string') {
+        return `Course ${index}: coreqWith[${i}] must be a string`
       }
     }
   }

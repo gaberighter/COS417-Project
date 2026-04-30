@@ -36,7 +36,11 @@ function validateAssignments(assignments: unknown): string | null {
     return 'assignments must be an array'
   }
   for (let i = 0; i < assignments.length; i++) {
-    const a = assignments[i] as Record<string, unknown>
+    const entry = assignments[i]
+    if (typeof entry !== 'object' || entry === null) {
+      return `Assignment ${i}: must be an object, got ${typeof entry}`
+    }
+    const a = entry as Record<string, unknown>
     if (!a.courseId || typeof a.courseId !== 'string') {
       return `Assignment ${i}: courseId is required and must be a string`
     }
@@ -63,6 +67,12 @@ function validateAssignments(assignments: unknown): string | null {
     ) {
       return `Assignment ${i}: endTime must be in HH:MM format (24-hour)`
     }
+    // Validate optional overrideBy field
+    if (a.overrideBy !== undefined && a.overrideBy !== null) {
+      if (typeof a.overrideBy !== 'string') {
+        return `Assignment ${i}: overrideBy must be a string or null`
+      }
+    }
   }
   return null
 }
@@ -72,12 +82,29 @@ function validateConflicts(conflicts: unknown): string | null {
     return 'conflicts must be an array'
   }
   for (let i = 0; i < conflicts.length; i++) {
-    const c = conflicts[i] as Record<string, unknown>
+    const entry = conflicts[i]
+    if (typeof entry !== 'object' || entry === null) {
+      return `Conflict ${i}: must be an object, got ${typeof entry}`
+    }
+    const c = entry as Record<string, unknown>
     if (!c.courseId || typeof c.courseId !== 'string') {
       return `Conflict ${i}: courseId is required and must be a string`
     }
     if (!c.reason || typeof c.reason !== 'string') {
       return `Conflict ${i}: reason is required and must be a string`
+    }
+    // Validate optional resolvedBy field
+    if (c.resolvedBy !== undefined && c.resolvedBy !== null) {
+      if (typeof c.resolvedBy !== 'string') {
+        return `Conflict ${i}: resolvedBy must be a string or null`
+      }
+    }
+    // Validate optional resolvedAt field
+    if (c.resolvedAt !== undefined && c.resolvedAt !== null) {
+      const dateStr = String(c.resolvedAt)
+      if (isNaN(Date.parse(dateStr))) {
+        return `Conflict ${i}: resolvedAt must be a valid ISO date string or null`
+      }
     }
   }
   return null
