@@ -7,14 +7,16 @@
     <p v-if="error" class="error">{{ error }}</p>
   </div>
   <div class="temporary-debug-buttons">
-    <h1>Temporary Debug Buttons</h1>
     <button @click="redirectToAdmin">Admin Page</button>
     <button @click="redirectToFaculty">Faculty Page</button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useAuth } from '~/composables/useAuth'
+definePageMeta({
+  pageTitle: 'Login',
+  hideTopBar: true,
+})
 
 const { loginWithSso, isLoading, error } = useAuth()
 const { redirectToAdmin, redirectToFaculty } = useDebugNavigation()
@@ -22,7 +24,7 @@ const { redirectToAdmin, redirectToFaculty } = useDebugNavigation()
 
 <style>
 .error {
-  color: #c31b1b;
+  color: var(--color-text-danger);
   margin-top: 0.75rem;
 }
 </style>
