@@ -212,6 +212,10 @@ export default defineEventHandler(async (event: H3Event) => {
 
         return new Promise((resolve, reject) => {
           const onAssert = async (err: Error | null, samlResponse: any) => {
+            let samlUser: any
+            let name_id: any
+            let session_index: any
+
             try {
               if (err) {
                 return reject(
@@ -220,11 +224,10 @@ export default defineEventHandler(async (event: H3Event) => {
               }
 
               // Save name_id and session_index for logout.
-              const {
-                name_id,
-                session_index,
-                attributes: samlUser,
-              } = samlResponse.user
+              const extracted = samlResponse.user
+              name_id = extracted.name_id
+              session_index = extracted.session_index
+              samlUser = extracted.attributes
 
               // Log only attribute keys by default to avoid leaking PII in logs.
               const samlAttributeKeys = Object.keys(samlUser || {})
