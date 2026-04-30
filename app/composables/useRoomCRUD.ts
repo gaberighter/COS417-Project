@@ -14,8 +14,8 @@ interface RoomEquipment {
 }
 
 interface Room {
-  abbreviation?: string
-  buildingCode: string
+  abbreviation: string
+  buildingName: string
   roomNumber: string
   displayName: string
   capacity: number
@@ -47,20 +47,14 @@ export const useRoomCRUD = () => {
   const retryLoad = () => loadRooms()
 
   const buildRoomId = (room: Room) => {
-    if (room.abbreviation?.trim()) {
-      return room.abbreviation.trim().toUpperCase()
-    }
-
-    const buildingCode = room.buildingCode?.trim().toUpperCase()
-    const roomNumber = room.roomNumber?.trim()
-    return `${buildingCode} ${roomNumber}`.trim()
+    return room.abbreviation.trim().toUpperCase()
   }
 
   const deleteRoom = async (room: Room) => {
     const roomId = buildRoomId(room)
     deleteMessage.value = ''
     const shouldDelete = window.confirm(
-      `Delete room ${room.buildingCode} ${room.roomNumber}?`,
+      `Delete room ${room.buildingName} ${room.roomNumber}?`,
     )
     if (!shouldDelete) {
       return

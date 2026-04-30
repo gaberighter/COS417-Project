@@ -14,7 +14,8 @@ interface RoomEquipment {
 }
 
 interface Room {
-  buildingCode: string
+  abbreviation: string
+  buildingName: string
   roomNumber: string
   displayName: string
   capacity: number
@@ -26,7 +27,7 @@ interface Room {
 type BooleanFilter = 'any' | 'true' | 'false'
 
 interface RoomFilters {
-  buildingCode: string
+  buildingName: string
   roomNumber: string
   displayName: string
   roomType: string
@@ -44,7 +45,7 @@ interface RoomFilters {
 
 export const useRoomFilters = (rooms: Ref<Room[]>) => {
   const createDefaultFilters = (): RoomFilters => ({
-    buildingCode: '',
+    buildingName: '',
     roomNumber: '',
     displayName: '',
     roomType: '',
@@ -90,8 +91,8 @@ export const useRoomFilters = (rooms: Ref<Room[]>) => {
   const filteredRooms = computed(() => {
     return rooms.value.filter((room) => {
       if (
-        appliedFilters.buildingCode &&
-        !includesInsensitive(room.buildingCode, appliedFilters.buildingCode)
+        appliedFilters.buildingName &&
+        !includesInsensitive(room.buildingName, appliedFilters.buildingName)
       ) {
         return false
       }

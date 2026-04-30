@@ -4,11 +4,11 @@
       <h2>Filter Rooms</h2>
       <div class="filter-grid">
         <label>
-          Building Code
+          Building Name
           <input
-            v-model="filters.buildingCode"
+            v-model="filters.buildingName"
             type="text"
-            placeholder="e.g. SCI"
+            placeholder="e.g. Science Building"
           />
         </label>
         <label>
@@ -154,7 +154,7 @@
           <tbody>
             <tr
               v-for="room in filteredRooms"
-              :key="`${room.buildingCode}-${room.roomNumber}`"
+              :key="room.abbreviation"
             >
               <td>{{ room.displayName }}</td>
               <td>{{ room.capacity }}</td>
