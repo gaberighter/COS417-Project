@@ -68,8 +68,13 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  const canEditOwnPreferences =
+    auth.roles?.includes('Faculty') ?? auth.role === 'Faculty'
+  const canTargetProfessor =
+    auth.roles?.includes('Admin') ?? auth.role === 'Admin'
+
   let prof
-  if (auth.role === 'Faculty') {
+  if (canEditOwnPreferences && !body.professorId) {
     prof = await Professor.findOne({
       $or: [
         { covenantId: auth.userId.toLowerCase() },
@@ -88,6 +93,13 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    if (!canTargetProfessor) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Only admins may target another professor',
+      })
+    }
+
     const professorId = body.professorId.trim()
 
     prof = await Professor.findOne({
@@ -99,7 +111,7 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 404,
       statusMessage:
-        auth.role === 'Faculty'
+        canEditOwnPreferences && !body.professorId
           ? 'Professor record not found'
           : `Professor not found: ${String(body.professorId ?? '').trim()}`,
     })

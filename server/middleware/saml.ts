@@ -72,10 +72,16 @@ function lookupOracleUser(email: string) {
   ).toUpperCase()
 }
 
+function covenantIdFromEmail(email?: string): string | null {
+  if (!email || !email.includes('@')) return null
+  return email.substring(0, email.indexOf('@')).toLowerCase()
+}
+
 async function getRoles(_username: string, email?: string): Promise<string[]> {
   if (!email) return []
   const roles: string[] = []
-  const covenantId = email.substring(0, email.indexOf('@')).toLowerCase()
+  const covenantId = covenantIdFromEmail(email)
+  if (!covenantId) return roles
 
   if (REGISTRAR_USERNAMES.includes(covenantId)) {
     roles.push('Admin')
@@ -413,6 +419,7 @@ export default defineEventHandler(async (event: H3Event) => {
     const session = await requireUserSession(event)
     const roles: string[] = (session.user as any).roles ?? []
     const username: string = (session.user as any).username ?? ''
+    const email: string | undefined = (session.user as any).email
     const method = (event.method ?? 'GET').toUpperCase()
 
     if (!username) {
@@ -425,16 +432,9 @@ export default defineEventHandler(async (event: H3Event) => {
     const isRegistrar = roles.includes('Admin')
     const isFaculty = roles.includes('Faculty')
 
-    // Expose auth context so downstream route handlers and audit logging can use it.
-    // Only set a role when the user actually holds one; unrecognized roles default to Faculty
-    // (least-privileged) but are still subject to route-level checks below.
-    const primaryRole: UserRole = isRegistrar
-      ? 'Admin'
-      : isFaculty
-        ? 'Faculty'
-        : 'Faculty'
-    const authCtx: AuthContext = { userId: username, role: primaryRole }
-    event.context.auth = authCtx
+    if (!isRegistrar && !isFaculty) {
+      throw createError({ statusCode: 403, statusMessage: 'Access denied' })
+    }
 
     const isRegistrarOnly = REGISTRAR_ONLY.some((route) =>
       urlObj.pathname.startsWith(route),
@@ -445,6 +445,23 @@ export default defineEventHandler(async (event: H3Event) => {
     const isFacultyRoute = FACULTY_OR_REGISTRAR.some((route) =>
       urlObj.pathname.startsWith(route),
     )
+
+    const covenantId = covenantIdFromEmail(email) ?? username.toLowerCase()
+
+    const appRoles = roles.filter((role): role is UserRole =>
+      role === 'Admin' || role === 'Faculty',
+    )
+
+    // Expose auth context so downstream route handlers and audit logging can use it.
+    // `role` remains the primary role for behavior branches, while `roles`
+    // preserves the full set for access checks.
+    const primaryRole: UserRole = isRegistrar ? 'Admin' : 'Faculty'
+    const authCtx: AuthContext = {
+      userId: covenantId,
+      role: primaryRole,
+      roles: appRoles,
+    }
+    event.context.auth = authCtx
 
     if (isRegistrarOnly && !isRegistrar) {
       throw createError({ statusCode: 403, statusMessage: 'Access denied' })
