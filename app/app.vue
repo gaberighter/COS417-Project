@@ -45,12 +45,12 @@
 
 <script setup lang="ts">
 const route = useRoute()
-const { user, loggedIn, fetch: refreshSession } = useUserSession()
+const { user, loggedIn, fetch: refreshSession, clear } = useUserSession()
 const auth = {
   isAuthenticated: loggedIn,
   user: user,
   logout: async () => {
-    await $fetch('/api/_auth/session', { method: 'DELETE' })
+    await clear()
     await navigateTo('/auth/login')
   },
 } as Record<string, unknown>
