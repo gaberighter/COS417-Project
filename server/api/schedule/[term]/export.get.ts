@@ -51,6 +51,20 @@ export default defineEventHandler(async (event) => {
 
   const file = await buildScheduleExportFile(schedule, format)
   await markScheduleAsExported(schedule._id)
+  setHeader(
+    event,
+    'Cache-Control',
+    'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+  )
+  setHeader(event, 'Pragma', 'no-cache')
+  setHeader(event, 'Expires', '0')
+  setHeader(event, 'Surrogate-Control', 'no-store')
+  setHeader(event, 'X-Schedule-Export-Version', 'human-readable-v2')
+  setHeader(
+    event,
+    'X-Schedule-Export-Headers',
+    'Dept|Course|Section|Title|Instructor|Time|Building|Room|Enroll|CRN|Course Fee',
+  )
   setHeader(event, 'Content-Type', file.contentType)
   setHeader(
     event,

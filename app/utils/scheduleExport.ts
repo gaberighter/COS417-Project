@@ -9,9 +9,12 @@ export async function downloadScheduleExport(
   runNumber: number,
   format: ScheduleExportFormat,
 ) {
-  const exportUrl = `/api/schedule/${encodeURIComponent(term)}/export?runNumber=${runNumber}&format=${format}`
+  const runtimeConfig = useRuntimeConfig()
+  const basePath = (runtimeConfig.app.baseURL || '/').replace(/\/$/, '')
+  const exportUrl = `${basePath}/api/schedule/${encodeURIComponent(term)}/export?runNumber=${runNumber}&format=${format}&_ts=${Date.now()}`
   const response = await fetch(exportUrl, {
     credentials: 'include',
+    cache: 'no-store',
   })
 
   if (!response.ok) {
