@@ -357,6 +357,7 @@ export async function buildScheduleExportFile(
       },
       { _id: 1, abbreviation: 1, roomNumber: 1, displayName: 1 },
     )
+      .collation({ locale: 'en', strength: 2 })
       .lean()
       .exec(),
   ])
