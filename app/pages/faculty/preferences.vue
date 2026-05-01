@@ -974,18 +974,18 @@ function normalizeLookupValue(v: string): string {
 // Returns a "LAST,FIRSTINITIAL" key for fuzzy-matching names across
 // different formats ("First Last" vs "Last, First" vs nickname variants).
 function profNameKey(name: string): string | null {
-  let first: string, last: string
+  let first: string | undefined, last: string | undefined
   if (name.includes(',')) {
-    const [l, f] = name.split(',').map((s) => s.trim())
-    last = l
-    first = f
+    const parts = name.split(',').map((s) => s.trim())
+    last = parts[0]
+    first = parts[1]
   } else {
     const parts = name.trim().split(/\s+/)
     last = parts[parts.length - 1]
-    first = parts.slice(0, -1).join(' ')
+    first = parts.slice(0, -1).join(' ') || undefined
   }
   if (!last || !first) return null
-  return `${last.toUpperCase()},${first[0].toUpperCase()}`
+  return `${last.toUpperCase()},${first[0]!.toUpperCase()}`
 }
 
 function normalizeTimeValue(v: string): string {
