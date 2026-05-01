@@ -48,12 +48,45 @@ function normalizeRoomDisplayName(
   return normalized.length > 0 ? normalized : null
 }
 
+function normalizeRoomReference(
+  value: string | null | undefined,
+): string | null {
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  const normalized = value.trim().toLowerCase()
+  return normalized.length > 0 ? normalized : null
+}
+
+function roomReferenceAliases(room: Room): string[] {
+  const aliases = new Set<string>()
+
+  for (const value of [
+    room._id,
+    room.abbreviation ?? null,
+    room.displayName ?? null,
+    `${room.buildingCode} ${room.roomNumber}`,
+  ]) {
+    const normalized = normalizeRoomReference(value)
+    if (normalized !== null) {
+      aliases.add(normalized)
+    }
+  }
+
+  return [...aliases]
+}
+
 function roomMatchesPreference(
   room: Room,
   preferredRoomId: string | null,
   preferredBuilding: string | null,
 ): boolean {
-  if (preferredRoomId !== null && preferredRoomId === room._id) {
+  const normalizedPreferredRoom = normalizeRoomReference(preferredRoomId)
+  if (
+    normalizedPreferredRoom !== null &&
+    roomReferenceAliases(room).includes(normalizedPreferredRoom)
+  ) {
     return true
   }
 
@@ -206,14 +239,20 @@ export function hasRealDataForRoom(
   if (
     input.historicalAssignments.some(
       (assignment) =>
-        assignment.roomId === room._id ||
-        assignment.buildingCode === room.buildingCode,
+        roomReferenceAliases(room).includes(
+          normalizeRoomReference(assignment.roomId) ?? '',
+        ) || assignment.buildingCode === room.buildingCode,
     )
   ) {
     return true
   }
 
-  if ((input.historicalPreferredRoomIds ?? []).includes(room._id)) {
+  const roomAliases = roomReferenceAliases(room)
+  if (
+    (input.historicalPreferredRoomIds ?? []).some((roomId) =>
+      roomAliases.includes(normalizeRoomReference(roomId) ?? ''),
+    )
+  ) {
     return true
   }
 

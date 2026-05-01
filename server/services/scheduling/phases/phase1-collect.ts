@@ -148,10 +148,42 @@ function mergeUniqueStrings(
   return [...new Set(lists.flatMap((list) => list ?? []))]
 }
 
+function normalizeRoomReference(value: string | null | undefined): string {
+  return String(value ?? '')
+    .trim()
+    .toUpperCase()
+}
+
+function resolveRoomReferenceToId(
+  rooms: Room[],
+  roomReference: string | null | undefined,
+): string | null {
+  const normalizedReference = normalizeRoomReference(roomReference)
+  if (!normalizedReference) {
+    return null
+  }
+
+  const matchedRoom =
+    rooms.find((room) =>
+      [
+        room._id,
+        room.abbreviation ?? null,
+        room.displayName ?? null,
+        `${room.buildingCode} ${room.roomNumber}`,
+      ].some(
+        (candidate) =>
+          normalizeRoomReference(candidate) === normalizedReference,
+      ),
+    ) ?? null
+
+  return matchedRoom?._id ?? null
+}
+
 function buildWorkItem(
   course: Awaited<ReturnType<typeof fetchCourses>>[number],
   professor: Professor,
   preference: PreferenceRecord | null,
+  rooms: Room[],
   historicalAssignments: HistoricalAssignment[],
   professorHistory: HistoricalAssignment[],
   similarProfessorHistory: HistoricalAssignment[],
@@ -164,11 +196,20 @@ function buildWorkItem(
   warnings: string[],
 ): CourseWorkItem {
   const preferenceCourses = preference ?? null
+  const resolvedPreferredRoomId = resolveRoomReferenceToId(
+    rooms,
+    preferenceCourses?.preferredRoomId ?? null,
+  )
   const effectivePreference = preferenceCourses
-    ? normalizeCoursePreferences(preferenceCourses)
+    ? {
+        ...normalizeCoursePreferences(preferenceCourses),
+        preferredRoomId:
+          resolvedPreferredRoomId ??
+          normalizeCoursePreferences(preferenceCourses).preferredRoomId,
+      }
     : null
   const hasSubmittedRoomBuildingPreference =
-    (preferenceCourses?.preferredRoomId ?? null) !== null ||
+    resolvedPreferredRoomId !== null ||
     (preferenceCourses?.preferredBuilding ?? null) !== null
   const hasDirectRoomHistory =
     historicalAssignments.length > 0 || professorHistory.length > 0
@@ -221,7 +262,7 @@ function buildWorkItem(
       effectivePreference?.requiredEquipment,
     ),
     preferredBuilding: effectivePreference?.preferredBuilding ?? null,
-    preferredRoomId: effectivePreference?.preferredRoomId ?? null,
+    preferredRoomId: resolvedPreferredRoomId ?? null,
     backToBackWith: effectivePreference?.backToBackWith ?? null,
     preferredBackToBackWith: [],
     coreqWith: mergeUniqueStrings(
@@ -578,6 +619,7 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
           course,
           professor,
           preference,
+          rooms,
           historicalAssignments.slice(0, schedulingConfig.maxHistoryPerCourse),
           professorHistory,
           similarProfessorHistory,
