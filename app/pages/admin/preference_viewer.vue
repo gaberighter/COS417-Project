@@ -459,8 +459,34 @@ async function loadAvailableTerms() {
       const [latestTerm] = availableTerms.value
       termInput.value = latestTerm ?? ''
     }
-  } catch {
-    availableTerms.value = []
+  } catch (err: unknown) {
+    const msg =
+      err &&
+      typeof err === 'object' &&
+      'data' in err &&
+      typeof (err as { data?: { statusMessage?: string } }).data
+        ?.statusMessage === 'string'
+        ? (err as { data: { statusMessage: string } }).data.statusMessage
+        : 'Failed to load available terms.'
+
+    const existingTerm = termInput.value.trim()
+    availableTerms.value = existingTerm ? [existingTerm] : []
+    errorMessage.value =
+      `${msg} Retry loading terms or enter one manually to continue.`
+
+    if (typeof window !== 'undefined' && !existingTerm) {
+      const manualTerm = window.prompt(
+        `${msg}\nEnter a term manually to continue:`,
+        '',
+      )
+      const normalizedTerm = manualTerm?.trim() ?? ''
+      if (normalizedTerm) {
+        termInput.value = normalizedTerm
+        availableTerms.value = [normalizedTerm]
+        errorMessage.value =
+          `${msg} Using manually entered term "${normalizedTerm}".`
+      }
+    }
   } finally {
     termsPending.value = false
   }
