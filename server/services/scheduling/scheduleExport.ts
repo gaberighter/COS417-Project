@@ -38,6 +38,58 @@ const bannerHeaders = [
 
 type BannerRow = Record<(typeof bannerHeaders)[number], string | number>
 
+function normalizeWhitespace(value: string): string {
+  return value.trim().replace(/\s+/g, ' ')
+}
+
+function looksLikeOpaqueReference(value: string): boolean {
+  return /^([a-f0-9]{24})(-[a-z0-9]+)?$/i.test(value)
+}
+
+function normalizeLookupKey(value: string): string {
+  const normalized = normalizeWhitespace(value)
+  return looksLikeOpaqueReference(normalized)
+    ? normalized.toLowerCase()
+    : normalized
+}
+
+function setLookupAlias<Value>(
+  map: Map<string, Value>,
+  key: string | null | undefined,
+  value: Value,
+) {
+  if (!key) return
+
+  const normalized = normalizeWhitespace(String(key))
+  if (!normalized) return
+
+  map.set(normalized, value)
+  map.set(normalized.toLowerCase(), value)
+  map.set(normalized.toUpperCase(), value)
+  map.set(normalizeLookupKey(normalized), value)
+}
+
+function getLookupValue<Value>(
+  map: Map<string, Value>,
+  key: string | null | undefined,
+): Value | undefined {
+  if (!key) return undefined
+
+  const normalized = normalizeWhitespace(String(key))
+  if (!normalized) return undefined
+
+  return (
+    map.get(normalized) ??
+    map.get(normalized.toLowerCase()) ??
+    map.get(normalized.toUpperCase()) ??
+    map.get(normalizeLookupKey(normalized))
+  )
+}
+
+function buildEnrollmentKey(professorKey: string, courseKey: string) {
+  return `${normalizeLookupKey(professorKey)}::${normalizeLookupKey(courseKey)}`
+}
+
 async function loadXlsxModule() {
   const module = await import('xlsx')
   return module.default ?? module
@@ -55,6 +107,63 @@ function getBuildingCode(roomAbbreviation: string): string {
   return roomAbbreviation.split(/\s+/)[0] ?? ''
 }
 
+function looksLikeOpaqueId(value: string): boolean {
+  return /^[a-f0-9]{24}$/i.test(value)
+}
+
+function formatExportCourseLabel(input: {
+  assignment: IAssignment
+  course?: {
+    deptCode: string
+    courseNumber: string
+    title: string
+    creditHours: number
+  }
+}) {
+  const section = courseSectionOf(input.assignment.courseId)
+  const base = input.course
+    ? [input.course.deptCode, input.course.courseNumber]
+        .filter(Boolean)
+        .join(' ')
+    : null
+
+  if (base) {
+    return section ? `${base}-${section}` : base
+  }
+
+  return section ? `Unresolved course (${section})` : 'Unresolved course'
+}
+
+function formatExportProfessorLabel(professor?: {
+  covenantId: string
+  displayName?: string
+}) {
+  if (professor?.displayName) {
+    return professor.displayName
+  }
+
+  if (professor?.covenantId && !looksLikeOpaqueId(professor.covenantId)) {
+    return professor.covenantId
+  }
+
+  return 'Unresolved professor'
+}
+
+function formatExportRoomLabel(room?: {
+  abbreviation: string
+  roomNumber: string
+}) {
+  if (room?.abbreviation) {
+    return room.abbreviation
+  }
+
+  if (room?.roomNumber) {
+    return `Room ${room.roomNumber}`
+  }
+
+  return 'Unresolved room'
+}
+
 function buildBannerRowData(
   term: string,
   assignments: IAssignment[],
@@ -68,7 +177,7 @@ function buildBannerRowData(
         creditHours: number
       }
     >
-    professorsById: Map<string, { covenantId: string }>
+    professorsById: Map<string, { covenantId: string; displayName?: string }>
     roomsById: Map<string, { abbreviation: string; roomNumber: string }>
     estimatedEnrollmentByKey: Map<string, number>
   },
@@ -78,24 +187,31 @@ function buildBannerRowData(
 
   for (const assignment of assignments) {
     const catalogCourseId = catalogCourseIdOf(assignment.courseId)
-    const course = lookups.coursesById.get(catalogCourseId)
-    const professor =
-      lookups.professorsById.get(assignment.professorId) ??
-      lookups.professorsById.get(assignment.professorId.toLowerCase())
-    const room = lookups.roomsById.get(assignment.roomId)
+    const course = getLookupValue(lookups.coursesById, catalogCourseId)
+    const professor = getLookupValue(
+      lookups.professorsById,
+      assignment.professorId,
+    )
+    const room = getLookupValue(lookups.roomsById, assignment.roomId)
     const normalizedReference = normalizeCourseReference(assignment.courseId)
-    const enrollmentKey = `${assignment.professorId}::${normalizedReference.scheduledCourseId}`
     const estimatedEnrollment =
-      lookups.estimatedEnrollmentByKey.get(enrollmentKey) ??
       lookups.estimatedEnrollmentByKey.get(
-        `${assignment.professorId.toLowerCase()}::${normalizedReference.scheduledCourseId}`,
+        buildEnrollmentKey(
+          assignment.professorId,
+          normalizedReference.scheduledCourseId,
+        ),
       ) ??
       lookups.estimatedEnrollmentByKey.get(
-        `${assignment.professorId}::${normalizedReference.catalogCourseId}`,
-      ) ??
-      lookups.estimatedEnrollmentByKey.get(
-        `${assignment.professorId.toLowerCase()}::${normalizedReference.catalogCourseId}`,
+        buildEnrollmentKey(
+          assignment.professorId,
+          normalizedReference.catalogCourseId,
+        ),
       )
+    const exportRowLabel = [
+      formatExportCourseLabel({ assignment, course }),
+      formatExportProfessorLabel(professor),
+      formatExportRoomLabel(room),
+    ].join(' | ')
 
     const row: BannerRow = {
       Department: course?.deptCode ?? '',
@@ -115,7 +231,7 @@ function buildBannerRowData(
 
     const rowMissing = bannerHeaders.filter((header) => row[header] === '')
     if (rowMissing.length > 0) {
-      missingFields.push(`${assignment.courseId}: ${rowMissing.join(', ')}`)
+      missingFields.push(`${exportRowLabel}: ${rowMissing.join(', ')}`)
       continue
     }
 
@@ -162,17 +278,23 @@ export async function buildScheduleExportFile(
   const courseIds = [
     ...new Set(
       schedule.assignments.map((assignment) =>
-        catalogCourseIdOf(assignment.courseId),
+        normalizeLookupKey(catalogCourseIdOf(assignment.courseId)),
       ),
     ),
   ]
   const professorIds = [
     ...new Set(
-      schedule.assignments.map((assignment) => assignment.professorId),
+      schedule.assignments.map((assignment) =>
+        normalizeLookupKey(assignment.professorId),
+      ),
     ),
   ]
   const roomIds = [
-    ...new Set(schedule.assignments.map((assignment) => assignment.roomId)),
+    ...new Set(
+      schedule.assignments.map((assignment) =>
+        normalizeLookupKey(assignment.roomId),
+      ),
+    ),
   ]
 
   const [courses, professors, rooms] = await Promise.all([
@@ -196,6 +318,7 @@ export async function buildScheduleExportFile(
       {
         _id: 1,
         covenantId: 1,
+        displayName: 1,
         preferences: { $elemMatch: { term: schedule.term } },
       },
     )
@@ -209,24 +332,36 @@ export async function buildScheduleExportFile(
       .exec(),
   ])
 
-  const coursesById = new Map(
-    courses.map((course) => [
-      course._id,
-      {
-        deptCode: course.deptCode,
-        courseNumber: course.courseNumber,
-        title: course.title,
-        creditHours: course.creditHours,
-      },
-    ]),
-  )
-  const professorsById = new Map<string, { covenantId: string }>()
+  const coursesById = new Map<
+    string,
+    {
+      deptCode: string
+      courseNumber: string
+      title: string
+      creditHours: number
+    }
+  >()
+  const professorsById = new Map<
+    string,
+    { covenantId: string; displayName?: string }
+  >()
   const estimatedEnrollmentByKey = new Map<string, number>()
+  for (const course of courses) {
+    const payload = {
+      deptCode: course.deptCode,
+      courseNumber: course.courseNumber,
+      title: course.title,
+      creditHours: course.creditHours,
+    }
+    setLookupAlias(coursesById, course._id, payload)
+  }
   for (const professor of professors) {
-    professorsById.set(professor._id, { covenantId: professor.covenantId })
-    professorsById.set(professor.covenantId, {
+    const payload = {
       covenantId: professor.covenantId,
-    })
+      displayName: professor.displayName,
+    }
+    setLookupAlias(professorsById, professor._id, payload)
+    setLookupAlias(professorsById, professor.covenantId, payload)
 
     for (const submission of professor.preferences ?? []) {
       if (submission.term !== schedule.term) continue
@@ -236,19 +371,31 @@ export async function buildScheduleExportFile(
           coursePreference.section ?? null,
         )
         estimatedEnrollmentByKey.set(
-          `${professor._id}::${normalizedReference.scheduledCourseId}`,
+          buildEnrollmentKey(
+            professor._id,
+            normalizedReference.scheduledCourseId,
+          ),
           coursePreference.expectedEnrollment,
         )
         estimatedEnrollmentByKey.set(
-          `${professor._id}::${normalizedReference.catalogCourseId}`,
+          buildEnrollmentKey(
+            professor._id,
+            normalizedReference.catalogCourseId,
+          ),
           coursePreference.expectedEnrollment,
         )
         estimatedEnrollmentByKey.set(
-          `${professor.covenantId}::${normalizedReference.scheduledCourseId}`,
+          buildEnrollmentKey(
+            professor.covenantId,
+            normalizedReference.scheduledCourseId,
+          ),
           coursePreference.expectedEnrollment,
         )
         estimatedEnrollmentByKey.set(
-          `${professor.covenantId}::${normalizedReference.catalogCourseId}`,
+          buildEnrollmentKey(
+            professor.covenantId,
+            normalizedReference.catalogCourseId,
+          ),
           coursePreference.expectedEnrollment,
         )
       }
@@ -260,14 +407,12 @@ export async function buildScheduleExportFile(
     { abbreviation: string; roomNumber: string }
   >()
   for (const room of rooms) {
-    roomsById.set(room._id, {
+    const payload = {
       abbreviation: room.abbreviation,
       roomNumber: room.roomNumber,
-    })
-    roomsById.set(room.abbreviation, {
-      abbreviation: room.abbreviation,
-      roomNumber: room.roomNumber,
-    })
+    }
+    setLookupAlias(roomsById, room._id, payload)
+    setLookupAlias(roomsById, room.abbreviation, payload)
   }
 
   const rows = buildBannerRowData(schedule.term, schedule.assignments, {
