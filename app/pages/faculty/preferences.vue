@@ -454,6 +454,56 @@
       style="display: none"
       @change="handleCsvUpload"
     />
+    <!-- ─────────────── NEW ENTITY CONFIRMATION DIALOG ─────────────── -->
+    <Dialog
+      v-model:visible="showNewEntityDialog"
+      modal
+      :closable="false"
+      header="New Information Detected"
+      class="pref-new-entity-dialog"
+      style="width: 32rem"
+    >
+      <p class="pref-ned__desc">
+        The following information does not currently exist in the database and
+        will be persisted with your preferences. Review and confirm to continue,
+        or cancel to go back and edit.
+      </p>
+
+      <div v-if="pendingNewEntities.newInstructors.length > 0" class="pref-ned__group">
+        <span class="pref-ned__label">New Instructors</span>
+        <ul class="pref-ned__list">
+          <li v-for="name in pendingNewEntities.newInstructors" :key="name">{{ name }}</li>
+        </ul>
+      </div>
+
+      <div v-if="pendingNewEntities.newBuildings.length > 0" class="pref-ned__group">
+        <span class="pref-ned__label">New Buildings</span>
+        <ul class="pref-ned__list">
+          <li v-for="code in pendingNewEntities.newBuildings" :key="code">{{ code }}</li>
+        </ul>
+      </div>
+
+      <div v-if="pendingNewEntities.newRooms.length > 0" class="pref-ned__group">
+        <span class="pref-ned__label">New Rooms</span>
+        <ul class="pref-ned__list">
+          <li v-for="room in pendingNewEntities.newRooms" :key="room">{{ room }}</li>
+        </ul>
+      </div>
+
+      <template #footer>
+        <Button
+          label="Cancel & Edit"
+          severity="secondary"
+          outlined
+          @click="cancelNewEntitySave"
+        />
+        <Button
+          label="Continue"
+          severity="primary"
+          @click="confirmNewEntitySave"
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -580,6 +630,18 @@ type AutoCompleteCompleteEvent = {
   query: string
 }
 
+type NewEntityInfo = {
+  newInstructors: string[]
+  newBuildings: string[]
+  newRooms: string[]
+}
+
+type PendingSave = {
+  status: PreferenceStatus
+  courses: PreferencePayloadCourse[]
+  nt: string
+}
+
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 const CRN_PATTERN = /^\d{4,10}$/
 const SECTION_PATTERN = /^[A-Za-z0-9-]{1,8}$/
@@ -626,6 +688,9 @@ const submissionStatus = ref<FacultyPreferenceSubmission['status'] | null>(null)
 const submissionDepartment = ref<string | null>(null)
 const loadedTerm = ref('')
 const loadedSnapshot = ref('[]')
+const showNewEntityDialog = ref(false)
+const pendingNewEntities = ref<NewEntityInfo>({ newInstructors: [], newBuildings: [], newRooms: [] })
+const pendingSave = ref<PendingSave | null>(null)
 
 const termSuggestions = ref<string[]>([])
 const subjectSuggestions = ref<string[]>([])
@@ -1482,30 +1547,45 @@ function validateRow(
   }
 }
 
-async function savePreferences(status: PreferenceStatus) {
-  statusMessage.value = ''
-  statusTone.value = 'info'
-  const nt = term.value.trim()
-  if (!TERM_PATTERN.test(nt)) {
-    statusMessage.value =
-      'Enter a valid term (letters, numbers, dashes, underscores).'
-    statusTone.value = 'error'
-    return
+function detectNewEntities(courses: PreferencePayloadCourse[]): NewEntityInfo {
+  const knownInstructors = new Set(
+    professors.value
+      .map((p) => normalizeLookupValue(p.displayName))
+      .filter(Boolean),
+  )
+  const knownBuildings = new Set(
+    buildingOptions.value.map((b) => normalizeLookupValue(b.code)),
+  )
+  const knownRoomIds = new Set([
+    ...roomOptions.value.map((r) => normalizeLookupValue(r._id)),
+    ...roomOptions.value.map((r) => normalizeLookupValue(r.abbreviation)),
+  ])
+
+  const newInstructors = new Set<string>()
+  const newBuildings = new Set<string>()
+  const newRooms = new Set<string>()
+
+  for (const c of courses) {
+    if (c.instructor && !knownInstructors.has(normalizeLookupValue(c.instructor)))
+      newInstructors.add(c.instructor)
+    if (c.preferredBuilding && !knownBuildings.has(normalizeLookupValue(c.preferredBuilding)))
+      newBuildings.add(c.preferredBuilding)
+    if (c.preferredRoomId && !knownRoomIds.has(normalizeLookupValue(c.preferredRoomId)))
+      newRooms.add(c.preferredRoomId)
   }
-  const courses = rows.value
-    .map((r) => validateRow(r, status))
-    .filter((c): c is PreferencePayloadCourse => c !== null)
-  if (rows.value.some((r) => r.error.length > 0)) {
-    statusMessage.value = 'Fix the highlighted row errors before saving.'
-    statusTone.value = 'error'
-    return
+
+  return {
+    newInstructors: [...newInstructors],
+    newBuildings: [...newBuildings],
+    newRooms: [...newRooms],
   }
-  if (courses.length === 0) {
-    statusMessage.value =
-      'Add at least one completed preference row before saving.'
-    statusTone.value = 'error'
-    return
-  }
+}
+
+async function executeSave(
+  status: PreferenceStatus,
+  courses: PreferencePayloadCourse[],
+  nt: string,
+) {
   savePending.value = true
   try {
     const patch = submissionExists.value && loadedTerm.value === nt
@@ -1544,6 +1624,56 @@ async function savePreferences(status: PreferenceStatus) {
   } finally {
     savePending.value = false
   }
+}
+
+async function confirmNewEntitySave() {
+  showNewEntityDialog.value = false
+  const ps = pendingSave.value
+  pendingSave.value = null
+  if (ps) await executeSave(ps.status, ps.courses, ps.nt)
+}
+
+function cancelNewEntitySave() {
+  showNewEntityDialog.value = false
+  pendingSave.value = null
+}
+
+async function savePreferences(status: PreferenceStatus) {
+  statusMessage.value = ''
+  statusTone.value = 'info'
+  const nt = term.value.trim()
+  if (!TERM_PATTERN.test(nt)) {
+    statusMessage.value =
+      'Enter a valid term (letters, numbers, dashes, underscores).'
+    statusTone.value = 'error'
+    return
+  }
+  const courses = rows.value
+    .map((r) => validateRow(r, status))
+    .filter((c): c is PreferencePayloadCourse => c !== null)
+  if (rows.value.some((r) => r.error.length > 0)) {
+    statusMessage.value = 'Fix the highlighted row errors before saving.'
+    statusTone.value = 'error'
+    return
+  }
+  if (courses.length === 0) {
+    statusMessage.value =
+      'Add at least one completed preference row before saving.'
+    statusTone.value = 'error'
+    return
+  }
+  const newEntities = detectNewEntities(courses)
+  if (
+    newEntities.newInstructors.length > 0 ||
+    newEntities.newBuildings.length > 0 ||
+    newEntities.newRooms.length > 0
+  ) {
+    pendingNewEntities.value = newEntities
+    pendingSave.value = { status, courses, nt }
+    showNewEntityDialog.value = true
+    return
+  }
+  await executeSave(status, courses, nt)
 }
 
 async function loadReferenceData() {
@@ -2159,5 +2289,38 @@ onMounted(loadPageData)
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* ─── New entity confirmation dialog ─── */
+.pref-ned__desc {
+  margin: 0 0 1rem;
+  color: var(--p-text-color, #1e293b);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.pref-ned__group {
+  margin-bottom: 0.875rem;
+}
+
+.pref-ned__label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color, #64748b);
+  margin-bottom: 0.25rem;
+}
+
+.pref-ned__list {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--p-text-color, #1e293b);
+  font-size: 0.875rem;
+}
+
+.pref-ned__list li {
+  margin-bottom: 0.15rem;
 }
 </style>
