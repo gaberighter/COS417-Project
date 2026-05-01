@@ -448,8 +448,8 @@ export default defineEventHandler(async (event: H3Event) => {
 
     const covenantId = covenantIdFromEmail(email) ?? username.toLowerCase()
 
-    const appRoles = roles.filter((role): role is UserRole =>
-      role === 'Admin' || role === 'Faculty',
+    const appRoles = roles.filter(
+      (role): role is UserRole => role === 'Admin' || role === 'Faculty',
     )
 
     // Expose auth context so downstream route handlers and audit logging can use it.

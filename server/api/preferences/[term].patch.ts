@@ -88,6 +88,7 @@ export default defineEventHandler(async (event) => {
     auth.roles?.includes('Admin') ?? auth.role === 'Admin'
 
   let prof
+  let requestedProfessorId = ''
   if (canEditOwnPreferences && !body.professorId) {
     prof = await Professor.findOne({
       $or: [
@@ -114,10 +115,13 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const professorId = body.professorId.trim()
+    requestedProfessorId = body.professorId.trim()
 
     prof = await Professor.findOne({
-      $or: [{ _id: professorId }, { covenantId: professorId.toLowerCase() }],
+      $or: [
+        { _id: requestedProfessorId },
+        { covenantId: requestedProfessorId.toLowerCase() },
+      ],
     }).exec()
   }
 
