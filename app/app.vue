@@ -45,14 +45,12 @@
 
 <script setup lang="ts">
 const route = useRoute()
-const { user, loggedIn, fetch: refreshSession, clear } = useUserSession()
+const { user, isAuthenticated, loginWithSso, logout } = useAuth()
 const auth = {
-  isAuthenticated: loggedIn,
-  user: user,
-  logout: async () => {
-    await clear()
-    await navigateTo('/auth/login')
-  },
+  isAuthenticated,
+  user,
+  loginWithSso,
+  logout,
 } as Record<string, unknown>
 
 const unwrapMaybeRef = (value: unknown) => {

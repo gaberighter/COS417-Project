@@ -1,5 +1,5 @@
 export const useAuth = () => {
-  const { user, loggedIn, fetch: refreshSession } = useUserSession()
+  const { user, loggedIn, fetch: refreshSession, clear } = useUserSession()
 
   const SSO_LOGIN_URL = '/saml/login'
   const isLoading = ref(false)
@@ -12,7 +12,7 @@ export const useAuth = () => {
   }
 
   const logout = async () => {
-    await $fetch('/api/_auth/session', { method: 'DELETE' })
+    await clear()
     await navigateTo('/auth/login')
   }
 
