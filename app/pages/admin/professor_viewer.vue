@@ -73,7 +73,6 @@
             <tr>
               <th>Covenant ID</th>
               <th>Name</th>
-              <th>Department</th>
               <th>Department Code</th>
               <th>Office Building</th>
               <th>Office Room</th>
@@ -86,7 +85,6 @@
             <tr v-for="professor in filteredProfessors" :key="professor._id">
               <td>{{ professor.covenantId }}</td>
               <td>{{ professor.displayName }}</td>
-              <td>{{ professor.department ?? professor.departmentCode }}</td>
               <td>{{ professor.departmentCode }}</td>
               <td>{{ formatNullable(professor.officeBuilding) }}</td>
               <td>{{ formatNullable(professor.officeRoom) }}</td>
@@ -114,7 +112,7 @@
               </td>
             </tr>
             <tr v-if="filteredProfessors.length === 0">
-              <td colspan="9">No professors found.</td>
+              <td colspan="8">No professors found.</td>
             </tr>
           </tbody>
         </table>
@@ -158,16 +156,6 @@
             v-model="professorForm.displayName"
             type="text"
             placeholder="e.g. Jane Smith"
-            required
-          />
-        </div>
-        <div class="form-group">
-          <label for="department">Department *</label>
-          <input
-            id="department"
-            v-model="professorForm.department"
-            type="text"
-            placeholder="e.g. COS"
             required
           />
         </div>
@@ -248,7 +236,6 @@ interface Professor {
   _id: string
   covenantId: string
   displayName: string
-  department: string
   departmentCode: string
   officeBuilding?: string | null
   officeRoom?: string | null
@@ -268,7 +255,6 @@ interface ProfessorFilters {
 interface ProfessorForm {
   covenantId: string
   displayName: string
-  department: string
   departmentCode: string
   officeBuilding: string
   officeRoom: string
@@ -296,7 +282,6 @@ const createDefaultFilters = (): ProfessorFilters => ({
 const createEmptyProfessorForm = (): ProfessorForm => ({
   covenantId: '',
   displayName: '',
-  department: '',
   departmentCode: '',
   officeBuilding: '',
   officeRoom: '',
@@ -357,7 +342,7 @@ const filteredProfessors = computed(() => {
     if (
       appliedFilters.departmentCode &&
       !includesInsensitive(
-        `${professor.department} ${professor.departmentCode}`,
+        professor.departmentCode,
         appliedFilters.departmentCode,
       )
     ) {
@@ -414,7 +399,6 @@ const openEditProfessorModal = (professor: Professor) => {
   Object.assign(professorForm, {
     covenantId: professor.covenantId,
     displayName: professor.displayName,
-    department: professor.department ?? professor.departmentCode,
     departmentCode: professor.departmentCode,
     officeBuilding: professor.officeBuilding ?? '',
     officeRoom: professor.officeRoom ?? '',
@@ -446,7 +430,6 @@ const submitProfessor = async () => {
       body: {
         covenantId: professorForm.covenantId.trim().toLowerCase(),
         displayName: professorForm.displayName.trim(),
-        department: professorForm.department.trim().toUpperCase(),
         departmentCode: professorForm.departmentCode.trim().toUpperCase(),
         officeBuilding: normalizeOptionalString(professorForm.officeBuilding),
         officeRoom: normalizeOptionalString(professorForm.officeRoom),

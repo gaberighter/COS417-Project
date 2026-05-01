@@ -69,7 +69,7 @@ export interface CoursePreference {
 
 export interface PreferenceSubmission {
   term: string
-  department: string
+  departmentCode: string
   submittedBy: string
   submittedAt: Date | null
   status: PreferenceStatus
@@ -80,7 +80,6 @@ export interface Professor {
   _id: string
   covenantId: string
   displayName: string
-  department: string
   departmentCode: string
   officeBuilding: string | null
   officeRoom: string | null

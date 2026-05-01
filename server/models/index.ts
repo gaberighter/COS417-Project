@@ -75,7 +75,7 @@ export interface ICoursePreference {
 
 export interface IPreferenceSubmission {
   term: string
-  department: string
+  departmentCode: string
   submittedBy: string
   submittedAt?: Date | null
   status: PreferenceStatus
@@ -88,7 +88,6 @@ export interface IProfessor {
   _id?: string
   covenantId: string
   displayName: string
-  department: string
   departmentCode: string
   officeBuilding?: string | null
   officeRoom?: string | null
@@ -252,7 +251,12 @@ const coursePreferenceSchema = new Schema<ICoursePreference>(
 const preferenceSubmissionSchema = new Schema<IPreferenceSubmission>(
   {
     term: { type: String, required: true, trim: true },
-    department: { type: String, required: true, trim: true, uppercase: true },
+    departmentCode: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+    },
     submittedBy: { type: String, required: true, trim: true },
     submittedAt: { type: Date, default: null },
     status: {
@@ -277,12 +281,6 @@ const professorSchema = new Schema<IProfessor>(
       trim: true,
       uppercase: true,
     },
-    department: {
-      type: String,
-      required: true,
-      trim: true,
-      uppercase: true,
-    },
     officeBuilding: { type: String, default: null, trim: true },
     officeRoom: { type: String, default: null, trim: true },
     seniorityYear: { type: Number, default: null },
@@ -299,9 +297,6 @@ const professorSchema = new Schema<IProfessor>(
 professorSchema.pre('validate', function setProfessorId() {
   if (!this._id) {
     this._id = buildProfessorId(this)
-  }
-  if (!this.department) {
-    this.department = this.departmentCode
   }
 })
 

@@ -197,7 +197,9 @@ function normalizePreferenceSubmission(input, professorId, departmentCode) {
 
   return {
     term: String(input.term ?? '').trim(),
-    department: String(input.department ?? departmentCode ?? '')
+    departmentCode: String(
+      input.departmentCode ?? input.department ?? departmentCode ?? '',
+    )
       .trim()
       .toUpperCase(),
     submittedBy: String(input.submittedBy ?? professorId).trim(),
@@ -257,10 +259,7 @@ function normalizeProfessor(input) {
     _id: covenantId,
     covenantId,
     displayName: String(input.displayName ?? '').trim(),
-    department: String(input.department ?? input.departmentCode ?? '')
-      .trim()
-      .toUpperCase(),
-    departmentCode: String(input.departmentCode ?? '')
+    departmentCode: String(input.departmentCode ?? input.department ?? '')
       .trim()
       .toUpperCase(),
     officeBuilding:
@@ -441,7 +440,7 @@ const MINIMAL_DATASET = {
       preferences: [
         {
           term: 'Fall2026',
-          department: 'COS',
+          departmentCode: 'COS',
           submittedBy: 'jeff.humphries',
           status: 'submitted',
           courses: [
@@ -475,7 +474,7 @@ const MINIMAL_DATASET = {
       preferences: [
         {
           term: 'Fall2026',
-          department: 'COS',
+          departmentCode: 'COS',
           submittedBy: 'zeyu.zhou',
           status: 'submitted',
           courses: [

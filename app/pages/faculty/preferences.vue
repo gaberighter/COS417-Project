@@ -508,7 +508,6 @@ type FacultyPreferenceSubmission = {
   displayName: string
   departmentCode: string
   term: string
-  department: string
   submittedBy: string
   submittedAt?: string | null
   status: PreferenceStatus
@@ -618,7 +617,7 @@ const loadPending = ref(false)
 const savePending = ref(false)
 const submissionExists = ref(false)
 const submissionStatus = ref<FacultyPreferenceSubmission['status'] | null>(null)
-const submissionDepartment = ref<string | null>(null)
+const submissionDepartmentCode = ref<string | null>(null)
 const loadedTerm = ref('')
 const loadedSnapshot = ref('[]')
 
@@ -1130,7 +1129,7 @@ function setLoadedState(
   term.value = normalizedTerm
   submissionExists.value = submission !== null
   submissionStatus.value = submission?.status ?? null
-  submissionDepartment.value = submission?.department ?? null
+  submissionDepartmentCode.value = submission?.departmentCode ?? null
   rows.value = submission?.courses?.length
     ? submission.courses.map((c) => mapSavedCourseToRow(c))
     : [createEmptyRow()]
@@ -1528,7 +1527,7 @@ async function savePreferences(status: PreferenceStatus) {
       await $fetch(`/api/preferences/${encodeURIComponent(nt)}`, {
         method: 'PATCH',
         body: {
-          department: submissionDepartment.value ?? undefined,
+          departmentCode: submissionDepartmentCode.value ?? undefined,
           status,
           courses,
         },
@@ -1538,7 +1537,7 @@ async function savePreferences(status: PreferenceStatus) {
         method: 'POST',
         body: {
           term: nt,
-          department: submissionDepartment.value ?? undefined,
+          departmentCode: submissionDepartmentCode.value ?? undefined,
           status,
           courses,
         },

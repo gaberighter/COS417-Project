@@ -11,26 +11,42 @@ import { Professor } from '../../models/index'
 import { normalizePreferenceStatus } from '../../utils/preferenceValidation'
 
 function formatSubmissionStatus<
-  T extends { status: unknown; submittedAt?: unknown },
+  T extends {
+    status: unknown
+    submittedAt?: unknown
+    department?: unknown
+  },
 >(submission: T) {
+  const { department, ...rest } = submission
   const status = normalizePreferenceStatus(submission.status)
   return {
-    ...submission,
+    ...rest,
     status,
     submittedAt:
       status === 'submitted' ? (submission.submittedAt ?? null) : null,
   }
 }
 
-function normalizeDepartment(value: string | null | undefined): string {
+function normalizeDepartmentCode(value: string | null | undefined): string {
   return (value ?? '').trim().toUpperCase()
 }
 
-function professorDepartment(professor: {
+function professorDepartmentCode(professor: {
   department?: string | null
   departmentCode?: string | null
 }): string {
-  return normalizeDepartment(professor.department || professor.departmentCode)
+  return normalizeDepartmentCode(
+    professor.departmentCode || professor.department,
+  )
+}
+
+function submissionDepartmentCode(submission: {
+  department?: string | null
+  departmentCode?: string | null
+}): string {
+  return normalizeDepartmentCode(
+    submission.departmentCode || submission.department,
+  )
 }
 
 export default defineEventHandler(async (event) => {
@@ -74,7 +90,6 @@ export default defineEventHandler(async (event) => {
         _id: 1,
         covenantId: 1,
         displayName: 1,
-        department: 1,
         departmentCode: 1,
         preferences: 1,
       },
@@ -89,18 +104,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const department = professorDepartment(professor)
+    const departmentCode = professorDepartmentCode(professor)
     const departmentProfessors = await Professor.find(
       {
         active: true,
         'preferences.term': term,
-        $or: [{ department }, { departmentCode: department }],
+        departmentCode,
       },
       {
         _id: 1,
         covenantId: 1,
         displayName: 1,
-        department: 1,
         departmentCode: 1,
         preferences: 1,
       },
@@ -113,7 +127,7 @@ export default defineEventHandler(async (event) => {
         (candidateProfessor.preferences ?? []).some(
           (candidate) =>
             candidate.term === term &&
-            normalizeDepartment(candidate.department) === department,
+            submissionDepartmentCode(candidate) === departmentCode,
         ),
       ) ??
       departmentProfessors.find((candidateProfessor) =>
@@ -129,8 +143,8 @@ export default defineEventHandler(async (event) => {
     const submission = (owner.preferences ?? []).find(
       (candidate) =>
         candidate.term === term &&
-        (normalizeDepartment(candidate.department) === department ||
-          normalizeDepartment(candidate.department) === ''),
+        (submissionDepartmentCode(candidate) === departmentCode ||
+          submissionDepartmentCode(candidate) === ''),
     )
 
     if (!submission) {
@@ -141,9 +155,8 @@ export default defineEventHandler(async (event) => {
       professorId: owner._id ?? owner.covenantId,
       covenantId: owner.covenantId,
       displayName: owner.displayName,
-      departmentCode: owner?.departmentCode ?? department,
       ...formatSubmissionStatus(submission),
-      department,
+      departmentCode: owner?.departmentCode ?? departmentCode,
     }
   }
 
@@ -153,7 +166,6 @@ export default defineEventHandler(async (event) => {
       _id: 1,
       covenantId: 1,
       displayName: 1,
-      department: 1,
       departmentCode: 1,
       preferences: 1,
     },
@@ -168,9 +180,8 @@ export default defineEventHandler(async (event) => {
         professorId: professor._id ?? professor.covenantId,
         covenantId: professor.covenantId,
         displayName: professor.displayName,
-        departmentCode: professor.departmentCode,
         ...formatSubmissionStatus(submission),
-        department: professorDepartment(professor),
+        departmentCode: professor.departmentCode,
       })),
   )
 
