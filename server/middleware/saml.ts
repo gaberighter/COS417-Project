@@ -294,6 +294,17 @@ export default defineEventHandler(async (event: H3Event) => {
                 session_index,
               }
 
+              const isAdmin = roles.includes('Admin')
+              const isFaculty = roles.includes('Faculty')
+              if (!isAdmin && !isFaculty) {
+                return reject(
+                  createError({
+                    statusCode: 403,
+                    statusMessage: 'Access denied',
+                  }),
+                )
+              }
+
               // See if this user exists in the Users collection.
               const existingUser = await UsersCollection.findOne({
                 username: user.username,
@@ -307,17 +318,6 @@ export default defineEventHandler(async (event: H3Event) => {
               }
 
               await setUserSession(event, { user, loggedInAt: Date.now() })
-
-              const isAdmin = roles.includes('Admin')
-              const isFaculty = roles.includes('Faculty')
-              if (!isAdmin && !isFaculty) {
-                return reject(
-                  createError({
-                    statusCode: 403,
-                    statusMessage: 'Access denied',
-                  }),
-                )
-              }
 
               try {
                 const clientIp = getClientIp(event)
