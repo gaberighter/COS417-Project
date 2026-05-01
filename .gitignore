@@ -12,6 +12,7 @@ node_modules
 # Logs
 logs
 *.log
+.pm2
 
 # Misc
 .DS_Store
