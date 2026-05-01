@@ -434,7 +434,14 @@ export default defineEventHandler(async (event: H3Event) => {
       : isFaculty
         ? 'Faculty'
         : 'Faculty'
-    const authCtx: AuthContext = { userId: username, role: primaryRole }
+    const authRoles = roles.filter(
+      (role): role is UserRole => role === 'Admin' || role === 'Faculty',
+    )
+    const authCtx: AuthContext = {
+      userId: username,
+      role: primaryRole,
+      roles: authRoles.length > 0 ? authRoles : [primaryRole],
+    }
     event.context.auth = authCtx
 
     const isRegistrarOnly = REGISTRAR_ONLY.some((route) =>

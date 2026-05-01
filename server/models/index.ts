@@ -75,7 +75,7 @@ export interface ICoursePreference {
 
 export interface IPreferenceSubmission {
   term: string
-  department: string
+  departmentCode: string
   submittedBy: string
   submittedAt?: Date | null
   status: PreferenceStatus
@@ -251,7 +251,12 @@ const coursePreferenceSchema = new Schema<ICoursePreference>(
 const preferenceSubmissionSchema = new Schema<IPreferenceSubmission>(
   {
     term: { type: String, required: true, trim: true },
-    department: { type: String, required: true, trim: true, uppercase: true },
+    departmentCode: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+    },
     submittedBy: { type: String, required: true, trim: true },
     submittedAt: { type: Date, default: null },
     status: {

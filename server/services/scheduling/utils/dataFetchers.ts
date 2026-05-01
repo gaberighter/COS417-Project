@@ -27,6 +27,32 @@ import type {
 } from '../types'
 import { normalizeClockTime } from './timeSlots'
 
+type LegacyPreferenceSubmission = IPreferenceSubmission & {
+  department?: string | null
+}
+
+type LegacyProfessor = IProfessor & {
+  department?: string | null
+}
+
+function normalizeDepartmentCode(value: string | null | undefined): string {
+  return (value ?? '').trim().toUpperCase()
+}
+
+function preferenceDepartmentCode(
+  submission: LegacyPreferenceSubmission,
+): string {
+  return normalizeDepartmentCode(
+    submission.departmentCode ?? submission.department,
+  )
+}
+
+function professorDepartmentCode(professor: LegacyProfessor): string {
+  return normalizeDepartmentCode(
+    professor.departmentCode ?? professor.department,
+  )
+}
+
 function normalizeDayPattern(value: string): DayPattern {
   if (
     value === 'MWF' ||
@@ -110,13 +136,13 @@ function cloneCourse(course: ICourse): Course {
 }
 
 function clonePreferenceSubmission(
-  submission: IPreferenceSubmission,
+  submission: LegacyPreferenceSubmission,
 ): PreferenceSubmission {
   const status = normalizePreferenceStatus(submission.status)
 
   return {
     term: submission.term,
-    department: submission.department,
+    departmentCode: preferenceDepartmentCode(submission),
     submittedBy: submission.submittedBy,
     submittedAt:
       status === 'submitted' && submission.submittedAt
@@ -144,12 +170,14 @@ function clonePreferenceSubmission(
   }
 }
 
-function cloneProfessor(professor: IProfessor): Professor {
+function cloneProfessor(professor: LegacyProfessor): Professor {
+  const departmentCode = professorDepartmentCode(professor)
+
   return {
     _id: String(professor._id ?? professor.covenantId),
     covenantId: professor.covenantId,
     displayName: professor.displayName,
-    departmentCode: professor.departmentCode,
+    departmentCode,
     officeBuilding: professor.officeBuilding ?? null,
     officeRoom: professor.officeRoom ?? null,
     seniorityYear: professor.seniorityYear ?? null,
@@ -248,7 +276,7 @@ export async function fetchPreferences(
               coreqWith: [...(course.coreqWith ?? [])],
               professorId: professor._id ?? professor.covenantId,
               professorName: professor.displayName,
-              departmentCode: professor.departmentCode,
+              departmentCode: professorDepartmentCode(professor),
               submittedAt:
                 status === 'submitted' && submission.submittedAt
                   ? new Date(submission.submittedAt)
@@ -316,7 +344,7 @@ export async function fetchHistoricalPreferences(
               coreqWith: [...(course.coreqWith ?? [])],
               professorId: professor._id ?? professor.covenantId,
               professorName: professor.displayName,
-              departmentCode: professor.departmentCode,
+              departmentCode: professorDepartmentCode(professor),
               submittedAt:
                 status === 'submitted' && submission.submittedAt
                   ? new Date(submission.submittedAt)

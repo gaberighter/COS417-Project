@@ -69,7 +69,7 @@ export interface CoursePreference {
 
 export interface PreferenceSubmission {
   term: string
-  department: string
+  departmentCode: string
   submittedBy: string
   submittedAt: Date | null
   status: PreferenceStatus

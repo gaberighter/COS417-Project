@@ -294,23 +294,32 @@
             <!-- Time -->
             <Column header="Time" style="width: 5rem">
               <template #body="{ data }">
-                <AutoComplete
-                  v-model="data.time"
-                  :suggestions="timeSuggestions"
-                  dropdown
-                  completeOnFocus
-                  :minLength="0"
-                  appendTo="body"
-                  fluid
-                  inputClass="pref-cell-input"
-                  panelClass="pref-autocomplete-panel"
-                  :placeholder="
-                    data.localId === rows[0]?.localId ? '12:00' : ''
-                  "
-                  @complete="searchTimeSuggestions"
-                  @update:modelValue="clearRowError(data)"
-                  @blur="handleTimeChange(data)"
-                />
+                <div class="pref-time-cell">
+                  <AutoComplete
+                    v-model="data.time"
+                    :suggestions="timeSuggestions"
+                    dropdown
+                    completeOnFocus
+                    :minLength="0"
+                    appendTo="body"
+                    fluid
+                    inputClass="pref-cell-input"
+                    panelClass="pref-autocomplete-panel"
+                    :placeholder="
+                      data.localId === rows[0]?.localId ? '12:00' : ''
+                    "
+                    @complete="searchTimeSuggestions"
+                    @update:modelValue="clearRowError(data)"
+                    @blur="handleTimeChange(data)"
+                  />
+                  <SelectButton
+                    :modelValue="timePeriodForRow(data)"
+                    :options="timePeriodOptions"
+                    :allowEmpty="false"
+                    class="pref-time-period"
+                    @update:modelValue="setTimePeriod(data, $event)"
+                  />
+                </div>
               </template>
             </Column>
 
@@ -499,7 +508,6 @@ type FacultyPreferenceSubmission = {
   displayName: string
   departmentCode: string
   term: string
-  department: string
   submittedBy: string
   submittedAt?: string | null
   status: PreferenceStatus
@@ -594,6 +602,7 @@ const dayPatternOptions = [
   'T',
   'R',
 ]
+const timePeriodOptions = ['AM', 'PM']
 
 const courseCatalog = ref<CourseRecord[]>([])
 const professors = ref<ProfessorRecord[]>([])
@@ -608,7 +617,7 @@ const loadPending = ref(false)
 const savePending = ref(false)
 const submissionExists = ref(false)
 const submissionStatus = ref<FacultyPreferenceSubmission['status'] | null>(null)
-const submissionDepartment = ref<string | null>(null)
+const submissionDepartmentCode = ref<string | null>(null)
 const loadedTerm = ref('')
 const loadedSnapshot = ref('[]')
 
@@ -853,6 +862,26 @@ function normalizeTimeValue(v: string): string {
   if (!TIME_PATTERN.test(t)) return t
   const [h, m] = t.split(':')
   return `${String(Number(h)).padStart(2, '0')}:${m}`
+}
+
+function timePeriodForRow(row: PreferenceRow): 'AM' | 'PM' {
+  const nt = normalizeTimeValue(row.time)
+  if (!TIME_PATTERN.test(nt)) return 'AM'
+  const [h] = nt.split(':')
+  return Number(h) >= 12 ? 'PM' : 'AM'
+}
+
+function setTimePeriod(row: PreferenceRow, period: 'AM' | 'PM') {
+  const nt = normalizeTimeValue(row.time)
+  if (!TIME_PATTERN.test(nt)) {
+    row.time = row.time.trim()
+    return
+  }
+  const [h, m] = nt.split(':')
+  let hour = Number(h)
+  if (period === 'AM' && hour >= 12) hour = hour === 12 ? 0 : hour - 12
+  if (period === 'PM' && hour < 12) hour += 12
+  row.time = `${String(hour).padStart(2, '0')}:${m}`
 }
 
 function subjectLabel(c: CourseRecord): string {
@@ -1100,7 +1129,7 @@ function setLoadedState(
   term.value = normalizedTerm
   submissionExists.value = submission !== null
   submissionStatus.value = submission?.status ?? null
-  submissionDepartment.value = submission?.department ?? null
+  submissionDepartmentCode.value = submission?.departmentCode ?? null
   rows.value = submission?.courses?.length
     ? submission.courses.map((c) => mapSavedCourseToRow(c))
     : [createEmptyRow()]
@@ -1117,11 +1146,11 @@ async function loadSavedSubmission(
   const reqId = ++latestLoadRequest
   loadPending.value = true
   try {
-    const res = await $fetch<
+    const response = await $fetch<
       FacultyPreferenceSubmission | FacultyPreferenceSubmission[] | null
     >(`/api/preferences/${encodeURIComponent(nt)}`)
+    const sub = Array.isArray(response) ? (response[0] ?? null) : response
     if (reqId !== latestLoadRequest) return
-    const sub = Array.isArray(res) ? (res[0] ?? null) : res
     setLoadedState(nt, sub)
     if (sub && !options.silent) {
       statusMessage.value = `Loaded saved preferences for ${nt}.`
@@ -1498,7 +1527,7 @@ async function savePreferences(status: PreferenceStatus) {
       await $fetch(`/api/preferences/${encodeURIComponent(nt)}`, {
         method: 'PATCH',
         body: {
-          department: submissionDepartment.value ?? undefined,
+          departmentCode: submissionDepartmentCode.value ?? undefined,
           status,
           courses,
         },
@@ -1508,7 +1537,7 @@ async function savePreferences(status: PreferenceStatus) {
         method: 'POST',
         body: {
           term: nt,
-          department: submissionDepartment.value ?? undefined,
+          departmentCode: submissionDepartmentCode.value ?? undefined,
           status,
           courses,
         },
@@ -1837,6 +1866,21 @@ onMounted(loadPageData)
 
 :deep(.pref-autocomplete-panel .p-autocomplete-option) {
   font-size: 0.84rem;
+}
+
+.pref-time-cell {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.pref-time-period {
+  min-width: 5.1rem;
+}
+
+:deep(.pref-time-period .p-button) {
+  padding: 0.35rem 0.45rem;
 }
 
 :deep(.pref-page .p-inputtext::placeholder) {

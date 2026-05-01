@@ -2,7 +2,7 @@
 // POST /api/preferences — §4.3.1
 // Role: Faculty — submit or update department preferences for a term.
 //
-// Body: { term: string; department?: string; status?: PreferenceStatus; courses: ICoursePreference[] }
+// Body: { term: string; departmentCode?: string; status?: PreferenceStatus; courses: ICoursePreference[] }
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
@@ -22,10 +22,15 @@ import {
 
 interface PreferencePayload {
   term: string
+  departmentCode?: string
   department?: string
   status?: IPreferenceSubmission['status']
   courses?: ICoursePreference[]
   preferences?: ICoursePreference[]
+}
+
+function normalizeDepartmentCode(value: string | null | undefined): string {
+  return (value ?? '').trim().toUpperCase()
 }
 
 export default defineEventHandler(async (event) => {
@@ -83,6 +88,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const departmentCode = normalizeDepartmentCode(prof.departmentCode)
   const now = new Date()
   const submittedBy = prof._id
   const status =
@@ -91,33 +97,48 @@ export default defineEventHandler(async (event) => {
       : normalizePreferenceStatus(body.status)
   const submission: IPreferenceSubmission = {
     term: body.term,
-    department: body.department ?? prof.departmentCode,
+    departmentCode,
     submittedBy,
     submittedAt: status === 'submitted' ? now : null,
     status,
     courses,
   }
 
-  const existingIndex = prof.preferences.findIndex(
-    (candidate) => candidate.term === body.term,
+  const targetProf =
+    (await Professor.findOne({
+      active: true,
+      'preferences.term': body.term,
+      departmentCode,
+    }).exec()) ?? prof
+
+  const existingIndex = targetProf.preferences.findIndex(
+    (candidate) =>
+      candidate.term === body.term &&
+      (normalizeDepartmentCode(candidate.departmentCode) === departmentCode ||
+        normalizeDepartmentCode(
+          (candidate as IPreferenceSubmission & { department?: string })
+            .department,
+        ) === departmentCode ||
+        normalizeDepartmentCode(candidate.departmentCode) === ''),
   )
   if (existingIndex >= 0) {
-    prof.preferences[existingIndex] = submission
+    targetProf.preferences[existingIndex] = submission
   } else {
-    prof.preferences.push(submission)
+    targetProf.preferences.push(submission)
   }
 
-  for (const existingSubmission of prof.preferences) {
+  for (const existingSubmission of targetProf.preferences) {
     normalizePreferenceSubmissionStatus(existingSubmission)
   }
 
-  await prof.save()
+  targetProf.markModified('preferences')
+  await targetProf.save()
 
   await logAction(
     auth,
     'PREFERENCE_SUBMIT',
     'professors',
-    submittedBy,
+    targetProf._id,
     `Updated ${courses.length} preference record(s) for ${body.term}`,
   )
   return { ok: true, term: body.term, count: courses.length, status }

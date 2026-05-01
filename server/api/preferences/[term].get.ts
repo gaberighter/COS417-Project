@@ -4,22 +4,49 @@
 // Note: preferences are embedded in professor documents, so this queries
 //       active professors and filters embedded submissions by term.
 
-import { defineEventHandler, getRouterParam, createError } from 'h3'
+import { defineEventHandler, getRouterParam, createError, getQuery } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Professor } from '../../models/index'
 import { normalizePreferenceStatus } from '../../utils/preferenceValidation'
 
 function formatSubmissionStatus<
-  T extends { status: unknown; submittedAt?: unknown },
+  T extends {
+    status: unknown
+    submittedAt?: unknown
+    department?: unknown
+  },
 >(submission: T) {
+  const { department, ...rest } = submission
   const status = normalizePreferenceStatus(submission.status)
   return {
-    ...submission,
+    ...rest,
     status,
     submittedAt:
       status === 'submitted' ? (submission.submittedAt ?? null) : null,
   }
+}
+
+function normalizeDepartmentCode(value: string | null | undefined): string {
+  return (value ?? '').trim().toUpperCase()
+}
+
+function professorDepartmentCode(professor: {
+  department?: string | null
+  departmentCode?: string | null
+}): string {
+  return normalizeDepartmentCode(
+    professor.departmentCode || professor.department,
+  )
+}
+
+function submissionDepartmentCode(submission: {
+  department?: string | null
+  departmentCode?: string | null
+}): string {
+  return normalizeDepartmentCode(
+    submission.departmentCode || submission.department,
+  )
 }
 
 export default defineEventHandler(async (event) => {
@@ -31,7 +58,25 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'term is required' })
   }
 
-  if (auth.role === 'Faculty') {
+  const roles = auth.roles ?? [auth.role]
+  const canReadOwnSubmission = roles.includes('Faculty')
+  const canReadAllSubmissions = roles.includes('Admin')
+  const query = getQuery(event)
+  const scope =
+    typeof query.scope === 'string'
+      ? query.scope
+      : Array.isArray(query.scope)
+        ? query.scope[0]
+        : undefined
+  const all =
+    typeof query.all === 'string'
+      ? query.all
+      : Array.isArray(query.all)
+        ? query.all[0]
+        : undefined
+  const adminScope = scope === 'all' || all === 'true'
+
+  if (canReadOwnSubmission && (!canReadAllSubmissions || !adminScope)) {
     const professor = await Professor.findOne(
       {
         active: true,
@@ -59,8 +104,47 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const submission = (professor.preferences ?? []).find(
-      (candidate) => candidate.term === term,
+    const departmentCode = professorDepartmentCode(professor)
+    const departmentProfessors = await Professor.find(
+      {
+        active: true,
+        'preferences.term': term,
+        departmentCode,
+      },
+      {
+        _id: 1,
+        covenantId: 1,
+        displayName: 1,
+        departmentCode: 1,
+        preferences: 1,
+      },
+    )
+      .lean()
+      .exec()
+
+    const owner =
+      departmentProfessors.find((candidateProfessor) =>
+        (candidateProfessor.preferences ?? []).some(
+          (candidate) =>
+            candidate.term === term &&
+            submissionDepartmentCode(candidate) === departmentCode,
+        ),
+      ) ??
+      departmentProfessors.find((candidateProfessor) =>
+        (candidateProfessor.preferences ?? []).some(
+          (candidate) => candidate.term === term,
+        ),
+      )
+
+    if (!owner) {
+      return null
+    }
+
+    const submission = (owner.preferences ?? []).find(
+      (candidate) =>
+        candidate.term === term &&
+        (submissionDepartmentCode(candidate) === departmentCode ||
+          submissionDepartmentCode(candidate) === ''),
     )
 
     if (!submission) {
@@ -68,11 +152,11 @@ export default defineEventHandler(async (event) => {
     }
 
     return {
-      professorId: professor._id ?? professor.covenantId,
-      covenantId: professor.covenantId,
-      displayName: professor.displayName,
-      departmentCode: professor.departmentCode,
+      professorId: owner._id ?? owner.covenantId,
+      covenantId: owner.covenantId,
+      displayName: owner.displayName,
       ...formatSubmissionStatus(submission),
+      departmentCode: owner?.departmentCode ?? departmentCode,
     }
   }
 
@@ -96,8 +180,8 @@ export default defineEventHandler(async (event) => {
         professorId: professor._id ?? professor.covenantId,
         covenantId: professor.covenantId,
         displayName: professor.displayName,
-        departmentCode: professor.departmentCode,
         ...formatSubmissionStatus(submission),
+        departmentCode: professor.departmentCode,
       })),
   )
 

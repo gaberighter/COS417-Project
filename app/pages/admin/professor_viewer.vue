@@ -73,7 +73,7 @@
             <tr>
               <th>Covenant ID</th>
               <th>Name</th>
-              <th>Department</th>
+              <th>Department Code</th>
               <th>Office Building</th>
               <th>Office Room</th>
               <th>Seniority</th>
