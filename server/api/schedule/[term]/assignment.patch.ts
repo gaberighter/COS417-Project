@@ -4,14 +4,20 @@
 // Body: Partial<IAssignment> with at minimum courseId to identify the target.
 
 import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
-import { requireAuth, type AuthContext } from '../../../utils/auth'
+import { requireAuth } from '../../../utils/auth'
 import { connectDB } from '../../../utils/db'
-import { Professor, Schedule, type IAssignment } from '../../../models/index'
+import { Professor, type IAssignment } from '../../../models/index'
 import { logAction } from '../../../services/auditService'
-
-const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
+import {
+  findScheduleByTerm,
+  hasOwn,
+  isLockedScheduleStatus,
+  normalizeScheduleTerm,
+  parseOptionalRunNumber,
+} from '../../../services/scheduling/scheduleRecords'
 
 type AssignmentPatchPayload = Partial<IAssignment> & {
+  runNumber?: number
   courseId?: string
   originalCourseId?: string
   previousCourseId?: string
@@ -20,21 +26,11 @@ type AssignmentPatchPayload = Partial<IAssignment> & {
   }
 }
 
-function hasOwn(obj: object, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(obj, key)
-}
-
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
   await connectDB()
 
-  const term = getRouterParam(event, 'term')
-  if (!term) {
-    throw createError({ statusCode: 400, statusMessage: 'term is required' })
-  }
-  if (!TERM_PATTERN.test(term)) {
-    throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
-  }
+  const term = normalizeScheduleTerm(getRouterParam(event, 'term'))
 
   let body: AssignmentPatchPayload
   try {
@@ -76,13 +72,20 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const schedule = await Schedule.findOne({ term })
-    .sort({ runNumber: -1 })
-    .exec()
+  const runNumber = parseOptionalRunNumber(body.runNumber)
+  const schedule = await findScheduleByTerm(term, runNumber)
   if (!schedule) {
     throw createError({
       statusCode: 404,
       statusMessage: `No schedule for term: ${term}`,
+    })
+  }
+
+  if (isLockedScheduleStatus(schedule.status)) {
+    throw createError({
+      statusCode: 409,
+      statusMessage:
+        'Approved or exported schedules must be reopened before assignments can be changed.',
     })
   }
 
@@ -146,7 +149,7 @@ export default defineEventHandler(async (event) => {
     'SCHEDULE_OVERRIDE',
     'schedules',
     schedule._id,
-    `Manually overrode assignment for course ${courseId} in ${term}`,
+    `Manually overrode assignment for course ${courseId} in ${term} run ${schedule.runNumber}`,
   )
 
   return schedule.assignments[assignmentIndex]

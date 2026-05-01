@@ -1,255 +1,566 @@
 <template>
-  <div class="schedule-viewer">
-    <h1>Schedule Viewer</h1>
-    <div class="schedule-list">
-      <div v-if="scheduleError">Unable to load schedules.</div>
-      <div v-else-if="schedulePending">Loading schedules...</div>
-      <div v-else-if="scheduleItems.length === 0">No schedules available.</div>
-      <div v-else class="term-dropdowns">
-        <details
-          v-for="term in termKeys"
-          :key="term"
-          class="term-dropdown"
-          :open="term === termKeys[0]"
-        >
-          <summary>{{ term }}</summary>
-          <div class="schedule-buttons">
-            <button
-              v-for="schedule in schedulesByTerm[term]"
-              :key="schedule._id"
-              @click="selectSchedule(schedule)"
-            >
-              {{ formatScheduleLabel(schedule) }}
-            </button>
+  <div class="schedule-history-page">
+    <div class="schedule-history-page-header">
+      <h1 class="schedule-history-page-header__title">Schedule Viewer</h1>
+      <Button
+        label="Run New Schedule"
+        severity="secondary"
+        outlined
+        @click="navigateTo('/admin/schedule_run')"
+      />
+    </div>
+
+    <Message
+      v-if="statusMessage"
+      :severity="statusSeverity"
+      :closable="false"
+      class="schedule-history-message"
+    >
+      {{ statusMessage }}
+    </Message>
+
+    <div class="schedule-history-layout">
+      <Card class="schedule-history-sidebar">
+        <template #header>
+          <div class="schedule-history-card-header">
+            <div>
+              <h2 class="schedule-history-card-header__title">Saved Schedule Versions</h2>
+            </div>
           </div>
-        </details>
-      </div>
-    </div>
-    <div class="schedule-content">
-      <div v-if="!selectedScheduleId">Select a schedule to view details.</div>
-      <div v-else-if="selectedSchedulePending">Loading schedule details...</div>
-      <div v-else-if="selectedScheduleError">
-        Unable to load schedule details.
-      </div>
-      <div v-else-if="selectedScheduleDetails" class="schedule-details">
-        <div class="schedule-meta">
-          <p><strong>Term:</strong> {{ selectedScheduleDetails.term }}</p>
-          <p><strong>Run:</strong> {{ selectedScheduleDetails.runNumber }}</p>
-          <p><strong>Status:</strong> {{ selectedScheduleDetails.status }}</p>
-        </div>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Course</th>
-                <th>Professor</th>
-                <th>Room</th>
-                <th>Days</th>
-                <th>Start</th>
-                <th>End</th>
-                <th>Override By</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(assignment, index) in selectedAssignments"
-                :key="`${assignment.courseId}-${assignment.roomId}-${index}`"
+        </template>
+
+        <template #content>
+          <div v-if="schedulePending" class="schedule-history-empty">
+            <ProgressSpinner
+              strokeWidth="4"
+              fill="transparent"
+              animationDuration=".9s"
+              aria-label="Loading schedules"
+            />
+            <span>Loading saved schedule history...</span>
+          </div>
+
+          <div v-else-if="scheduleItems.length === 0" class="schedule-history-empty">
+            <span>No saved schedules yet.</span>
+          </div>
+
+          <div v-else class="schedule-term-list">
+            <details
+              v-for="termKey in termKeys"
+              :key="termKey"
+              class="schedule-term-group"
+              :open="termKey === selectedTerm || termKey === termKeys[0]"
+            >
+              <summary>{{ termKey }}</summary>
+              <div class="schedule-term-group__items">
+                <button
+                  v-for="schedule in schedulesByTerm[termKey]"
+                  :key="schedule._id"
+                  type="button"
+                  class="schedule-run-button"
+                  :class="{
+                    'schedule-run-button--active':
+                      schedule._id === selectedScheduleId,
+                  }"
+                  @click="selectSchedule(schedule)"
+                >
+                  <strong>Run {{ schedule.runNumber }}</strong>
+                  <span>{{ schedule.status }}</span>
+                  <small>
+                    {{ formatDateTime(schedule.updatedAt || schedule.createdAt) }}
+                  </small>
+                </button>
+              </div>
+            </details>
+          </div>
+        </template>
+      </Card>
+
+      <div class="schedule-history-main">
+        <Card class="schedule-history-main-card">
+          <template #header>
+            <div class="schedule-history-card-header">
+              <div>
+                <h2 class="schedule-history-card-header__title">
+                  {{ selectedScheduleTitle }}
+                </h2>
+              </div>
+              <div class="schedule-history-card-header__actions">
+                <Tag
+                  v-if="!selectedSchedule"
+                  value="No run selected"
+                  severity="secondary"
+                  rounded
+                />
+                <Tag
+                  v-if="selectedSchedule"
+                  :value="selectedSchedule.status"
+                  :severity="selectedStatusSeverity"
+                  rounded
+                />
+                <Tag
+                  v-if="selectedSchedule?.approvedAt"
+                  value="Approved"
+                  severity="success"
+                  rounded
+                />
+                <Tag
+                  v-if="selectedSchedule?.status === 'exported'"
+                  value="Exported"
+                  severity="contrast"
+                  rounded
+                />
+              </div>
+            </div>
+          </template>
+
+          <template #content>
+            <div v-if="selectedSchedulePending" class="schedule-history-empty">
+              <ProgressSpinner
+                strokeWidth="4"
+                fill="transparent"
+                animationDuration=".9s"
+                aria-label="Loading selected schedule"
+              />
+              <span>Loading schedule details...</span>
+            </div>
+
+            <div v-else-if="!selectedSchedule" class="schedule-history-empty">
+              <span>Select a saved run to view its schedule.</span>
+            </div>
+
+            <div v-else class="schedule-history-stack">
+              <div class="schedule-meta-grid">
+                <div class="schedule-meta-card">
+                  <span class="schedule-meta-card__label">Created</span>
+                  <strong>{{ formatDateTime(selectedSchedule.createdAt) }}</strong>
+                </div>
+                <div class="schedule-meta-card">
+                  <span class="schedule-meta-card__label">Updated</span>
+                  <strong>{{ formatDateTime(selectedSchedule.updatedAt) }}</strong>
+                </div>
+                <div class="schedule-meta-card">
+                  <span class="schedule-meta-card__label">Approved</span>
+                  <strong>
+                    {{
+                      selectedSchedule.approvedAt
+                        ? formatDateTime(selectedSchedule.approvedAt)
+                        : 'Not approved'
+                    }}
+                  </strong>
+                </div>
+                <div class="schedule-meta-card">
+                  <span class="schedule-meta-card__label">Conflicts</span>
+                  <strong>{{ selectedSchedule.conflicts.length }}</strong>
+                </div>
+                <div class="schedule-meta-card">
+                  <span class="schedule-meta-card__label">Warnings</span>
+                  <strong>{{ selectedSchedule.warnings.length }}</strong>
+                </div>
+                <div class="schedule-meta-card">
+                  <span class="schedule-meta-card__label">Near-Hard Flags</span>
+                  <strong>{{ selectedSchedule.nearHardFlags.length }}</strong>
+                </div>
+                <div class="schedule-meta-card">
+                  <span class="schedule-meta-card__label">Recommended</span>
+                  <strong>{{ selectedRecommendedStatus }}</strong>
+                </div>
+                <div class="schedule-meta-card">
+                  <span class="schedule-meta-card__label">Trace Entries</span>
+                  <strong>{{ selectedSchedule.traces.length }}</strong>
+                </div>
+              </div>
+
+              <Message
+                v-if="isSelectedScheduleLocked"
+                severity="info"
+                :closable="false"
               >
-                <td>{{ assignment.courseId }}</td>
-                <td>
-                  <span v-if="!isEditing(assignment)">
-                    {{ formatProfessorName(assignment.professorId) }}
-                  </span>
-                  <input
-                    v-else
-                    v-model="editingDraft.professorId"
-                    class="schedule-table-input"
-                    type="text"
-                    placeholder="firstname.lastname"
+                This run is locked because it is approved or exported. Reopen it to
+                enable overrides.
+              </Message>
+
+              <div class="schedule-history-actions">
+                <Button
+                  v-if="canApproveSelectedSchedule"
+                  label="Approve"
+                  severity="success"
+                  outlined
+                  :loading="statusPending"
+                  @click="approveSelectedSchedule"
+                />
+                <Button
+                  v-if="canReopenSelectedSchedule"
+                  label="Reopen"
+                  severity="warn"
+                  outlined
+                  :loading="statusPending"
+                  @click="reopenSelectedSchedule"
+                />
+                <Button
+                  v-if="canExportSelectedSchedule"
+                  label="Export CSV"
+                  severity="contrast"
+                  outlined
+                  :loading="exportPending"
+                  @click="exportSelectedSchedule('csv')"
+                />
+                <Button
+                  v-if="canExportSelectedSchedule"
+                  label="Export Excel"
+                  severity="contrast"
+                  :loading="exportPending"
+                  @click="exportSelectedSchedule('xlsx')"
+                />
+              </div>
+
+              <div class="schedule-filter-grid">
+                <label>
+                  Global Search
+                  <InputText
+                    v-model="filters.search"
+                    placeholder="Course, title, room, instructor..."
+                    fluid
                   />
-                </td>
-                <td>
-                  <span v-if="!isEditing(assignment)">
-                    {{ assignment.roomId }}
-                  </span>
-                  <input
-                    v-else
-                    v-model="editingDraft.roomId"
-                    class="schedule-table-input"
-                    type="text"
+                </label>
+                <div class="schedule-filter-grid__actions">
+                  <Button
+                    label="Clear Search"
+                    severity="secondary"
+                    outlined
+                    :disabled="!filters.search"
+                    @click="filters.search = ''"
                   />
-                </td>
-                <td>
-                  <span v-if="!isEditing(assignment)">
-                    {{ assignment.days }}
+                  <span class="schedule-filter-grid__count">
+                    Showing {{ filteredRows.length }} of {{ enrichedRows.length }} row(s)
                   </span>
-                  <select
-                    v-else
-                    v-model="editingDraft.days"
-                    class="schedule-table-input"
-                  >
-                    <option
-                      v-for="pattern in dayPatternOptions"
-                      :key="pattern"
-                      :value="pattern"
-                    >
-                      {{ pattern }}
-                    </option>
-                  </select>
-                </td>
-                <td>
-                  <span v-if="!isEditing(assignment)">
-                    {{ assignment.startTime }}
-                  </span>
-                  <input
-                    v-else
-                    v-model="editingDraft.startTime"
-                    class="schedule-table-input"
-                    type="text"
-                    placeholder="09:00"
-                  />
-                </td>
-                <td>
-                  <span v-if="!isEditing(assignment)">
-                    {{ assignment.endTime }}
-                  </span>
-                  <input
-                    v-else
-                    v-model="editingDraft.endTime"
-                    class="schedule-table-input"
-                    type="text"
-                    placeholder="10:15"
-                  />
-                </td>
-                <td>{{ formatOptionalValue(assignment.overrideBy) }}</td>
-                <td class="row-actions">
-                  <button
-                    v-if="!isEditing(assignment)"
-                    type="button"
-                    class="action-btn action-btn--edit"
-                    :disabled="editPending || editingCourseId !== null"
-                    @click="startEdit(assignment)"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    v-if="!isEditing(assignment)"
-                    type="button"
-                    class="action-btn action-btn--delete"
-                    :disabled="editPending || editingCourseId !== null"
-                    @click="deleteAssignment(assignment)"
-                  >
-                    Delete
-                  </button>
-                  <template v-else>
-                    <button
-                      type="button"
-                      class="action-btn action-btn--save"
-                      :disabled="editPending"
-                      @click="saveEdit"
-                    >
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      class="action-btn action-btn--cancel"
-                      :disabled="editPending"
-                      @click="cancelEdit"
-                    >
-                      Cancel
-                    </button>
+                </div>
+              </div>
+
+              <details class="schedule-detail-block">
+                <summary>Show optional filters</summary>
+                <div class="schedule-detail-block__content">
+                  <div class="schedule-filter-grid schedule-filter-grid--advanced">
+                    <label>
+                      Department
+                      <select v-model="filters.department" class="schedule-native-select">
+                        <option value="">All</option>
+                        <option
+                          v-for="department in departmentOptions"
+                          :key="department"
+                          :value="department"
+                        >
+                          {{ department }}
+                        </option>
+                      </select>
+                    </label>
+                    <label>
+                      Instructor
+                      <select v-model="filters.instructor" class="schedule-native-select">
+                        <option value="">All</option>
+                        <option
+                          v-for="instructor in instructorOptions"
+                          :key="instructor"
+                          :value="instructor"
+                        >
+                          {{ instructor }}
+                        </option>
+                      </select>
+                    </label>
+                    <label>
+                      Building
+                      <select v-model="filters.building" class="schedule-native-select">
+                        <option value="">All</option>
+                        <option
+                          v-for="building in buildingOptions"
+                          :key="building"
+                          :value="building"
+                        >
+                          {{ building }}
+                        </option>
+                      </select>
+                    </label>
+                    <label>
+                      Room
+                      <select v-model="filters.room" class="schedule-native-select">
+                        <option value="">All</option>
+                        <option v-for="room in roomOptions" :key="room" :value="room">
+                          {{ room }}
+                        </option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="schedule-detail-block__actions">
+                    <Button
+                      label="Reset All Filters"
+                      severity="secondary"
+                      outlined
+                      :disabled="!hasActiveFilters"
+                      @click="resetFilters"
+                    />
+                  </div>
+                </div>
+              </details>
+
+              <DataTable
+                :value="filteredRows"
+                stripedRows
+                scrollable
+                showGridlines
+                tableStyle="min-width: 88rem"
+                class="schedule-table"
+              >
+                <template #empty>
+                  <div class="schedule-table-empty">
+                    No schedule rows match the current filters.
+                  </div>
+                </template>
+                <Column field="department" header="Dept" sortable />
+                <Column field="courseNumber" header="Course" sortable />
+                <Column field="section" header="Section" sortable>
+                  <template #body="{ data }">
+                    {{ data.section || 'N/A' }}
                   </template>
-                </td>
-              </tr>
-              <tr v-if="selectedAssignments.length === 0">
-                <td colspan="8">No classes in this schedule.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
+                </Column>
+                <Column field="courseTitle" header="Title" sortable />
+                <Column field="instructorName" header="Instructor" sortable>
+                  <template #body="{ data }">
+                    <span v-if="!isEditingRow(data.courseId)">{{ data.instructorName }}</span>
+                    <InputText
+                      v-else
+                      v-model="editDraft.professorId"
+                      fluid
+                      placeholder="professor id"
+                    />
+                  </template>
+                </Column>
+                <Column field="timeLabel" header="Time" sortable>
+                  <template #body="{ data }">
+                    <div v-if="!isEditingRow(data.courseId)">
+                      {{ data.timeLabel }}
+                    </div>
+                    <div v-else class="schedule-edit-time">
+                      <select v-model="editDraft.days" class="schedule-native-select">
+                        <option
+                          v-for="pattern in dayPatternOptions"
+                          :key="pattern"
+                          :value="pattern"
+                        >
+                          {{ pattern }}
+                        </option>
+                      </select>
+                      <InputText
+                        v-model="editDraft.startTime"
+                        fluid
+                        placeholder="09:00"
+                      />
+                      <InputText
+                        v-model="editDraft.endTime"
+                        fluid
+                        placeholder="10:15"
+                      />
+                    </div>
+                  </template>
+                </Column>
+                <Column field="building" header="Building" sortable />
+                <Column field="roomLabel" header="Room" sortable>
+                  <template #body="{ data }">
+                    <span v-if="!isEditingRow(data.courseId)">{{ data.roomLabel }}</span>
+                    <InputText
+                      v-else
+                      v-model="editDraft.roomId"
+                      fluid
+                      placeholder="room id"
+                    />
+                  </template>
+                </Column>
+                <Column field="enrollment" header="Enroll" sortable>
+                  <template #body="{ data }">
+                    {{ data.enrollment ?? 'N/A' }}
+                  </template>
+                </Column>
+                <Column field="overrideBy" header="Override By" sortable>
+                  <template #body="{ data }">
+                    {{ data.overrideBy || 'N/A' }}
+                  </template>
+                </Column>
+                <Column header="Actions">
+                  <template #body="{ data }">
+                    <div class="schedule-row-actions">
+                      <template v-if="!isEditingRow(data.courseId)">
+                        <Button
+                          label="Edit"
+                          size="small"
+                          severity="secondary"
+                          outlined
+                          :disabled="isSelectedScheduleLocked || rowActionPending"
+                          @click="startEdit(data.courseId)"
+                        />
+                      </template>
+                      <template v-else>
+                        <Button
+                          label="Save"
+                          size="small"
+                          :loading="rowActionPending"
+                          @click="saveEdit"
+                        />
+                        <Button
+                          label="Cancel"
+                          size="small"
+                          severity="secondary"
+                          outlined
+                          :disabled="rowActionPending"
+                          @click="cancelEdit"
+                        />
+                      </template>
+                    </div>
+                  </template>
+                </Column>
+              </DataTable>
+
+              <div v-if="selectedSchedule.warnings.length" class="schedule-subsection">
+                <h3>Warnings</h3>
+                <Message
+                  v-for="warning in selectedSchedule.warnings"
+                  :key="warning"
+                  severity="warn"
+                  :closable="false"
+                >
+                  {{ warning }}
+                </Message>
+              </div>
+
+              <div class="schedule-subsection">
+                <h3>Conflicts</h3>
+                <DataTable
+                  :value="selectedConflictRows"
+                  stripedRows
+                  scrollable
+                  showGridlines
+                  tableStyle="min-width: 65rem"
+                >
+                  <template #empty>
+                    <div class="schedule-table-empty">No conflicts saved for this run.</div>
+                  </template>
+                  <Column field="courseId" header="Course" sortable />
+                  <Column field="instructor" header="Instructor" sortable />
+                  <Column field="room" header="Room" sortable />
+                  <Column field="time" header="Time" sortable />
+                  <Column field="issueType" header="Issue Type" sortable />
+                  <Column field="reason" header="Reason" />
+                </DataTable>
+              </div>
+
+              <div class="schedule-subsection">
+                <h3>Near-Hard Flags</h3>
+                <DataTable
+                  :value="selectedNearHardFlagRows"
+                  stripedRows
+                  scrollable
+                  showGridlines
+                  tableStyle="min-width: 65rem"
+                >
+                  <template #empty>
+                    <div class="schedule-table-empty">
+                      No near-hard flags were saved for this run.
+                    </div>
+                  </template>
+                  <Column field="courseId" header="Course" sortable />
+                  <Column field="instructor" header="Instructor" sortable />
+                  <Column field="room" header="Room" sortable />
+                  <Column field="time" header="Time" sortable />
+                  <Column field="issueType" header="Issue Type" sortable />
+                  <Column field="reason" header="Reason" />
+                </DataTable>
+              </div>
+
+              <div class="schedule-subsection">
+                <h3>Trace Output</h3>
+                <DataTable
+                  :value="selectedTraceRows"
+                  stripedRows
+                  scrollable
+                  showGridlines
+                  tableStyle="min-width: 95rem"
+                >
+                  <template #empty>
+                    <div class="schedule-table-empty">No placement traces were saved for this run.</div>
+                  </template>
+                  <Column field="courseId" header="Course" sortable />
+                  <Column field="catalogCourseId" header="Catalog Course" sortable />
+                  <Column field="professorId" header="Professor Id" sortable />
+                  <Column field="status" header="Status" sortable />
+                  <Column field="stageLabel" header="Stage" sortable />
+                  <Column field="candidateCount" header="Candidates" sortable />
+                  <Column field="chosenPlacement" header="Chosen Placement" />
+                  <Column field="candidateRoomsLabel" header="Candidate Rooms" />
+                  <Column field="candidateSlotsLabel" header="Candidate Slots" />
+                  <Column field="reasonsLabel" header="Reasons" />
+                </DataTable>
+              </div>
+            </div>
+          </template>
+        </Card>
       </div>
     </div>
-  </div>
-  <div class="temporary-debug-buttons">
-    <button @click="redirectToLogin">Login Page</button>
-    <button @click="redirectToAdmin">Admin Page</button>
   </div>
 </template>
 
 <script setup lang="ts">
+import {
+  buildEnrichedScheduleRows,
+  buildIssueTableRows,
+} from '~~/app/utils/schedule'
+import {
+  downloadScheduleExport,
+  type ScheduleExportFormat,
+} from '~~/app/utils/scheduleExport'
+import { useScheduleReferenceData } from '~~/app/composables/useScheduleReferenceData'
+import type {
+  EnrichedScheduleRow,
+  SavedScheduleDetails,
+  SavedScheduleSummary,
+  ScheduleAssignment,
+  ScheduleStatus,
+} from '~~/types/schedule'
+
 definePageMeta({
   pageTitle: 'Schedule Viewer',
 })
 
-const { redirectToLogin, redirectToAdmin } = useDebugNavigation()
-
-type ScheduleSummary = {
-  _id: string
-  term: string
-  runNumber: number
-  status: string
-  createdAt?: string
-}
-
-type ScheduleDetails = ScheduleSummary & {
-  createdBy: string
-  assignments: {
-    courseId: string
-    professorId: string
-    roomId: string
-    days: string
-    startTime: string
-    endTime: string
-    overrideBy?: string | null
-  }[]
-  conflicts: {
-    courseId: string
-    reason: string
-    resolvedBy?: string | null
-    resolvedAt?: string | null
-  }[]
-  updatedAt?: string
-}
+type Severity = 'success' | 'info' | 'warn' | 'error' | 'secondary' | 'contrast'
 
 type ScheduleRunResponse = {
-  schedules: ScheduleDetails[]
+  ok: true
+  term: string
+  count: number
+  schedules: SavedScheduleDetails[]
 }
 
-type Assignment = ScheduleDetails['assignments'][number]
-
-const {
-  data: schedules,
-  pending: schedulePending,
-  error: scheduleError,
-} = useFetch<ScheduleSummary[]>('/api/schedule')
-
-const scheduleItems = computed(() => schedules.value ?? [])
-const schedulesByTerm = computed(() => {
-  return scheduleItems.value.reduce<Record<string, ScheduleSummary[]>>(
-    (acc, schedule) => {
-      const termSchedules = acc[schedule.term] ?? (acc[schedule.term] = [])
-      termSchedules.push(schedule)
-      return acc
-    },
-    Object.create(null) as Record<string, ScheduleSummary[]>,
-  )
-})
-const termKeys = computed(() =>
-  Object.keys(schedulesByTerm.value).sort((a, b) => b.localeCompare(a)),
-)
-const selectedScheduleId = ref<string | null>(null)
-const selectedScheduleDetails = ref<ScheduleDetails | null>(null)
+const scheduleItems = ref<SavedScheduleSummary[]>([])
+const schedulePending = ref(false)
 const selectedSchedulePending = ref(false)
-const selectedScheduleError = ref<unknown>(null)
-const scheduleDetailsCache = new Map<string, ScheduleDetails>()
-let latestScheduleRequest = 0
-
+const selectedScheduleId = ref<string | null>(null)
+const selectedTerm = ref('')
+const selectedSchedule = ref<SavedScheduleDetails | null>(null)
+const statusMessage = ref('')
+const statusSeverity = ref<Severity>('info')
+const rowActionPending = ref(false)
+const statusPending = ref(false)
+const exportPending = ref(false)
 const editingCourseId = ref<string | null>(null)
-const editPending = ref(false)
-const actionMessage = ref('')
-const editingDraft = reactive<Assignment>({
+const scheduleDetailsCache = new Map<string, SavedScheduleDetails>()
+const route = useRoute()
+
+const filters = reactive({
+  search: '',
+  department: '',
+  instructor: '',
+  building: '',
+  room: '',
+})
+
+const editDraft = reactive<ScheduleAssignment>({
   courseId: '',
   professorId: '',
   roomId: '',
@@ -259,417 +570,725 @@ const editingDraft = reactive<Assignment>({
   overrideBy: null,
 })
 
-const dayPatternOptions: Assignment['days'][] = [
+const dayPatternOptions: ScheduleAssignment['days'][] = [
   'MWF',
   'TR',
   'MW',
   'MTWF',
   'MWRF',
+  'M',
   'W',
   'T',
   'R',
 ]
 
-const selectedAssignments = computed(
-  () => selectedScheduleDetails.value?.assignments ?? [],
+const { lookups, loadForTerm } = useScheduleReferenceData()
+
+const schedulesByTerm = computed(() => {
+  return scheduleItems.value.reduce<Record<string, SavedScheduleSummary[]>>(
+    (accumulator, schedule) => {
+      const bucket = accumulator[schedule.term] ?? (accumulator[schedule.term] = [])
+      bucket.push(schedule)
+      return accumulator
+    },
+    {},
+  )
+})
+
+const termKeys = computed(() =>
+  Object.keys(schedulesByTerm.value).sort((left, right) =>
+    right.localeCompare(left),
+  ),
 )
 
-async function selectSchedule(schedule: ScheduleSummary) {
-  const requestId = ++latestScheduleRequest
-  selectedScheduleId.value = schedule._id
-  selectedScheduleError.value = null
+const enrichedRows = computed(() =>
+  buildEnrichedScheduleRows(selectedSchedule.value?.assignments ?? [], lookups.value),
+)
 
-  const cachedSchedule = scheduleDetailsCache.get(schedule._id)
-  if (cachedSchedule) {
-    selectedScheduleDetails.value = cachedSchedule
-    selectedSchedulePending.value = false
-    return
+const filteredRows = computed(() => {
+  const query = filters.search.trim().toLowerCase()
+
+  return enrichedRows.value.filter((row) => {
+    if (filters.department && row.department !== filters.department) return false
+    if (filters.instructor && row.instructorName !== filters.instructor) return false
+    if (filters.building && row.building !== filters.building) return false
+    if (filters.room && row.roomLabel !== filters.room) return false
+
+    if (!query) return true
+
+    return [
+      row.courseId,
+      row.courseTitle,
+      row.instructorName,
+      row.roomLabel,
+      row.building,
+      row.timeLabel,
+    ]
+      .join(' ')
+      .toLowerCase()
+      .includes(query)
+  })
+})
+
+const selectedConflictRows = computed(() =>
+  buildIssueTableRows(
+    selectedSchedule.value?.conflicts ?? [],
+    enrichedRows.value,
+  ),
+)
+
+const selectedNearHardFlagRows = computed(() =>
+  buildIssueTableRows(
+    selectedSchedule.value?.nearHardFlags ?? [],
+    enrichedRows.value,
+  ),
+)
+
+const selectedRecommendedStatus = computed<ScheduleStatus>(() => {
+  if (
+    (selectedSchedule.value?.conflicts.length ?? 0) > 0 ||
+    (selectedSchedule.value?.nearHardFlags.length ?? 0) > 0
+  ) {
+    return 'under_review'
   }
 
-  selectedScheduleDetails.value = null
+  return 'approved'
+})
+
+const selectedTraceRows = computed(() =>
+  (selectedSchedule.value?.traces ?? []).map((trace) => ({
+    courseId: trace.courseId,
+    catalogCourseId: trace.catalogCourseId,
+    professorId: trace.professorId,
+    status: trace.status,
+    stageLabel: trace.stage
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (character) => character.toUpperCase()),
+    candidateCount: trace.candidateCount,
+    chosenPlacement: trace.chosen
+      ? `${trace.chosen.days} ${trace.chosen.startTime}-${trace.chosen.endTime} @ ${trace.chosen.roomId}`
+      : 'None',
+    candidateRoomsLabel: trace.candidateRooms.join(', ') || 'None',
+    candidateSlotsLabel:
+      trace.candidateSlots
+        .map((slot) => `${slot.days} ${slot.startTime}-${slot.endTime}`)
+        .join(', ') || 'None',
+    reasonsLabel: trace.reasons.join('; ') || 'None',
+  })),
+)
+
+const selectedScheduleTitle = computed(() => {
+  if (!selectedSchedule.value) return 'Saved Schedule Viewer'
+  return `${selectedSchedule.value.term} - Run ${selectedSchedule.value.runNumber}`
+})
+
+const selectedStatusSeverity = computed<Severity>(() => {
+  switch (selectedSchedule.value?.status) {
+    case 'approved':
+      return 'success'
+    case 'exported':
+      return 'contrast'
+    case 'under_review':
+      return 'warn'
+    default:
+      return 'secondary'
+  }
+})
+
+const isSelectedScheduleLocked = computed(() =>
+  ['approved', 'exported'].includes(selectedSchedule.value?.status ?? ''),
+)
+
+const canApproveSelectedSchedule = computed(() => {
+  if (!selectedSchedule.value) return false
+  return ['draft', 'under_review'].includes(selectedSchedule.value.status)
+})
+
+const canReopenSelectedSchedule = computed(() => {
+  if (!selectedSchedule.value) return false
+  return ['approved', 'exported'].includes(selectedSchedule.value.status)
+})
+
+const canExportSelectedSchedule = computed(() => {
+  if (!selectedSchedule.value) return false
+  return ['approved', 'exported'].includes(selectedSchedule.value.status)
+})
+
+const departmentOptions = computed(() =>
+  [...new Set(enrichedRows.value.map((row) => row.department))].sort(),
+)
+
+const instructorOptions = computed(() =>
+  [...new Set(enrichedRows.value.map((row) => row.instructorName))].sort(),
+)
+
+const buildingOptions = computed(() =>
+  [...new Set(enrichedRows.value.map((row) => row.building))].sort(),
+)
+
+const roomOptions = computed(() =>
+  [...new Set(enrichedRows.value.map((row) => row.roomLabel))].sort(),
+)
+
+const hasActiveFilters = computed(() => {
+  return Boolean(
+    filters.search ||
+      filters.department ||
+      filters.instructor ||
+      filters.building ||
+      filters.room,
+  )
+})
+
+function setStatus(message: string, severity: Severity = 'info') {
+  statusMessage.value = message
+  statusSeverity.value = severity
+}
+
+function extractErrorMessage(error: unknown): string {
+  const candidate = error as {
+    data?: { statusMessage?: string }
+    statusMessage?: string
+    message?: string
+  }
+
+  return (
+    candidate?.data?.statusMessage ??
+    candidate?.statusMessage ??
+    candidate?.message ??
+    'The request could not be completed.'
+  )
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return 'N/A'
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleString()
+}
+
+function normalizeQueryValue(value: unknown) {
+  if (Array.isArray(value)) {
+    const firstValue = value[0]
+    return typeof firstValue === 'string' ? firstValue : ''
+  }
+
+  return typeof value === 'string' ? value : ''
+}
+
+function findScheduleFromQuery() {
+  const termQuery = normalizeQueryValue(route.query.term).trim()
+  const runQueryRaw = normalizeQueryValue(route.query.run).trim()
+  const runQuery = Number(runQueryRaw)
+  const hasRunQuery = runQueryRaw.length > 0 && Number.isInteger(runQuery)
+
+  if (!termQuery) return null
+
+  return (
+    scheduleItems.value.find(
+      (schedule) =>
+        schedule.term === termQuery &&
+        (!hasRunQuery || schedule.runNumber === runQuery),
+    ) ??
+    scheduleItems.value.find((schedule) => schedule.term === termQuery) ??
+    null
+  )
+}
+
+function resetFilters() {
+  filters.search = ''
+  filters.department = ''
+  filters.instructor = ''
+  filters.building = ''
+  filters.room = ''
+}
+
+async function loadSchedules() {
+  schedulePending.value = true
+  try {
+    scheduleItems.value = await $fetch<SavedScheduleSummary[]>('/api/schedule')
+  } catch (error) {
+    setStatus(extractErrorMessage(error), 'error')
+  } finally {
+    schedulePending.value = false
+  }
+}
+
+async function loadScheduleDetailsForTerm(term: string) {
+  const response = await $fetch<ScheduleRunResponse>(
+    `/api/schedule/${encodeURIComponent(term)}/all`,
+  )
+
+  for (const schedule of response.schedules) {
+    scheduleDetailsCache.set(schedule._id, schedule)
+  }
+}
+
+async function refreshSelectedSchedule() {
+  if (!selectedSchedule.value) return
+
+  await loadScheduleDetailsForTerm(selectedSchedule.value.term)
+  selectedSchedule.value =
+    scheduleDetailsCache.get(selectedSchedule.value._id) ?? selectedSchedule.value
+
+  scheduleItems.value = scheduleItems.value.map((summary) =>
+    summary._id === selectedSchedule.value?._id
+      ? {
+          ...summary,
+          status: selectedSchedule.value.status,
+          updatedAt: selectedSchedule.value.updatedAt,
+          approvedAt: selectedSchedule.value.approvedAt ?? null,
+          approvedBy: selectedSchedule.value.approvedBy ?? null,
+        }
+      : summary,
+  )
+}
+
+async function selectSchedule(schedule: SavedScheduleSummary) {
   selectedSchedulePending.value = true
+  selectedScheduleId.value = schedule._id
+  selectedTerm.value = schedule.term
 
   try {
-    const response = await $fetch<ScheduleRunResponse>(
-      `/api/schedule/${encodeURIComponent(schedule.term)}/all`,
-    )
-    const details =
-      response.schedules.find((item) => item._id === schedule._id) ??
-      response.schedules.find(
-        (item) => item.runNumber === schedule.runNumber,
-      ) ??
-      null
-
-    if (requestId !== latestScheduleRequest) return
-    selectedScheduleDetails.value = details
-    if (details) scheduleDetailsCache.set(schedule._id, details)
-  } catch (error) {
-    if (requestId !== latestScheduleRequest) return
-    selectedScheduleError.value = error
-  } finally {
-    if (requestId === latestScheduleRequest) {
-      selectedSchedulePending.value = false
+    if (!scheduleDetailsCache.has(schedule._id)) {
+      await loadScheduleDetailsForTerm(schedule.term)
     }
+
+    selectedSchedule.value = scheduleDetailsCache.get(schedule._id) ?? null
+    resetFilters()
+    editingCourseId.value = null
+    await loadForTerm(schedule.term)
+  } catch (error) {
+    setStatus(extractErrorMessage(error), 'error')
+  } finally {
+    selectedSchedulePending.value = false
   }
 }
 
-function formatScheduleLabel(schedule: ScheduleSummary) {
-  return `${schedule.term} - Run ${schedule.runNumber} (${schedule.status})`
+function isEditingRow(courseId: string) {
+  return editingCourseId.value === courseId
 }
 
-function formatOptionalValue(value?: string | null) {
-  return value && value.trim().length > 0 ? value : 'N/A'
-}
+function startEdit(courseId: string) {
+  if (!selectedSchedule.value) return
 
-function formatProfessorName(value: string) {
-  const trimmed = value.trim()
-  if (!trimmed) return 'Unknown'
-  const parts = trimmed.split(/[.\s_]+/).filter(Boolean)
-  const formatted = parts.map((part) =>
-    part.length > 1
-      ? `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`
-      : part.toUpperCase(),
+  const assignment = selectedSchedule.value.assignments.find(
+    (candidate) => candidate.courseId === courseId,
   )
-  return formatted.join(' ')
-}
+  if (!assignment) return
 
-function isEditing(assignment: Assignment) {
-  return editingCourseId.value === assignment.courseId
-}
-
-function startEdit(assignment: Assignment) {
-  editingCourseId.value = assignment.courseId
-  actionMessage.value = ''
-  Object.assign(editingDraft, assignment)
+  editingCourseId.value = courseId
+  Object.assign(editDraft, assignment)
 }
 
 function cancelEdit() {
   editingCourseId.value = null
 }
 
-function validateAssignmentDraft() {
+function validateEditDraft() {
   const requiredFields: Array<[string, string]> = [
-    ['courseId', editingCourseId.value ?? ''],
-    ['professor', editingDraft.professorId],
-    ['room', editingDraft.roomId],
-    ['days', editingDraft.days],
-    ['start time', editingDraft.startTime],
-    ['end time', editingDraft.endTime],
+    ['professor', editDraft.professorId],
+    ['room', editDraft.roomId],
+    ['days', editDraft.days],
+    ['start time', editDraft.startTime],
+    ['end time', editDraft.endTime],
   ]
 
   const missing = requiredFields.find(([, value]) => !value?.trim())
   if (missing) {
-    return `Please enter a ${missing[0]} before saving.`
-  }
-
-  if (!dayPatternOptions.includes(editingDraft.days)) {
-    return 'Please select a valid day pattern.'
+    return `Please provide a ${missing[0]} before saving.`
   }
 
   return ''
 }
 
 async function saveEdit() {
-  if (!selectedScheduleDetails.value || !editingCourseId.value) return
-  editPending.value = true
-  actionMessage.value = ''
-  const schedule = selectedScheduleDetails.value
-  const validationMessage = validateAssignmentDraft()
+  if (!selectedSchedule.value || !editingCourseId.value) return
+
+  const validationMessage = validateEditDraft()
   if (validationMessage) {
-    actionMessage.value = validationMessage
-    editPending.value = false
+    setStatus(validationMessage, 'warn')
     return
   }
-  const updatedAssignments = schedule.assignments.map((assignment) =>
-    assignment.courseId === editingCourseId.value
-      ? {
-          ...assignment,
-          ...editingDraft,
-          courseId: editingCourseId.value,
-        }
-      : assignment,
-  )
 
+  rowActionPending.value = true
   try {
-    const updatedSchedule = await $fetch<ScheduleDetails>(
-      `/api/schedule/${encodeURIComponent(schedule.term)}`,
+    await $fetch(
+      `/api/schedule/${encodeURIComponent(selectedSchedule.value.term)}/assignment`,
       {
         method: 'PATCH',
         body: {
-          runNumber: schedule.runNumber,
-          assignments: updatedAssignments,
+          runNumber: selectedSchedule.value.runNumber,
+          originalCourseId: editingCourseId.value,
+          assignment: {
+            courseId: editingCourseId.value,
+            professorId: editDraft.professorId,
+            roomId: editDraft.roomId,
+            days: editDraft.days,
+            startTime: editDraft.startTime,
+            endTime: editDraft.endTime,
+          },
         },
       },
     )
 
-    selectedScheduleDetails.value = updatedSchedule
-    scheduleDetailsCache.set(updatedSchedule._id, updatedSchedule)
-    actionMessage.value = 'Assignment updated.'
+    await refreshSelectedSchedule()
     editingCourseId.value = null
+    setStatus(
+      `Updated ${selectedSchedule.value.term} run ${selectedSchedule.value.runNumber}.`,
+      'success',
+    )
   } catch (error) {
-    actionMessage.value = 'Unable to update assignment.'
-    selectedScheduleError.value = error
+    setStatus(extractErrorMessage(error), 'error')
   } finally {
-    editPending.value = false
+    rowActionPending.value = false
   }
 }
 
-async function deleteAssignment(assignment: Assignment) {
-  if (!selectedScheduleDetails.value) return
-  const shouldDelete = window.confirm(
-    `Delete assignment for ${assignment.courseId}?`,
-  )
-  if (!shouldDelete) return
+async function updateSelectedStatus(nextStatus: ScheduleStatus) {
+  if (!selectedSchedule.value) return
 
-  editPending.value = true
-  actionMessage.value = ''
-  const schedule = selectedScheduleDetails.value
-  const updatedAssignments = schedule.assignments.filter(
-    (item) => item.courseId !== assignment.courseId,
-  )
-
+  statusPending.value = true
   try {
-    const updatedSchedule = await $fetch<ScheduleDetails>(
-      `/api/schedule/${encodeURIComponent(schedule.term)}`,
+    selectedSchedule.value = await $fetch<SavedScheduleDetails>(
+      `/api/schedule/${encodeURIComponent(selectedSchedule.value.term)}`,
       {
         method: 'PATCH',
         body: {
-          runNumber: schedule.runNumber,
-          assignments: updatedAssignments,
+          runNumber: selectedSchedule.value.runNumber,
+          status: nextStatus,
         },
       },
     )
 
-    selectedScheduleDetails.value = updatedSchedule
-    scheduleDetailsCache.set(updatedSchedule._id, updatedSchedule)
-    actionMessage.value = 'Assignment deleted.'
+    scheduleDetailsCache.set(selectedSchedule.value._id, selectedSchedule.value)
+    await loadSchedules()
+    setStatus(
+      `${selectedSchedule.value.term} run ${selectedSchedule.value.runNumber} is now ${selectedSchedule.value.status}.`,
+      'success',
+    )
   } catch (error) {
-    actionMessage.value = 'Unable to delete assignment.'
-    selectedScheduleError.value = error
+    setStatus(extractErrorMessage(error), 'error')
   } finally {
-    editPending.value = false
+    statusPending.value = false
   }
 }
+
+async function approveSelectedSchedule() {
+  await updateSelectedStatus('approved')
+}
+
+async function reopenSelectedSchedule() {
+  await updateSelectedStatus('under_review')
+}
+
+async function exportSelectedSchedule(format: ScheduleExportFormat) {
+  if (!selectedSchedule.value) return
+
+  exportPending.value = true
+  try {
+    await downloadScheduleExport(
+      selectedSchedule.value.term,
+      selectedSchedule.value.runNumber,
+      format,
+    )
+
+    selectedSchedule.value = {
+      ...selectedSchedule.value,
+      status: 'exported',
+    }
+    scheduleDetailsCache.set(selectedSchedule.value._id, selectedSchedule.value)
+    await loadSchedules()
+    setStatus(
+      `Exported ${selectedSchedule.value.term} run ${selectedSchedule.value.runNumber} as ${format.toUpperCase()}.`,
+      'success',
+    )
+  } catch (error) {
+    setStatus(extractErrorMessage(error), 'error')
+  } finally {
+    exportPending.value = false
+  }
+}
+
+onMounted(async () => {
+  await loadSchedules()
+  const initialSchedule = findScheduleFromQuery() ?? scheduleItems.value[0] ?? null
+  if (initialSchedule) {
+    await selectSchedule(initialSchedule)
+  }
+})
 </script>
 
-<style>
-.schedule-viewer {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 16px;
-  min-height: calc(100vh - 4rem);
+<style scoped>
+.schedule-history-page {
   display: flex;
   flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.75rem 0 2rem;
 }
 
-.schedule-list {
-  margin-top: 1rem;
-}
-
-.schedule-content {
-  flex: 1;
-  min-height: 0;
-}
-
-.term-dropdowns {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.75rem;
-  margin: 1rem 0 1.5rem;
-}
-
-.term-dropdown {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 0.4rem 0.8rem;
-  min-width: min(220px, 100%);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.15);
-}
-
-.term-dropdown > summary {
-  list-style: none;
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--color-text-primary);
+.schedule-history-page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
-.term-dropdown > summary::after {
-  content: '▾';
-  font-size: 0.9rem;
+.schedule-history-page-header__title {
+  margin: 0;
+  font-size: clamp(1.4rem, 2vw, 1.9rem);
+}
+
+.schedule-history-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.schedule-history-sidebar,
+.schedule-history-main,
+.schedule-history-main-card {
+  height: 100%;
+}
+
+.schedule-history-sidebar :deep(.p-card),
+.schedule-history-main-card :deep(.p-card) {
+  height: 100%;
+}
+
+.schedule-history-sidebar :deep(.p-card-header),
+.schedule-history-main-card :deep(.p-card-header) {
+  padding: 1.15rem 1.35rem 0;
+}
+
+.schedule-history-sidebar :deep(.p-card-body),
+.schedule-history-main-card :deep(.p-card-body) {
+  padding: 1.05rem 1.35rem 1.35rem;
+}
+
+.schedule-history-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.schedule-history-card-header__title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.schedule-history-card-header__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.schedule-history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  min-height: 12rem;
+  text-align: center;
   color: var(--color-text-secondary);
-  transition: transform 0.2s ease;
 }
 
-.term-dropdown > summary::-webkit-details-marker {
+.schedule-term-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.schedule-term-group {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.schedule-term-group > summary {
+  cursor: pointer;
+  padding: 0.95rem 1rem;
+  font-weight: 700;
+  list-style: none;
+  color: var(--color-text-primary);
+}
+
+.schedule-term-group > summary::-webkit-details-marker {
   display: none;
 }
 
-.term-dropdown[open] {
-  background-color: var(--color-surface-elevated);
+.schedule-term-group__items {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0 1rem 1rem;
 }
 
-.term-dropdown[open] > summary::after {
-  transform: rotate(-180deg);
-}
-
-.schedule-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 0.6rem;
-}
-
-.schedule-buttons button {
+.schedule-run-button {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.8rem 0.9rem;
   text-align: left;
-  border-radius: 10px;
-  padding: 0.65rem 0.85rem;
-  font-weight: 600;
-  box-shadow: 0 8px 16px rgba(0, 51, 153, 0.12);
-  transition:
-    transform 160ms ease,
-    box-shadow 160ms ease;
+  border-radius: 14px;
+  border: 1px solid rgba(59, 130, 246, 0.16);
+  background: #f8fafc;
+  color: var(--color-text-primary);
 }
 
-.schedule-buttons button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 20px rgba(0, 51, 153, 0.16);
+.schedule-run-button strong {
+  font-size: 0.96rem;
 }
 
-.schedule-details {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  flex: 1;
-  min-height: 0;
-}
-
-.schedule-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
+.schedule-run-button span,
+.schedule-run-button small {
   color: var(--color-text-secondary);
 }
 
-.schedule-meta p {
+.schedule-run-button--active {
+  border-color: rgba(29, 78, 216, 0.45);
+  background: rgba(219, 234, 254, 0.72);
+  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.16);
+}
+
+.schedule-history-stack,
+.schedule-subsection {
+  display: grid;
+  gap: 1rem;
+}
+
+.schedule-meta-grid,
+.schedule-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.85rem;
+}
+
+.schedule-filter-grid--advanced {
+  margin-top: 0.25rem;
+}
+
+.schedule-filter-grid__actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  grid-column: 1 / -1;
+}
+
+.schedule-filter-grid__count {
+  color: var(--color-text-secondary);
+  font-size: 0.92rem;
+}
+
+.schedule-meta-card {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: linear-gradient(180deg, #fff, #f8fafc);
+}
+
+.schedule-meta-card__label {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.schedule-history-actions,
+.schedule-row-actions,
+.schedule-edit-time {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.schedule-filter-grid label {
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.schedule-native-select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  background: #fff;
+  color: var(--color-text-primary);
+}
+
+.schedule-native-select:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.schedule-detail-block {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.9);
+  overflow: hidden;
+}
+
+.schedule-detail-block > summary {
+  cursor: pointer;
+  padding: 0.9rem 1rem;
+  font-weight: 600;
+  list-style: none;
+  color: var(--color-text-primary);
+}
+
+.schedule-detail-block > summary::-webkit-details-marker {
+  display: none;
+}
+
+.schedule-detail-block__content {
+  padding: 0 1rem 1rem;
+}
+
+.schedule-detail-block__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.9rem;
+}
+
+.schedule-table-empty {
+  padding: 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.schedule-subsection h3 {
   margin: 0;
 }
 
-.table-container {
-  overflow-x: auto;
-  overflow-y: auto;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  max-height: min(60vh, 520px);
+@media (max-width: 1120px) {
+  .schedule-history-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  border: 1px solid var(--color-border);
-  padding: 0.5rem;
-  text-align: left;
-}
-
-thead {
-  background-color: var(--color-surface-elevated);
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.row-actions {
-  white-space: nowrap;
-}
-
-.action-btn {
-  padding: 0.35rem 0.65rem;
-  font-size: 0.85rem;
-  border-radius: 8px;
-  border: 1px solid var(--color-action-secondary-border);
-  background: var(--color-action-secondary-bg);
-  color: var(--color-action-secondary-text);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.action-btn + .action-btn {
-  margin-left: 0.4rem;
-}
-
-.action-btn:hover {
-  background: var(--color-action-secondary-bg-hover);
-  transform: translateY(-1px);
-}
-
-.action-btn--delete {
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #ef4444;
-}
-
-.action-btn--delete:hover {
-  background: rgba(239, 68, 68, 0.12);
-}
-
-.action-btn--save {
-  border-color: rgba(34, 197, 94, 0.4);
-  color: #22c55e;
-}
-
-.action-btn--save:hover {
-  background: rgba(34, 197, 94, 0.12);
-}
-
-.action-btn--cancel {
-  border-color: rgba(148, 163, 184, 0.6);
-  color: var(--color-text-secondary);
-}
-
-.action-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.schedule-table-input {
-  width: 100%;
-  background-color: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
-  border-radius: 6px;
-  padding: 0.35rem 0.45rem;
-  font-size: 0.9rem;
-}
-
-.schedule-table-input:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-
-.action-message {
-  margin: 0.6rem 0 0;
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
+@media (max-width: 860px) {
+  .schedule-history-page-header,
+  .schedule-history-card-header {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 640px) {
-  .term-dropdown {
-    width: 100%;
-  }
-
-  .schedule-meta {
+  .schedule-history-actions,
+  .schedule-row-actions,
+  .schedule-filter-grid__actions {
     flex-direction: column;
-    gap: 0.35rem;
+    align-items: stretch;
   }
 }
 </style>
