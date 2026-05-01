@@ -62,6 +62,7 @@ export interface SavedScheduleSummary {
   runNumber: number
   status: ScheduleStatus
   createdBy: string
+  assignmentCount?: number
   createdAt?: string
   updatedAt?: string
   approvedAt?: string | null
@@ -74,6 +75,12 @@ export interface SavedScheduleDetails extends SavedScheduleSummary {
   warnings: string[]
   nearHardFlags: ScheduleIssue[]
   traces: PlacementTrace[]
+}
+
+export interface ScheduleTermIndexEntry {
+  term: string
+  hasPreferences: boolean
+  runs: SavedScheduleSummary[]
 }
 
 export interface ScheduleRunResponse {

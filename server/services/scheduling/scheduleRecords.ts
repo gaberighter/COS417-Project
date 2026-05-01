@@ -99,8 +99,24 @@ export async function listScheduleSummaries() {
 export async function findScheduleByTerm(
   term: string,
   runNumber?: number,
-  options: { lean?: boolean } = {},
+  options: { lean?: boolean; preferPopulated?: boolean } = {},
 ) {
+  if (runNumber === undefined && options.preferPopulated) {
+    const populatedQuery = Schedule.findOne({
+      term,
+      'assignments.0': { $exists: true },
+    }).sort({ runNumber: -1 })
+
+    if (options.lean) {
+      populatedQuery.lean()
+    }
+
+    const populatedSchedule = await populatedQuery.exec()
+    if (populatedSchedule) {
+      return populatedSchedule
+    }
+  }
+
   const filter = runNumber !== undefined ? { term, runNumber } : { term }
   const query = Schedule.findOne(filter)
   if (runNumber === undefined) {
