@@ -7,6 +7,7 @@ import {
   type IAssignment,
   type ISchedule,
 } from '../../models/index'
+import { Users } from '../../models/user.model'
 import {
   catalogCourseIdOf,
   courseSectionOf,
@@ -134,6 +135,10 @@ function getBuildingCode(roomAbbreviation: string): string {
   return roomAbbreviation.split(/\s+/)[0] ?? ''
 }
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 function splitRoomReference(roomReference: string | null | undefined): {
   buildingCode: string
   roomNumber: string
@@ -198,6 +203,7 @@ function formatExportProfessorLabel(professor?: {
 function formatExportOverrideLabel(input: {
   overrideBy?: string | null
   professorsById: Map<string, { covenantId: string; displayName?: string }>
+  overrideActorsById: Map<string, string>
 }) {
   const overrideBy = normalizeWhitespace(String(input.overrideBy ?? ''))
   if (!overrideBy) return ''
@@ -207,7 +213,16 @@ function formatExportOverrideLabel(input: {
     return professor.displayName
   }
 
-  return overrideBy
+  const overrideActor = getLookupValue(input.overrideActorsById, overrideBy)
+  if (overrideActor) {
+    return overrideActor
+  }
+
+  if (looksLikeOpaqueReference(overrideBy)) {
+    return 'Administrative override'
+  }
+
+  return `Admin (${overrideBy})`
 }
 
 function formatExportRoomLabel(
@@ -303,6 +318,7 @@ function buildExportRowData(
       }
     >
     professorsById: Map<string, { covenantId: string; displayName?: string }>
+    overrideActorsById: Map<string, string>
     roomsById: Map<string, { abbreviation: string; roomNumber: string }>
     preferenceFieldsByKey: Map<string, PreferenceExportFields>
   },
@@ -367,6 +383,7 @@ function buildExportRowData(
       OverrideBy: formatExportOverrideLabel({
         overrideBy: assignment.overrideBy,
         professorsById: lookups.professorsById,
+        overrideActorsById: lookups.overrideActorsById,
       }),
     }
 
@@ -412,9 +429,10 @@ export async function buildScheduleExportFile(
   ]
   const professorIds = [
     ...new Set(
-      schedule.assignments.flatMap((assignment) =>
-        expandQueryKeys(assignment.professorId),
-      ),
+      schedule.assignments.flatMap((assignment) => [
+        ...expandQueryKeys(assignment.professorId),
+        ...expandQueryKeys(assignment.overrideBy),
+      ]),
     ),
   ]
   const roomIds = [
@@ -424,8 +442,15 @@ export async function buildScheduleExportFile(
       ),
     ),
   ]
+  const overrideIds = [
+    ...new Set(
+      schedule.assignments.flatMap((assignment) =>
+        expandQueryKeys(assignment.overrideBy),
+      ),
+    ),
+  ]
 
-  const [courses, professors, rooms] = await Promise.all([
+  const [courses, professors, rooms, users] = await Promise.all([
     CourseCatalog.find(
       { _id: { $in: courseIds } },
       { _id: 1, deptCode: 1, courseNumber: 1, title: 1, creditHours: 1 },
@@ -465,6 +490,21 @@ export async function buildScheduleExportFile(
       .collation({ locale: 'en', strength: 2 })
       .lean()
       .exec(),
+    overrideIds.length
+      ? Users.find(
+          {
+            $or: [
+              { username: { $in: overrideIds } },
+              ...overrideIds.map((id) => ({
+                email: { $regex: `^${escapeRegex(id)}@`, $options: 'i' },
+              })),
+            ],
+          } as any,
+          { _id: 1, username: 1, email: 1, name: 1, preferred: 1 } as any,
+        )
+          .lean()
+          .exec()
+      : Promise.resolve([]),
   ])
 
   const coursesById = new Map<
@@ -480,6 +520,7 @@ export async function buildScheduleExportFile(
     string,
     { covenantId: string; displayName?: string }
   >()
+  const overrideActorsById = new Map<string, string>()
   const preferenceFieldsByKey = new Map<string, PreferenceExportFields>()
   for (const course of courses) {
     const payload = {
@@ -498,6 +539,14 @@ export async function buildScheduleExportFile(
     setLookupAlias(professorsById, professor._id, payload)
     setLookupAlias(professorsById, professor.covenantId, payload)
     setLookupAlias(professorsById, professor.displayName, payload)
+    if (professor.displayName) {
+      setLookupAlias(overrideActorsById, professor._id, professor.displayName)
+      setLookupAlias(
+        overrideActorsById,
+        professor.covenantId,
+        professor.displayName,
+      )
+    }
 
     for (const submission of professor.preferences ?? []) {
       if (submission.term !== schedule.term) continue
@@ -539,6 +588,22 @@ export async function buildScheduleExportFile(
     }
   }
 
+  for (const user of users) {
+    const displayName =
+      normalizeWhitespace(String(user.preferred ?? '')) ||
+      normalizeWhitespace(String(user.name ?? '')) ||
+      normalizeWhitespace(String(user.username ?? ''))
+
+    if (!displayName) continue
+
+    setLookupAlias(overrideActorsById, user.username, displayName)
+
+    const email = normalizeWhitespace(String(user.email ?? ''))
+    if (email.includes('@')) {
+      setLookupAlias(overrideActorsById, email.split('@')[0], displayName)
+    }
+  }
+
   const roomsById = new Map<
     string,
     { abbreviation: string; roomNumber: string }
@@ -556,6 +621,7 @@ export async function buildScheduleExportFile(
   const rows = buildExportRowData(schedule.assignments, {
     coursesById,
     professorsById,
+    overrideActorsById,
     roomsById,
     preferenceFieldsByKey,
   })
