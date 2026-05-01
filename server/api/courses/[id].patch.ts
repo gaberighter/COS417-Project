@@ -193,8 +193,9 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updated = await CourseCatalog.collection.findOneAndUpdate(
-    { _id: existing._id },
+    { _id: existing._id } as any,
     { $set: patch },
     { returnDocument: 'after' },
   )
@@ -203,7 +204,7 @@ export default defineEventHandler(async (event) => {
     auth,
     'COURSE_UPDATE',
     'courseCatalog',
-    updated?._id,
+    String(updated?._id ?? courseId),
     `Updated course ${courseId}`,
   )
 

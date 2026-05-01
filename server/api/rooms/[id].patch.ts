@@ -136,8 +136,9 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updated = await Room.collection.findOneAndUpdate(
-    { _id: existing._id },
+    { _id: existing._id } as any,
     { $set: patch },
     { returnDocument: 'after' },
   )
@@ -146,7 +147,7 @@ export default defineEventHandler(async (event) => {
     auth,
     'ROOM_UPDATE',
     'rooms',
-    updated?._id,
+    String(updated?._id ?? roomId),
     `Updated room ${roomId}`,
   )
 
