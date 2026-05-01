@@ -3,11 +3,14 @@
 // Role: Admin
 
 import { defineEventHandler, getRouterParam, createError } from 'h3'
+import mongoose from 'mongoose'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { CourseCatalog } from '../../models/index'
 import { logAction } from '../../services/auditService'
 import { getClientIp } from '../../utils/ip'
+
+const IS_OBJECT_ID = /^[0-9a-f]{24}$/i
 
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
@@ -25,10 +28,16 @@ export default defineEventHandler(async (event) => {
   const clientIp = getClientIp(event)
   const courseId = id.trim()
 
-  // Find and delete the course
-  const deleted = await CourseCatalog.findOneAndDelete({ _id: courseId })
+  // Find and delete the course — handle both String _id and legacy ObjectId _id
+  let deleted = await CourseCatalog.findOneAndDelete({ _id: courseId })
     .lean()
     .exec()
+  if (!deleted && IS_OBJECT_ID.test(courseId)) {
+    const raw = await CourseCatalog.collection.findOneAndDelete({
+      _id: new mongoose.Types.ObjectId(courseId),
+    })
+    deleted = raw as typeof deleted
+  }
 
   if (!deleted) {
     // Return 404 when the requested course _id doesn't exist.

@@ -3,10 +3,25 @@
 // Role: Admin
 
 import { createError, defineEventHandler, getRouterParam, readBody } from 'h3'
+import mongoose from 'mongoose'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { CourseCatalog } from '../../models/index'
 import { logAction } from '../../services/auditService'
+
+const IS_OBJECT_ID = /^[0-9a-f]{24}$/i
+
+async function findCourseByAnyId(courseId: string) {
+  const byString = await CourseCatalog.findById(courseId).lean().exec()
+  if (byString) return byString
+  if (IS_OBJECT_ID.test(courseId)) {
+    const raw = await CourseCatalog.collection.findOne({
+      _id: new mongoose.Types.ObjectId(courseId),
+    })
+    return raw as typeof byString | null
+  }
+  return null
+}
 
 type DayPattern = 'MWF' | 'TR' | 'MW' | 'MTWF' | 'MWRF' | 'M' | 'W' | 'T' | 'R'
 
@@ -64,7 +79,7 @@ export default defineEventHandler(async (event) => {
 
   const courseId = id.trim()
 
-  const existing = await CourseCatalog.findById(courseId).lean().exec()
+  const existing = await findCourseByAnyId(courseId)
   if (!existing) {
     throw createError({
       statusCode: 404,
@@ -178,19 +193,18 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const updated = await CourseCatalog.findByIdAndUpdate(
-    courseId,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updated = await CourseCatalog.collection.findOneAndUpdate(
+    { _id: existing._id } as any,
     { $set: patch },
-    { new: true, runValidators: true },
+    { returnDocument: 'after' },
   )
-    .lean()
-    .exec()
 
   await logAction(
     auth,
     'COURSE_UPDATE',
     'courseCatalog',
-    updated?._id,
+    String(updated?._id ?? courseId),
     `Updated course ${courseId}`,
   )
 
