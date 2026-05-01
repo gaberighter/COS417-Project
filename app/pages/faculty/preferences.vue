@@ -469,24 +469,39 @@
         or cancel to go back and edit.
       </p>
 
-      <div v-if="pendingNewEntities.newInstructors.length > 0" class="pref-ned__group">
+      <div
+        v-if="pendingNewEntities.newInstructors.length > 0"
+        class="pref-ned__group"
+      >
         <span class="pref-ned__label">New Instructors</span>
         <ul class="pref-ned__list">
-          <li v-for="name in pendingNewEntities.newInstructors" :key="name">{{ name }}</li>
+          <li v-for="name in pendingNewEntities.newInstructors" :key="name">
+            {{ name }}
+          </li>
         </ul>
       </div>
 
-      <div v-if="pendingNewEntities.newBuildings.length > 0" class="pref-ned__group">
+      <div
+        v-if="pendingNewEntities.newBuildings.length > 0"
+        class="pref-ned__group"
+      >
         <span class="pref-ned__label">New Buildings</span>
         <ul class="pref-ned__list">
-          <li v-for="code in pendingNewEntities.newBuildings" :key="code">{{ code }}</li>
+          <li v-for="code in pendingNewEntities.newBuildings" :key="code">
+            {{ code }}
+          </li>
         </ul>
       </div>
 
-      <div v-if="pendingNewEntities.newRooms.length > 0" class="pref-ned__group">
+      <div
+        v-if="pendingNewEntities.newRooms.length > 0"
+        class="pref-ned__group"
+      >
         <span class="pref-ned__label">New Rooms</span>
         <ul class="pref-ned__list">
-          <li v-for="room in pendingNewEntities.newRooms" :key="room">{{ room }}</li>
+          <li v-for="room in pendingNewEntities.newRooms" :key="room">
+            {{ room }}
+          </li>
         </ul>
       </div>
 
@@ -689,7 +704,11 @@ const submissionDepartment = ref<string | null>(null)
 const loadedTerm = ref('')
 const loadedSnapshot = ref('[]')
 const showNewEntityDialog = ref(false)
-const pendingNewEntities = ref<NewEntityInfo>({ newInstructors: [], newBuildings: [], newRooms: [] })
+const pendingNewEntities = ref<NewEntityInfo>({
+  newInstructors: [],
+  newBuildings: [],
+  newRooms: [],
+})
 const pendingSave = ref<PendingSave | null>(null)
 
 const termSuggestions = ref<string[]>([])
@@ -1566,11 +1585,20 @@ function detectNewEntities(courses: PreferencePayloadCourse[]): NewEntityInfo {
   const newRooms = new Set<string>()
 
   for (const c of courses) {
-    if (c.instructor && !knownInstructors.has(normalizeLookupValue(c.instructor)))
+    if (
+      c.instructor &&
+      !knownInstructors.has(normalizeLookupValue(c.instructor))
+    )
       newInstructors.add(c.instructor)
-    if (c.preferredBuilding && !knownBuildings.has(normalizeLookupValue(c.preferredBuilding)))
+    if (
+      c.preferredBuilding &&
+      !knownBuildings.has(normalizeLookupValue(c.preferredBuilding))
+    )
       newBuildings.add(c.preferredBuilding)
-    if (c.preferredRoomId && !knownRoomIds.has(normalizeLookupValue(c.preferredRoomId)))
+    if (
+      c.preferredRoomId &&
+      !knownRoomIds.has(normalizeLookupValue(c.preferredRoomId))
+    )
       newRooms.add(c.preferredRoomId)
   }
 
