@@ -10,7 +10,9 @@
 
             <div class="schedule-admin-hero__controls">
               <div class="schedule-field">
-                <label class="schedule-label" for="schedule-run-term">Term</label>
+                <label class="schedule-label" for="schedule-run-term"
+                  >Term</label
+                >
                 <AutoComplete
                   id="schedule-run-term"
                   v-model="term"
@@ -67,7 +69,11 @@
                 <Tag
                   v-if="runResult"
                   :value="`Recommended: ${runResult.recommendedStatus}`"
-                  :severity="runResult.recommendedStatus === 'approved' ? 'success' : 'warn'"
+                  :severity="
+                    runResult.recommendedStatus === 'approved'
+                      ? 'success'
+                      : 'warn'
+                  "
                   rounded
                 />
                 <Tag
@@ -132,13 +138,18 @@
             </div>
 
             <div v-if="!runResult" class="schedule-empty-state">
-              <p>Run the scheduler to review assignments, warnings, and conflicts.</p>
+              <p>
+                Run the scheduler to review assignments, warnings, and
+                conflicts.
+              </p>
             </div>
 
             <div v-else class="schedule-result-stack">
               <div class="schedule-result-overview">
                 <div class="schedule-result-overview__card">
-                  <span class="schedule-result-overview__label">Assignments</span>
+                  <span class="schedule-result-overview__label"
+                    >Assignments</span
+                  >
                   <strong>{{ runResult.assignments.length }}</strong>
                 </div>
                 <div class="schedule-result-overview__card">
@@ -146,7 +157,9 @@
                   <strong>{{ runResult.conflicts.length }}</strong>
                 </div>
                 <div class="schedule-result-overview__card">
-                  <span class="schedule-result-overview__label">Near-Hard Flags</span>
+                  <span class="schedule-result-overview__label"
+                    >Near-Hard Flags</span
+                  >
                   <strong>{{ runResult.nearHardFlags.length }}</strong>
                 </div>
                 <div class="schedule-result-overview__card">
@@ -213,7 +226,9 @@
                   tableStyle="min-width: 65rem"
                 >
                   <template #empty>
-                    <div class="schedule-table-empty">No conflicts returned.</div>
+                    <div class="schedule-table-empty">
+                      No conflicts returned.
+                    </div>
                   </template>
                   <Column field="courseId" header="Course" sortable />
                   <Column field="instructor" header="Instructor" sortable />
@@ -234,7 +249,9 @@
                   tableStyle="min-width: 65rem"
                 >
                   <template #empty>
-                    <div class="schedule-table-empty">No near-hard flags returned.</div>
+                    <div class="schedule-table-empty">
+                      No near-hard flags returned.
+                    </div>
                   </template>
                   <Column field="courseId" header="Course" sortable />
                   <Column field="instructor" header="Instructor" sortable />
@@ -252,7 +269,9 @@
           <template #header>
             <div class="schedule-card-header">
               <div>
-                <h2 class="schedule-card-header__title">Current Save Snapshot</h2>
+                <h2 class="schedule-card-header__title">
+                  Current Save Snapshot
+                </h2>
               </div>
               <div class="schedule-card-header__actions">
                 <button
@@ -270,7 +289,10 @@
                       <small>{{ historyPopoverSubtitle }}</small>
                     </div>
 
-                    <div v-if="historyPending" class="schedule-history-popover__empty">
+                    <div
+                      v-if="historyPending"
+                      class="schedule-history-popover__empty"
+                    >
                       Loading saved runs...
                     </div>
 
@@ -297,7 +319,10 @@
                         @click="openHistoryItem(history)"
                       >
                         <div class="schedule-history-popover__item-top">
-                          <strong>{{ history.term }} - Run {{ history.runNumber }}</strong>
+                          <strong
+                            >{{ history.term }} - Run
+                            {{ history.runNumber }}</strong
+                          >
                           <Tag
                             :value="history.status"
                             :severity="scheduleStatusSeverity(history.status)"
@@ -305,7 +330,12 @@
                           />
                         </div>
                         <small>
-                          Updated {{ formatDateTime(history.updatedAt || history.createdAt) }}
+                          Updated
+                          {{
+                            formatDateTime(
+                              history.updatedAt || history.createdAt,
+                            )
+                          }}
                         </small>
                       </button>
                     </div>
@@ -355,13 +385,16 @@
               </div>
 
               <Message
-                v-if="savedSchedule.status === 'approved' || savedSchedule.status === 'exported'"
+                v-if="
+                  savedSchedule.status === 'approved' ||
+                  savedSchedule.status === 'exported'
+                "
                 severity="info"
                 :closable="false"
                 class="schedule-inline-message"
               >
-                This saved version is locked, which keeps the process safe for export.
-                Reopen it only if you need to make another review pass.
+                This saved version is locked, which keeps the process safe for
+                export. Reopen it only if you need to make another review pass.
               </Message>
             </div>
           </template>
@@ -423,13 +456,13 @@ const statusMessage = ref('')
 const statusSeverity = ref<Severity>('info')
 const historyLoadError = ref('')
 const historyItems = ref<SavedScheduleSummary[]>([])
-const historyPopover = ref<{ toggle: (event: Event) => void, hide?: () => void } | null>(null)
+const historyPopover = ref<{
+  toggle: (event: Event) => void
+  hide?: () => void
+} | null>(null)
 const runResultIsSaved = ref(false)
 
-const {
-  lookups,
-  loadForTerm,
-} = useScheduleReferenceData()
+const { lookups, loadForTerm } = useScheduleReferenceData()
 
 function scheduleStatusSeverity(status?: ScheduleStatus | null): Severity {
   switch (status) {
@@ -449,11 +482,7 @@ const savedScheduleTagSeverity = computed<Severity>(() => {
 })
 
 const canRunSchedule = computed(() => {
-  return (
-    !!selectedTerm.value &&
-    !runPending.value &&
-    !termContextPending.value
-  )
+  return !!selectedTerm.value && !runPending.value && !termContextPending.value
 })
 
 const canApproveSavedSchedule = computed(() => {
@@ -508,7 +537,9 @@ const generatedScheduleMessage = computed(() => {
 })
 
 const historyScopeTerm = computed(() => {
-  return selectedTerm.value || term.value.trim() || savedSchedule.value?.term || ''
+  return (
+    selectedTerm.value || term.value.trim() || savedSchedule.value?.term || ''
+  )
 })
 
 const historyPopoverItems = computed(() => {
@@ -526,7 +557,9 @@ const historyPopoverItems = computed(() => {
 const historyPopoverTitle = computed(() => {
   if (
     historyScopeTerm.value &&
-    historyPopoverItems.value.some((history) => history.term === historyScopeTerm.value)
+    historyPopoverItems.value.some(
+      (history) => history.term === historyScopeTerm.value,
+    )
   ) {
     return `${historyScopeTerm.value} History`
   }
@@ -537,9 +570,11 @@ const historyPopoverTitle = computed(() => {
 const historyPopoverSubtitle = computed(() => {
   if (
     historyScopeTerm.value &&
-    historyPopoverItems.value.some((history) => history.term === historyScopeTerm.value)
+    historyPopoverItems.value.some(
+      (history) => history.term === historyScopeTerm.value,
+    )
   ) {
-    return 'Quick access to this term\'s saved schedule runs.'
+    return "Quick access to this term's saved schedule runs."
   }
 
   return 'Showing the most recent saved runs across terms.'
@@ -1143,7 +1178,11 @@ onMounted(async () => {
   border-radius: 16px;
   border: 1px solid rgba(148, 163, 184, 0.25);
   background:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 50%),
+    radial-gradient(
+      circle at top right,
+      rgba(59, 130, 246, 0.08),
+      transparent 50%
+    ),
     #fff;
 }
 

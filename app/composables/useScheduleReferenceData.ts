@@ -12,7 +12,10 @@ let staticProfessors: ProfessorRecord[] | null = null
 let staticRooms: RoomRecord[] | null = null
 
 const preferenceCache = new Map<string, PreferenceSubmissionRecord[]>()
-const preferencePromises = new Map<string, Promise<PreferenceSubmissionRecord[]>>()
+const preferencePromises = new Map<
+  string,
+  Promise<PreferenceSubmissionRecord[]>
+>()
 
 export function useScheduleReferenceData() {
   const courses = ref<CourseRecord[]>(staticCourses ?? [])
@@ -83,7 +86,8 @@ export function useScheduleReferenceData() {
 
     preferencePending.value = true
     try {
-      preferences.value = await (preferencePromises.get(term) ?? Promise.resolve([]))
+      preferences.value = await (preferencePromises.get(term) ??
+        Promise.resolve([]))
     } finally {
       preferencePending.value = false
     }

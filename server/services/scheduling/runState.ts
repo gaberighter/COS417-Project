@@ -49,7 +49,9 @@ function cloneState(): ScheduleRunStateSnapshot {
   }
 }
 
-export function beginScheduleRun(term: string): ScheduleRunStateSnapshot | null {
+export function beginScheduleRun(
+  term: string,
+): ScheduleRunStateSnapshot | null {
   if (scheduleRunState.activeRun) {
     return cloneState()
   }

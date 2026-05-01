@@ -23,7 +23,17 @@ const VALID_STATUSES: ISchedule['status'][] = [
   'approved',
   'exported',
 ]
-const VALID_DAYS: string[] = ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'M', 'W', 'T', 'R']
+const VALID_DAYS: string[] = [
+  'MWF',
+  'TR',
+  'MW',
+  'MTWF',
+  'MWRF',
+  'M',
+  'W',
+  'T',
+  'R',
+]
 const TIME_PATTERN = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
 
 export const SCHEDULE_TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
@@ -104,10 +114,7 @@ export async function findScheduleByTerm(
 }
 
 export async function findSchedulesByTerm(term: string) {
-  return Schedule.find({ term })
-    .sort({ runNumber: -1 })
-    .lean()
-    .exec()
+  return Schedule.find({ term }).sort({ runNumber: -1 }).lean().exec()
 }
 
 export async function deleteScheduleByTerm(term: string, runNumber?: number) {
@@ -412,7 +419,8 @@ export function applySchedulePatch(
 
   if (
     isLockedScheduleStatus(previousStatus) &&
-    (attemptsContentMutation || (!isReopenRequest && nextStatus !== previousStatus))
+    (attemptsContentMutation ||
+      (!isReopenRequest && nextStatus !== previousStatus))
   ) {
     throw createError({
       statusCode: 409,

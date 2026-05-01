@@ -132,8 +132,12 @@ function buildBannerRowData(
   return rows
 }
 
-export function parseScheduleExportFormat(value: unknown): ScheduleExportFormat {
-  const normalized = String(value ?? 'csv').trim().toLowerCase()
+export function parseScheduleExportFormat(
+  value: unknown,
+): ScheduleExportFormat {
+  const normalized = String(value ?? 'csv')
+    .trim()
+    .toLowerCase()
   if (normalized === 'csv' || normalized === 'xlsx') {
     return normalized
   }
@@ -156,12 +160,20 @@ export async function buildScheduleExportFile(
   }
 
   const courseIds = [
-    ...new Set(schedule.assignments.map((assignment) => catalogCourseIdOf(assignment.courseId))),
+    ...new Set(
+      schedule.assignments.map((assignment) =>
+        catalogCourseIdOf(assignment.courseId),
+      ),
+    ),
   ]
   const professorIds = [
-    ...new Set(schedule.assignments.map((assignment) => assignment.professorId)),
+    ...new Set(
+      schedule.assignments.map((assignment) => assignment.professorId),
+    ),
   ]
-  const roomIds = [...new Set(schedule.assignments.map((assignment) => assignment.roomId))]
+  const roomIds = [
+    ...new Set(schedule.assignments.map((assignment) => assignment.roomId)),
+  ]
 
   const [courses, professors, rooms] = await Promise.all([
     CourseCatalog.find(

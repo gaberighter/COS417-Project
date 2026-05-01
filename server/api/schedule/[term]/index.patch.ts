@@ -50,13 +50,7 @@ export default defineEventHandler(async (event) => {
 
   await schedule.save()
 
-  await logAction(
-    auth,
-    auditAction,
-    'schedules',
-    schedule._id,
-    auditDetail,
-  )
+  await logAction(auth, auditAction, 'schedules', schedule._id, auditDetail)
 
   return schedule.toObject()
 })

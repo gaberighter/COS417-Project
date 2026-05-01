@@ -111,7 +111,9 @@ export function buildScheduleLookupData(input: {
   rooms: RoomRecord[]
   preferences: PreferenceSubmissionRecord[]
 }) {
-  const coursesById = new Map(input.courses.map((course) => [course._id, course]))
+  const coursesById = new Map(
+    input.courses.map((course) => [course._id, course]),
+  )
   const professorsById = new Map<string, ProfessorRecord>()
   const roomsById = new Map<string, RoomRecord>()
   const enrollmentByKey = new Map<string, number>()
@@ -165,7 +167,11 @@ function roomBuilding(room: RoomRecord | undefined): string {
 
 function roomLabel(room: RoomRecord | undefined, roomId: string): string {
   if (!room) return roomId
-  return room.abbreviation || room.displayName || `${room.buildingName} ${room.roomNumber}`
+  return (
+    room.abbreviation ||
+    room.displayName ||
+    `${room.buildingName} ${room.roomNumber}`
+  )
 }
 
 export function buildEnrichedScheduleRows(
@@ -200,9 +206,11 @@ export function buildEnrichedScheduleRows(
       courseId: assignment.courseId,
       catalogCourseId: normalized.catalogCourseId,
       section: normalized.section,
-      department: course?.deptCode ?? normalized.catalogCourseId.split(/\s+/)[0] ?? '',
+      department:
+        course?.deptCode ?? normalized.catalogCourseId.split(/\s+/)[0] ?? '',
       courseNumber:
-        course?.courseNumber ?? normalized.catalogCourseId.split(/\s+/).slice(1).join(' '),
+        course?.courseNumber ??
+        normalized.catalogCourseId.split(/\s+/).slice(1).join(' '),
       courseTitle: course?.title ?? normalized.catalogCourseId,
       instructorId: assignment.professorId,
       instructorName: professor?.displayName ?? assignment.professorId,

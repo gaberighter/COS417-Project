@@ -24,7 +24,9 @@
         <template #header>
           <div class="schedule-history-card-header">
             <div>
-              <h2 class="schedule-history-card-header__title">Saved Schedule Versions</h2>
+              <h2 class="schedule-history-card-header__title">
+                Saved Schedule Versions
+              </h2>
             </div>
           </div>
         </template>
@@ -40,7 +42,10 @@
             <span>Loading saved schedule history...</span>
           </div>
 
-          <div v-else-if="scheduleItems.length === 0" class="schedule-history-empty">
+          <div
+            v-else-if="scheduleItems.length === 0"
+            class="schedule-history-empty"
+          >
             <span>No saved schedules yet.</span>
           </div>
 
@@ -67,7 +72,9 @@
                   <strong>Run {{ schedule.runNumber }}</strong>
                   <span>{{ schedule.status }}</span>
                   <small>
-                    {{ formatDateTime(schedule.updatedAt || schedule.createdAt) }}
+                    {{
+                      formatDateTime(schedule.updatedAt || schedule.createdAt)
+                    }}
                   </small>
                 </button>
               </div>
@@ -133,11 +140,15 @@
               <div class="schedule-meta-grid">
                 <div class="schedule-meta-card">
                   <span class="schedule-meta-card__label">Created</span>
-                  <strong>{{ formatDateTime(selectedSchedule.createdAt) }}</strong>
+                  <strong>{{
+                    formatDateTime(selectedSchedule.createdAt)
+                  }}</strong>
                 </div>
                 <div class="schedule-meta-card">
                   <span class="schedule-meta-card__label">Updated</span>
-                  <strong>{{ formatDateTime(selectedSchedule.updatedAt) }}</strong>
+                  <strong>{{
+                    formatDateTime(selectedSchedule.updatedAt)
+                  }}</strong>
                 </div>
                 <div class="schedule-meta-card">
                   <span class="schedule-meta-card__label">Approved</span>
@@ -176,8 +187,8 @@
                 severity="info"
                 :closable="false"
               >
-                This run is locked because it is approved or exported. Reopen it to
-                enable overrides.
+                This run is locked because it is approved or exported. Reopen it
+                to enable overrides.
               </Message>
 
               <div class="schedule-history-actions">
@@ -232,7 +243,8 @@
                     @click="filters.search = ''"
                   />
                   <span class="schedule-filter-grid__count">
-                    Showing {{ filteredRows.length }} of {{ enrichedRows.length }} row(s)
+                    Showing {{ filteredRows.length }} of
+                    {{ enrichedRows.length }} row(s)
                   </span>
                 </div>
               </div>
@@ -240,10 +252,15 @@
               <details class="schedule-detail-block">
                 <summary>Show optional filters</summary>
                 <div class="schedule-detail-block__content">
-                  <div class="schedule-filter-grid schedule-filter-grid--advanced">
+                  <div
+                    class="schedule-filter-grid schedule-filter-grid--advanced"
+                  >
                     <label>
                       Department
-                      <select v-model="filters.department" class="schedule-native-select">
+                      <select
+                        v-model="filters.department"
+                        class="schedule-native-select"
+                      >
                         <option value="">All</option>
                         <option
                           v-for="department in departmentOptions"
@@ -256,7 +273,10 @@
                     </label>
                     <label>
                       Instructor
-                      <select v-model="filters.instructor" class="schedule-native-select">
+                      <select
+                        v-model="filters.instructor"
+                        class="schedule-native-select"
+                      >
                         <option value="">All</option>
                         <option
                           v-for="instructor in instructorOptions"
@@ -269,7 +289,10 @@
                     </label>
                     <label>
                       Building
-                      <select v-model="filters.building" class="schedule-native-select">
+                      <select
+                        v-model="filters.building"
+                        class="schedule-native-select"
+                      >
                         <option value="">All</option>
                         <option
                           v-for="building in buildingOptions"
@@ -282,9 +305,16 @@
                     </label>
                     <label>
                       Room
-                      <select v-model="filters.room" class="schedule-native-select">
+                      <select
+                        v-model="filters.room"
+                        class="schedule-native-select"
+                      >
                         <option value="">All</option>
-                        <option v-for="room in roomOptions" :key="room" :value="room">
+                        <option
+                          v-for="room in roomOptions"
+                          :key="room"
+                          :value="room"
+                        >
                           {{ room }}
                         </option>
                       </select>
@@ -325,7 +355,9 @@
                 <Column field="courseTitle" header="Title" sortable />
                 <Column field="instructorName" header="Instructor" sortable>
                   <template #body="{ data }">
-                    <span v-if="!isEditingRow(data.courseId)">{{ data.instructorName }}</span>
+                    <span v-if="!isEditingRow(data.courseId)">{{
+                      data.instructorName
+                    }}</span>
                     <InputText
                       v-else
                       v-model="editDraft.professorId"
@@ -340,7 +372,10 @@
                       {{ data.timeLabel }}
                     </div>
                     <div v-else class="schedule-edit-time">
-                      <select v-model="editDraft.days" class="schedule-native-select">
+                      <select
+                        v-model="editDraft.days"
+                        class="schedule-native-select"
+                      >
                         <option
                           v-for="pattern in dayPatternOptions"
                           :key="pattern"
@@ -365,7 +400,9 @@
                 <Column field="building" header="Building" sortable />
                 <Column field="roomLabel" header="Room" sortable>
                   <template #body="{ data }">
-                    <span v-if="!isEditingRow(data.courseId)">{{ data.roomLabel }}</span>
+                    <span v-if="!isEditingRow(data.courseId)">{{
+                      data.roomLabel
+                    }}</span>
                     <InputText
                       v-else
                       v-model="editDraft.roomId"
@@ -393,7 +430,9 @@
                           size="small"
                           severity="secondary"
                           outlined
-                          :disabled="isSelectedScheduleLocked || rowActionPending"
+                          :disabled="
+                            isSelectedScheduleLocked || rowActionPending
+                          "
                           @click="startEdit(data.courseId)"
                         />
                       </template>
@@ -418,7 +457,10 @@
                 </Column>
               </DataTable>
 
-              <div v-if="selectedSchedule.warnings.length" class="schedule-subsection">
+              <div
+                v-if="selectedSchedule.warnings.length"
+                class="schedule-subsection"
+              >
                 <h3>Warnings</h3>
                 <Message
                   v-for="warning in selectedSchedule.warnings"
@@ -440,7 +482,9 @@
                   tableStyle="min-width: 65rem"
                 >
                   <template #empty>
-                    <div class="schedule-table-empty">No conflicts saved for this run.</div>
+                    <div class="schedule-table-empty">
+                      No conflicts saved for this run.
+                    </div>
                   </template>
                   <Column field="courseId" header="Course" sortable />
                   <Column field="instructor" header="Instructor" sortable />
@@ -484,17 +528,29 @@
                   tableStyle="min-width: 95rem"
                 >
                   <template #empty>
-                    <div class="schedule-table-empty">No placement traces were saved for this run.</div>
+                    <div class="schedule-table-empty">
+                      No placement traces were saved for this run.
+                    </div>
                   </template>
                   <Column field="courseId" header="Course" sortable />
-                  <Column field="catalogCourseId" header="Catalog Course" sortable />
+                  <Column
+                    field="catalogCourseId"
+                    header="Catalog Course"
+                    sortable
+                  />
                   <Column field="professorId" header="Professor Id" sortable />
                   <Column field="status" header="Status" sortable />
                   <Column field="stageLabel" header="Stage" sortable />
                   <Column field="candidateCount" header="Candidates" sortable />
                   <Column field="chosenPlacement" header="Chosen Placement" />
-                  <Column field="candidateRoomsLabel" header="Candidate Rooms" />
-                  <Column field="candidateSlotsLabel" header="Candidate Slots" />
+                  <Column
+                    field="candidateRoomsLabel"
+                    header="Candidate Rooms"
+                  />
+                  <Column
+                    field="candidateSlotsLabel"
+                    header="Candidate Slots"
+                  />
                   <Column field="reasonsLabel" header="Reasons" />
                 </DataTable>
               </div>
@@ -587,7 +643,8 @@ const { lookups, loadForTerm } = useScheduleReferenceData()
 const schedulesByTerm = computed(() => {
   return scheduleItems.value.reduce<Record<string, SavedScheduleSummary[]>>(
     (accumulator, schedule) => {
-      const bucket = accumulator[schedule.term] ?? (accumulator[schedule.term] = [])
+      const bucket =
+        accumulator[schedule.term] ?? (accumulator[schedule.term] = [])
       bucket.push(schedule)
       return accumulator
     },
@@ -602,15 +659,20 @@ const termKeys = computed(() =>
 )
 
 const enrichedRows = computed(() =>
-  buildEnrichedScheduleRows(selectedSchedule.value?.assignments ?? [], lookups.value),
+  buildEnrichedScheduleRows(
+    selectedSchedule.value?.assignments ?? [],
+    lookups.value,
+  ),
 )
 
 const filteredRows = computed(() => {
   const query = filters.search.trim().toLowerCase()
 
   return enrichedRows.value.filter((row) => {
-    if (filters.department && row.department !== filters.department) return false
-    if (filters.instructor && row.instructorName !== filters.instructor) return false
+    if (filters.department && row.department !== filters.department)
+      return false
+    if (filters.instructor && row.instructorName !== filters.instructor)
+      return false
     if (filters.building && row.building !== filters.building) return false
     if (filters.room && row.roomLabel !== filters.room) return false
 
@@ -733,10 +795,10 @@ const roomOptions = computed(() =>
 const hasActiveFilters = computed(() => {
   return Boolean(
     filters.search ||
-      filters.department ||
-      filters.instructor ||
-      filters.building ||
-      filters.room,
+    filters.department ||
+    filters.instructor ||
+    filters.building ||
+    filters.room,
   )
 })
 
@@ -833,7 +895,8 @@ async function refreshSelectedSchedule() {
 
   await loadScheduleDetailsForTerm(selectedSchedule.value.term)
   selectedSchedule.value =
-    scheduleDetailsCache.get(selectedSchedule.value._id) ?? selectedSchedule.value
+    scheduleDetailsCache.get(selectedSchedule.value._id) ??
+    selectedSchedule.value
 
   scheduleItems.value = scheduleItems.value.map((summary) =>
     summary._id === selectedSchedule.value?._id
@@ -1016,7 +1079,8 @@ async function exportSelectedSchedule(format: ScheduleExportFormat) {
 
 onMounted(async () => {
   await loadSchedules()
-  const initialSchedule = findScheduleFromQuery() ?? scheduleItems.value[0] ?? null
+  const initialSchedule =
+    findScheduleFromQuery() ?? scheduleItems.value[0] ?? null
   if (initialSchedule) {
     await selectSchedule(initialSchedule)
   }
