@@ -26,10 +26,7 @@ const UsersCollection = Users as any
 
 let providers: SAMLProviders | null = null
 
-const REGISTRAR_ONLY: string[] = (process.env.REGISTRAR_ONLY_ROUTES ?? '')
-  .split(',')
-  .map((route) => route.trim())
-  .filter(Boolean)
+const REGISTRAR_ONLY = ['/api/audit-logs']
 
 const FACULTY_READ_ONLY = [
   '/api/professors',
@@ -311,6 +308,17 @@ export default defineEventHandler(async (event: H3Event) => {
                 session_index,
               }
 
+              const isAdmin = roles.includes('Admin')
+              const isFaculty = roles.includes('Faculty')
+              if (!isAdmin && !isFaculty) {
+                return reject(
+                  createError({
+                    statusCode: 403,
+                    statusMessage: 'Access denied',
+                  }),
+                )
+              }
+
               // See if this user exists in the Users collection.
               const existingUser = await UsersCollection.findOne({
                 username: user.username,
@@ -341,9 +349,12 @@ export default defineEventHandler(async (event: H3Event) => {
                 )
               }
 
-              return resolve(
-                sendRedirect(event, process.env.SAML_REDIRECT_TO || '/'),
-              )
+              const baseUrl =
+                process.env.SAML_REDIRECT_TO?.replace(/\/$/, '') || ''
+              const redirectTo = isAdmin
+                ? `${baseUrl}/admin/admin_dashboard`
+                : `${baseUrl}/faculty/faculty_dashboard`
+              return resolve(sendRedirect(event, redirectTo))
             } catch (e: any) {
               try {
                 let attemptedId = 'unknown'
