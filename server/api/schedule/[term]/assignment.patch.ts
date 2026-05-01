@@ -6,15 +6,11 @@
 import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
 import { requireAuth } from '../../../utils/auth'
 import { connectDB } from '../../../utils/db'
-import { Professor, type IAssignment } from '../../../models/index'
+import { Professor, Schedule, type IAssignment } from '../../../models/index'
 import { logAction } from '../../../services/auditService'
-import {
-  findScheduleByTerm,
-  hasOwn,
-  isLockedScheduleStatus,
-  normalizeScheduleTerm,
-  parseOptionalRunNumber,
-} from '../../../services/scheduling/scheduleRecords'
+import { isLockedScheduleStatus } from '../../../services/scheduling/scheduleRecords'
+
+const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 
 type AssignmentPatchPayload = Partial<IAssignment> & {
   runNumber?: number
@@ -26,11 +22,21 @@ type AssignmentPatchPayload = Partial<IAssignment> & {
   }
 }
 
+function hasOwn(obj: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(obj, key)
+}
+
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
   await connectDB()
 
-  const term = normalizeScheduleTerm(getRouterParam(event, 'term'))
+  const term = getRouterParam(event, 'term')
+  if (!term) {
+    throw createError({ statusCode: 400, statusMessage: 'term is required' })
+  }
+  if (!TERM_PATTERN.test(term)) {
+    throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
+  }
 
   let body: AssignmentPatchPayload
   try {
@@ -72,8 +78,22 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const runNumber = parseOptionalRunNumber(body.runNumber)
-  const schedule = await findScheduleByTerm(term, runNumber)
+  let runNumber: number | undefined
+  if (body.runNumber !== undefined) {
+    const parsed = Number(body.runNumber)
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'runNumber must be a positive integer',
+      })
+    }
+    runNumber = parsed
+  }
+
+  const filter = runNumber !== undefined ? { term, runNumber } : { term }
+  const schedule = await Schedule.findOne(filter)
+    .sort(runNumber !== undefined ? undefined : { runNumber: -1 })
+    .exec()
   if (!schedule) {
     throw createError({
       statusCode: 404,

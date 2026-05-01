@@ -13,7 +13,8 @@ import {
   completeScheduleRun,
   failScheduleRun,
 } from '../../services/scheduling/runState'
-import { normalizeScheduleTerm } from '../../services/scheduling/scheduleRecords'
+
+const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 
 export default defineEventHandler(async (event) => {
   requireAuth(event, ['Admin'])
@@ -29,7 +30,13 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const term = normalizeScheduleTerm(body.term)
+  const term = String(body.term ?? '').trim()
+  if (!term) {
+    throw createError({ statusCode: 400, statusMessage: 'term is required' })
+  }
+  if (!TERM_PATTERN.test(term)) {
+    throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
+  }
 
   const currentState = beginScheduleRun(term)
   if (currentState) {

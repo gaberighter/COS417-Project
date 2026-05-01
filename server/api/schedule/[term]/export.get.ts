@@ -14,7 +14,6 @@ import { connectDB } from '../../../utils/db'
 import { logAction } from '../../../services/auditService'
 import {
   findScheduleByTerm,
-  normalizeScheduleTerm,
   parseOptionalRunNumber,
 } from '../../../services/scheduling/scheduleRecords'
 import {
@@ -23,12 +22,20 @@ import {
   parseScheduleExportFormat,
 } from '../../../services/scheduling/scheduleExport'
 
+const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
+
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin', 'Faculty'])
   await connectDB()
   const query = getQuery(event)
 
-  const term = normalizeScheduleTerm(getRouterParam(event, 'term'))
+  const term = getRouterParam(event, 'term')
+  if (!term) {
+    throw createError({ statusCode: 400, statusMessage: 'term is required' })
+  }
+  if (!TERM_PATTERN.test(term)) {
+    throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
+  }
   const runNumber = parseOptionalRunNumber(query.runNumber)
   const format = parseScheduleExportFormat(query.format)
   const schedule = await findScheduleByTerm(term, runNumber, { lean: true })
