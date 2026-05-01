@@ -53,6 +53,22 @@ function normalizeLookupKey(value: string): string {
     : normalized
 }
 
+function expandQueryKeys(value: string | null | undefined): string[] {
+  if (!value) return []
+
+  const normalized = normalizeWhitespace(String(value))
+  if (!normalized) return []
+
+  return [
+    ...new Set([
+      normalized,
+      normalized.toLowerCase(),
+      normalized.toUpperCase(),
+      normalizeLookupKey(normalized),
+    ]),
+  ]
+}
+
 function setLookupAlias<Value>(
   map: Map<string, Value>,
   key: string | null | undefined,
@@ -149,16 +165,23 @@ function formatExportProfessorLabel(professor?: {
   return 'Unresolved professor'
 }
 
-function formatExportRoomLabel(room?: {
-  abbreviation: string
-  roomNumber: string
-}) {
+function formatExportRoomLabel(
+  room?: {
+    abbreviation: string
+    roomNumber: string
+  },
+  roomId?: string,
+) {
   if (room?.abbreviation) {
     return room.abbreviation
   }
 
   if (room?.roomNumber) {
     return `Room ${room.roomNumber}`
+  }
+
+  if (roomId && !looksLikeOpaqueReference(roomId)) {
+    return roomId
   }
 
   return 'Unresolved room'
@@ -210,7 +233,7 @@ function buildBannerRowData(
     const exportRowLabel = [
       formatExportCourseLabel({ assignment, course }),
       formatExportProfessorLabel(professor),
-      formatExportRoomLabel(room),
+      formatExportRoomLabel(room, assignment.roomId),
     ].join(' | ')
 
     const row: BannerRow = {
@@ -277,22 +300,22 @@ export async function buildScheduleExportFile(
 
   const courseIds = [
     ...new Set(
-      schedule.assignments.map((assignment) =>
-        normalizeLookupKey(catalogCourseIdOf(assignment.courseId)),
+      schedule.assignments.flatMap((assignment) =>
+        expandQueryKeys(catalogCourseIdOf(assignment.courseId)),
       ),
     ),
   ]
   const professorIds = [
     ...new Set(
-      schedule.assignments.map((assignment) =>
-        normalizeLookupKey(assignment.professorId),
+      schedule.assignments.flatMap((assignment) =>
+        expandQueryKeys(assignment.professorId),
       ),
     ),
   ]
   const roomIds = [
     ...new Set(
-      schedule.assignments.map((assignment) =>
-        normalizeLookupKey(assignment.roomId),
+      schedule.assignments.flatMap((assignment) =>
+        expandQueryKeys(assignment.roomId),
       ),
     ),
   ]
@@ -325,9 +348,16 @@ export async function buildScheduleExportFile(
       .lean()
       .exec(),
     Room.find(
-      { $or: [{ _id: { $in: roomIds } }, { abbreviation: { $in: roomIds } }] },
-      { _id: 1, abbreviation: 1, roomNumber: 1 },
+      {
+        $or: [
+          { _id: { $in: roomIds } },
+          { abbreviation: { $in: roomIds } },
+          { displayName: { $in: roomIds } },
+        ],
+      },
+      { _id: 1, abbreviation: 1, roomNumber: 1, displayName: 1 },
     )
+      .collation({ locale: 'en', strength: 2 })
       .lean()
       .exec(),
   ])
@@ -413,6 +443,7 @@ export async function buildScheduleExportFile(
     }
     setLookupAlias(roomsById, room._id, payload)
     setLookupAlias(roomsById, room.abbreviation, payload)
+    setLookupAlias(roomsById, room.displayName, payload)
   }
 
   const rows = buildBannerRowData(schedule.term, schedule.assignments, {
