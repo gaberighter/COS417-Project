@@ -88,13 +88,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const professorId = body.professorId.trim()
-    if (!professorId) {
+    if (
+      typeof body.professorId !== 'string' ||
+      body.professorId.trim() === ''
+    ) {
       throw createError({
         statusCode: 400,
         statusMessage: 'professorId must be a non-empty string',
       })
     }
+
+    const professorId = body.professorId.trim()
 
     prof = await Professor.findOne({
       $or: [{ _id: professorId }, { covenantId: professorId.toLowerCase() }],

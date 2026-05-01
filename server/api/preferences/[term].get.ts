@@ -58,8 +58,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'term is required' })
   }
 
+  const isAdmin = auth.roles?.includes('Admin') ?? auth.role === 'Admin'
   const canReadOwnPreferences =
-    auth.roles?.includes('Faculty') ?? auth.role === 'Faculty'
+    !isAdmin && (auth.roles?.includes('Faculty') ?? auth.role === 'Faculty')
 
   if (canReadOwnPreferences) {
     const professor = await Professor.findOne(
