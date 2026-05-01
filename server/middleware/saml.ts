@@ -300,9 +300,25 @@ export default defineEventHandler(async (event: H3Event) => {
 
               await setUserSession(event, { user, loggedInAt: Date.now() })
 
-              return resolve(
-                sendRedirect(event, process.env.SAML_REDIRECT_TO || '/'),
-              )
+              const isAdmin = roles.includes('Admin')
+              const isFaculty = roles.includes('Faculty')
+
+              if (!isAdmin && !isFaculty) {
+                return reject(
+                  createError({
+                    statusCode: 403,
+                    statusMessage: 'Access denied',
+                  }),
+                )
+              }
+
+              const baseUrl =
+                process.env.SAML_REDIRECT_TO?.replace(/\/$/, '') || ''
+              const redirectTo = isAdmin
+                ? `${baseUrl}/admin/admin_dashboard`
+                : `${baseUrl}/faculty/faculty_dashboard`
+
+              return resolve(sendRedirect(event, redirectTo))
             } catch (e: any) {
               return reject(
                 createError({
