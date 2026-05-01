@@ -1,28 +1,4 @@
-:root,
-:root[data-theme='dark'] {
-  --color-bg: #0f1722;
-  --color-surface: #172132;
-  --color-surface-elevated: #1f2c42;
-  --color-text-primary: #e6edf7;
-  --color-text-secondary: #b6c2d4;
-  --color-text-muted: #97a6bc;
-  --color-border: #33445f;
-  --color-shadow: rgba(0, 0, 0, 0.35);
-
-  --color-action-primary-bg: #2563eb;
-  --color-action-primary-bg-hover: #1d4ed8;
-  --color-action-primary-text: #ffffff;
-
-  --color-action-secondary-bg: #1f2c42;
-  --color-action-secondary-bg-hover: #2a3a54;
-  --color-action-secondary-text: #dbeafe;
-  --color-action-secondary-border: #4b6286;
-
-  --color-focus-ring: #7dd3fc;
-  --color-text-danger: #fca5a5;
-}
-
-:root[data-theme='light'] {
+:root {
   --color-bg: #f8fafc;
   --color-surface: #ffffff;
   --color-surface-elevated: #eef2f7;
@@ -43,6 +19,7 @@
 
   --color-focus-ring: #0369a1;
   --color-text-danger: #b91c1c;
+  --color-example-text: #9ca3af; /* slightly lighter gray for example/placeholder text */
 }
 
 html,
@@ -57,6 +34,18 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: var(--color-bg);
   color: var(--color-text-primary);
+}
+
+/* Lighter text for example inputs/placeholders used across the app */
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-example-text);
+  opacity: 1;
+}
+
+/* optional helper class you can add to elements for example text styling */
+.example-text {
+  color: var(--color-example-text);
 }
 
 #__nuxt {
@@ -154,8 +143,43 @@ button:disabled {
 
 .app-content {
   flex: 1;
-  width: min(1200px, calc(100% - 2rem));
+  width: min(1800px, calc(100% - 0.5rem));
   margin: 1rem auto 2rem;
+}
+
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem 0 2rem;
+}
+
+.dashboard-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.dashboard-button {
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: left;
+  box-shadow: 0 16px 26px rgba(0, 51, 153, 0.16);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.dashboard-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 32px rgba(0, 51, 153, 0.2);
+}
+
+.dashboard-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 10px 18px rgba(0, 51, 153, 0.16);
 }
 
 .button-wrapper {
@@ -204,7 +228,7 @@ button:disabled {
   }
 
   .app-content {
-    width: calc(100% - 1rem);
+    width: calc(100% - 0.5rem);
     margin-top: 0.75rem;
   }
 }

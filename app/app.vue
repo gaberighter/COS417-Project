@@ -11,15 +11,9 @@
         >
           {{ dashboardActionLabel }}
         </button>
-        <button
-          class="site-top-bar__auth-btn site-top-bar__auth-btn--secondary site-top-bar__theme-btn"
-          @click="toggleTheme"
-        >
-          {{ themeToggleLabel }}
-        </button>
-        <span v-if="isLoggedIn" class="site-top-bar__auth-context">{{
-          authContextLabel
-        }}</span>
+        <span v-if="isLoggedIn" class="site-top-bar__auth-context">
+          {{ authContextLabel }}
+        </span>
         <button
           v-if="!isLoggedIn"
           class="site-top-bar__auth-btn"
@@ -50,34 +44,6 @@
 </template>
 
 <script setup lang="ts">
-type SiteTheme = 'dark' | 'light'
-
-const themePreference = useCookie<SiteTheme>('site-theme', {
-  default: () => 'dark',
-})
-
-const currentTheme = useState<SiteTheme>('site-theme', () => {
-  return themePreference.value === 'light' ? 'light' : 'dark'
-})
-
-watch(currentTheme, (theme) => {
-  themePreference.value = theme
-})
-
-useHead(() => ({
-  htmlAttrs: {
-    'data-theme': currentTheme.value,
-  },
-}))
-
-const themeToggleLabel = computed(() => {
-  return currentTheme.value === 'dark' ? 'Light Theme' : 'Dark Theme'
-})
-
-const toggleTheme = () => {
-  currentTheme.value = currentTheme.value === 'dark' ? 'light' : 'dark'
-}
-
 const route = useRoute()
 const auth = useAuth() as Record<string, unknown>
 

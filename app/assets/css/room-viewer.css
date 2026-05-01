@@ -167,13 +167,15 @@
 .btn-primary,
 .btn-secondary,
 .action-btn {
-  border-radius: 6px;
-  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
   border: none;
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .btn-primary {
@@ -196,8 +198,8 @@
 }
 
 .action-btn {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
   border: 1px solid var(--color-action-secondary-border);
   background: var(--color-action-secondary-bg);
   color: var(--color-action-secondary-text);
@@ -209,6 +211,8 @@
 
 .action-btn:hover {
   background: var(--color-action-secondary-bg-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(0, 51, 153, 0.14);
 }
 
 /* FAB */

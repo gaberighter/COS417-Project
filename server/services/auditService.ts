@@ -4,6 +4,8 @@
 import type { AuthContext } from '../utils/auth'
 import { AuditLog, Professor, type IAuditLog } from '../models/index'
 export { getClientIpFromHeaders } from '../utils/ip'
+import type { H3Event } from 'h3'
+import { getClientIp } from '../utils/ip'
 
 function toDetailText(
   action: string,
@@ -56,6 +58,25 @@ export async function logAction(
   }
 
   await AuditLog.create(entry)
+}
+
+/**
+ * Convenience wrapper: derive actor and client IP from the H3 event and log an action.
+ * Safe to call when `event.context.auth` is missing — will record covenantId as 'system'.
+ */
+export async function logActionForEvent(
+  event: H3Event,
+  action: string,
+  targetCollection: string,
+  targetId?: string,
+  detail?: string | Record<string, unknown>,
+): Promise<void> {
+  const auth = (event.context && (event.context as any).auth) as
+    | AuthContext
+    | undefined
+  const actor: AuthContext = auth ?? { userId: 'system', role: 'Admin' }
+  const ip = getClientIp(event)
+  await logAction(actor, action, targetCollection, targetId, detail, ip)
 }
 
 /**
