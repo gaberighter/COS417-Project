@@ -20,6 +20,7 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
   margin-bottom: 3rem;
 }
@@ -51,9 +52,10 @@
 /* Filter Grid */
 .filter-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
   gap: 0.75rem;
   flex: 1;
+  min-width: 0;
 }
 
 .filter-grid label,
@@ -61,9 +63,10 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
   color: var(--color-text-primary);
+  min-width: 0;
 }
 
 .filter-grid input,
@@ -76,7 +79,11 @@
   color: var(--color-text-primary);
   border-radius: 6px;
   padding: 0.5rem;
-  font-size: 0.95rem;
+  font-size: 0.75rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .filter-grid input:focus-visible,
