@@ -166,7 +166,7 @@ export interface ScheduleAssignment {
   startTime: string
   endTime: string
   enrollmentOverride?: number | null
-  overrideBy?: string
+  overrideBy?: string | null
 }
 
 export interface ScheduleConflict {
