@@ -378,6 +378,118 @@
                   </Column>
                 </DataTable>
               </div>
+
+              <div class="schedule-subsection">
+                <h3>Trace Output</h3>
+                <p class="schedule-trace-note">
+                  Placement trace for this run. Expand a course to see which
+                  fallback tier won and how the scheduler narrowed the choice.
+                </p>
+                <DataTable
+                  :value="runTraceRows"
+                  stripedRows
+                  showGridlines
+                  class="schedule-table schedule-table--trace"
+                >
+                  <template #empty>
+                    <div class="schedule-table-empty">
+                      No placement traces were returned for this run.
+                    </div>
+                  </template>
+                  <Column field="courseLabel" header="Course" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.courseLabel"
+                        title="Course"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="professorName" header="Professor" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.professorName"
+                        title="Professor"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="outcomeLabel" header="Outcome" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.outcomeLabel"
+                        title="Outcome"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="selectedTier" header="Selected Tier">
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.selectedTier"
+                        title="Selected Tier"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="chosenPlacement" header="Placement">
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.chosenPlacement"
+                        title="Placement"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="decisionSummary" header="Decision Summary">
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.decisionSummary"
+                        title="Decision Summary"
+                      />
+                    </template>
+                  </Column>
+                </DataTable>
+
+                <div v-if="runTraceRows.length" class="schedule-trace-details">
+                  <details
+                    v-for="trace in runTraceRows"
+                    :key="`${trace.courseId}-${trace.stageLabel}`"
+                    class="schedule-detail-block"
+                  >
+                    <summary>
+                      {{ trace.courseLabel }} - {{ trace.outcomeLabel }}
+                    </summary>
+                    <div class="schedule-detail-block__content">
+                      <p>
+                        <strong>Selected tier:</strong> {{ trace.selectedTier }}
+                      </p>
+                      <p>
+                        <strong>Chosen placement:</strong>
+                        {{ trace.chosenPlacement }}
+                      </p>
+                      <p>
+                        <strong>Candidate pool:</strong>
+                        {{ trace.candidateSummary }}
+                      </p>
+                      <p>
+                        <strong>Candidate preview:</strong>
+                        {{ trace.candidatePreview }}
+                      </p>
+                      <p>
+                        <strong>Reason summary:</strong>
+                        {{ trace.reasonsLabel }}
+                      </p>
+                      <div v-if="trace.decisionLog.length">
+                        <strong>Decision log</strong>
+                        <ul>
+                          <li
+                            v-for="entry in trace.decisionLog"
+                            :key="`${trace.courseId}-${entry}`"
+                          >
+                            {{ entry }}
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              </div>
             </div>
           </template>
         </Card>
@@ -525,6 +637,7 @@
 import {
   buildEnrichedScheduleRows,
   buildIssueTableRows,
+  buildTraceTableRows,
 } from '~~/app/utils/schedule'
 import {
   downloadScheduleExport,
@@ -638,6 +751,10 @@ const nearHardFlagRows = computed(() =>
     enrichedRunRows.value,
     lookups.value,
   ),
+)
+
+const runTraceRows = computed(() =>
+  buildTraceTableRows(runResult.value?.traces ?? [], lookups.value),
 )
 
 const generatedScheduleMessageSeverity = computed<Severity>(() => {
@@ -1348,6 +1465,38 @@ onMounted(async () => {
 
 .schedule-subsection h3 {
   margin: 0;
+}
+
+.schedule-trace-note {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.schedule-trace-details {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.schedule-detail-block {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 16px;
+  background: #fff;
+  padding: 0.85rem 1rem;
+}
+
+.schedule-detail-block__content {
+  display: grid;
+  gap: 0.6rem;
+  padding-top: 0.85rem;
+}
+
+.schedule-detail-block__content p {
+  margin: 0;
+}
+
+.schedule-detail-block__content ul {
+  margin: 0.45rem 0 0;
+  padding-left: 1.1rem;
 }
 
 .schedule-inline-message {

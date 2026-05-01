@@ -22,6 +22,11 @@ export function optimizeCandidatePlacement(
   }>,
   workItem: CourseWorkItem,
   professor: Professor,
-): { room: CandidateSlot['room']; slot: TimeSlot } | null {
+): {
+  room: CandidateSlot['room']
+  slot: TimeSlot
+  score: number
+  decisionLog: string[]
+} | null {
   return scoreAndRank(candidates, workItem, professor)
 }

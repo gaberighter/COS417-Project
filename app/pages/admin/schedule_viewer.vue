@@ -679,6 +679,14 @@
                       />
                     </template>
                   </Column>
+                  <Column field="selectedTier" header="Selected Tier">
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.selectedTier"
+                        title="Selected Tier"
+                      />
+                    </template>
+                  </Column>
                   <Column field="chosenPlacement" header="Placement">
                     <template #body="{ data }">
                       <ScheduleCellPreview
@@ -712,6 +720,53 @@
                     </template>
                   </Column>
                 </DataTable>
+
+                <div
+                  v-if="selectedTraceRows.length"
+                  class="schedule-trace-details"
+                >
+                  <details
+                    v-for="trace in selectedTraceRows"
+                    :key="`${trace.courseId}-${trace.stageLabel}`"
+                    class="schedule-detail-block"
+                  >
+                    <summary>
+                      {{ trace.courseLabel }} - {{ trace.outcomeLabel }}
+                    </summary>
+                    <div class="schedule-detail-block__content">
+                      <p>
+                        <strong>Selected tier:</strong> {{ trace.selectedTier }}
+                      </p>
+                      <p>
+                        <strong>Chosen placement:</strong>
+                        {{ trace.chosenPlacement }}
+                      </p>
+                      <p>
+                        <strong>Candidate pool:</strong>
+                        {{ trace.candidateSummary }}
+                      </p>
+                      <p>
+                        <strong>Candidate preview:</strong>
+                        {{ trace.candidatePreview }}
+                      </p>
+                      <p>
+                        <strong>Reason summary:</strong>
+                        {{ trace.reasonsLabel }}
+                      </p>
+                      <div v-if="trace.decisionLog.length">
+                        <strong>Decision log</strong>
+                        <ul>
+                          <li
+                            v-for="entry in trace.decisionLog"
+                            :key="`${trace.courseId}-${entry}`"
+                          >
+                            {{ entry }}
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </details>
+                </div>
               </div>
             </div>
           </template>

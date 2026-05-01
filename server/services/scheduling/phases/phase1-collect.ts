@@ -43,6 +43,25 @@ function makeNullProfessor(departmentCode: string): Professor {
   }
 }
 
+function makeNamedProfessor(
+  displayName: string,
+  departmentCode: string,
+): Professor {
+  const normalizedName = displayName.trim() || 'Unassigned Professor'
+
+  return {
+    _id: normalizedName,
+    covenantId: normalizedName.toLowerCase(),
+    displayName: normalizedName,
+    departmentCode,
+    officeBuilding: null,
+    officeRoom: null,
+    seniorityYear: null,
+    active: true,
+    preferences: [],
+  }
+}
+
 function findProfessorForId(
   professors: Professor[],
   identifier: string | null,
@@ -65,17 +84,26 @@ function resolveProfessor(
   course: { deptCode: string; typicalProfessor: string | null },
   preference: PreferenceRecord | null,
   professors: Professor[],
+  warnings: string[],
+  scheduledCourseId: string,
 ): Professor {
   if (professors.length === 0) {
     throw new SchedulingInputError(['No active professors available'])
   }
 
-  const preferredProfessor = findProfessorForId(
+  const instructorProfessor = findProfessorForId(
     professors,
-    preference?.professorId ?? null,
+    preference?.instructor ?? null,
   )
-  if (preferredProfessor !== null) {
-    return preferredProfessor
+  if (instructorProfessor !== null) {
+    return instructorProfessor
+  }
+
+  if (preference?.instructor?.trim()) {
+    warnings.push(
+      `Instructor "${preference.instructor}" for ${scheduledCourseId} is not in the active professor list; scheduling with a named placeholder professor record.`,
+    )
+    return makeNamedProfessor(preference.instructor, course.deptCode)
   }
 
   const typicalProfessor = findProfessorForId(
@@ -135,6 +163,7 @@ function normalizeCoursePreferences(
     preferredTimes: course?.preferredTimes ?? [],
     avoidTimes: course?.avoidTimes ?? [],
     requiredEquipment: course?.requiredEquipment ?? [],
+    instructor: course?.instructor ?? null,
     preferredBuilding: course?.preferredBuilding ?? null,
     preferredRoomId: course?.preferredRoomId ?? null,
     backToBackWith: course?.backToBackWith ?? null,
@@ -555,7 +584,13 @@ export async function collectInputs(term: string): Promise<CollectedInputs> {
   for (const scheduledCourse of scheduledCourses) {
     try {
       const { course, preference } = scheduledCourse
-      const professor = resolveProfessor(course, preference, professors)
+      const professor = resolveProfessor(
+        course,
+        preference,
+        professors,
+        warnings,
+        preference.scheduledCourseId,
+      )
       const historicalAssignments = historyByCourse.get(course._id) ?? []
 
       const professorHistory = historyByProfessor.get(professor._id) ?? []

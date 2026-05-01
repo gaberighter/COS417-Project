@@ -139,7 +139,9 @@ export interface IPlacementTrace {
   candidateRooms: string[]
   candidateSlots: IPlacementTraceSlot[]
   candidateCount: number
+  selectedTier?: string | null
   reasons: string[]
+  decisionLog: string[]
 }
 
 export interface ISchedule {
@@ -432,7 +434,9 @@ const placementTraceSchema = new Schema<IPlacementTrace>(
       default: [],
     },
     candidateCount: { type: Number, required: true, min: 0, default: 0 },
+    selectedTier: { type: String, default: null, trim: true },
     reasons: { type: [String], required: true, default: [] },
+    decisionLog: { type: [String], required: true, default: [] },
   },
   { _id: false },
 )

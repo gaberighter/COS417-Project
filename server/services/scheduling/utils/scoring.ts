@@ -280,16 +280,26 @@ export function scoreAndRank(
   }>,
   workItem: CourseWorkItem,
   professor: Professor,
-): { room: Room; slot: TimeSlot } | null {
+): { room: Room; slot: TimeSlot; score: number; decisionLog: string[] } | null {
   if (candidates.length === 0) {
     return null
   }
 
   let bestCandidate: { room: Room; slot: TimeSlot } | null = null
   let bestScore = Number.NEGATIVE_INFINITY
+  const scoredCandidates: Array<{
+    room: Room
+    slot: TimeSlot
+    score: number
+  }> = []
 
   for (const candidate of candidates) {
     const scored = scoreCandidateSlot(candidate, workItem, professor)
+    scoredCandidates.push({
+      room: candidate.room,
+      slot: candidate.slot,
+      score: scored,
+    })
     if (
       scored > bestScore ||
       (scored === bestScore &&
@@ -305,5 +315,34 @@ export function scoreAndRank(
     }
   }
 
-  return bestCandidate
+  if (bestCandidate === null) {
+    return null
+  }
+
+  const topCandidates = [...scoredCandidates]
+    .sort((left, right) => {
+      if (left.score !== right.score) {
+        return right.score - left.score
+      }
+
+      return parseTime(left.slot.startTime) - parseTime(right.slot.startTime)
+    })
+    .slice(0, 3)
+    .map(
+      (candidate) =>
+        `${candidate.slot.days} ${candidate.slot.startTime}-${candidate.slot.endTime} @ ${
+          candidate.room.displayName ??
+          `${candidate.room.buildingCode} ${candidate.room.roomNumber}`
+        } (score ${candidate.score.toFixed(1)})`,
+    )
+
+  return {
+    ...bestCandidate,
+    score: bestScore,
+    decisionLog: [
+      `Ranked ${candidates.length} pairing(s) by weighted preferences, history, and capacity fit.`,
+      `Top scored options: ${topCandidates.join(' | ')}.`,
+      `Selected the highest scoring pairing at ${bestScore.toFixed(1)} points.`,
+    ],
+  }
 }

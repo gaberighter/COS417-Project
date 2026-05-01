@@ -65,6 +65,7 @@ async function buildPlan(term: string): Promise<{
     stage: PlacementTrace['stage'],
     reasons: string[],
     evaluation?: ReturnType<typeof evaluatePlacementOptions>,
+    decisionLog: string[] = [],
     chosen?: {
       room: { _id: string }
       slot: {
@@ -97,7 +98,9 @@ async function buildPlan(term: string): Promise<{
         endTime: slot.endTime,
       })),
       candidateCount: evaluation?.candidates.length ?? 0,
+      selectedTier: evaluation?.selectedTier ?? null,
       reasons,
+      decisionLog,
     }
   }
 
@@ -147,6 +150,7 @@ async function buildPlan(term: string): Promise<{
             'constraint_conflict',
             [evaluation.conflict.reason],
             evaluation,
+            evaluation.decisionLog,
           ),
         )
         conflicts.push(evaluation.conflict)
@@ -178,6 +182,10 @@ async function buildPlan(term: string): Promise<{
               'single_candidate',
               ['Assigned from single surviving candidate.'],
               evaluation,
+              [
+                ...evaluation.decisionLog,
+                'Only one pairing survived the fallback tiers, so it was assigned immediately.',
+              ],
               chosen,
             ),
           )
@@ -197,6 +205,7 @@ async function buildPlan(term: string): Promise<{
               'assignment_failed',
               [conflict.reason],
               evaluation,
+              evaluation.decisionLog,
               chosen,
             ),
           )
@@ -247,6 +256,7 @@ async function buildPlan(term: string): Promise<{
           'constraint_conflict',
           [evaluation.conflict.reason],
           evaluation,
+          evaluation.decisionLog,
         ),
       )
       conflicts.push(evaluation.conflict)
@@ -275,6 +285,7 @@ async function buildPlan(term: string): Promise<{
           'optimization_failed',
           [conflict.reason],
           evaluation,
+          evaluation.decisionLog,
         ),
       )
       conflicts.push(conflict)
@@ -293,6 +304,7 @@ async function buildPlan(term: string): Promise<{
           'optimization_failed',
           [conflict.reason],
           evaluation,
+          evaluation.decisionLog,
         ),
       )
       conflicts.push(conflict)
@@ -312,6 +324,7 @@ async function buildPlan(term: string): Promise<{
           'optimized',
           ['Assigned after candidate ranking.'],
           evaluation,
+          [...evaluation.decisionLog, ...chosen.decisionLog],
           chosen,
         ),
       )
@@ -331,6 +344,7 @@ async function buildPlan(term: string): Promise<{
           'assignment_failed',
           [conflict.reason],
           evaluation,
+          [...evaluation.decisionLog, ...chosen.decisionLog],
           chosen,
         ),
       )
