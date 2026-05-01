@@ -3,11 +3,14 @@
 // Role: Admin
 
 import { defineEventHandler, getRouterParam, createError } from 'h3'
+import mongoose from 'mongoose'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Room } from '../../models/index'
 import { logAction } from '../../services/auditService'
 import { getClientIp } from '../../utils/ip'
+
+const IS_OBJECT_ID = /^[0-9a-f]{24}$/i
 
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
@@ -22,8 +25,14 @@ export default defineEventHandler(async (event) => {
   const clientIp = getClientIp(event)
   const roomId = id.trim().toUpperCase()
 
-  // Find and delete the room
-  const deleted = await Room.findOneAndDelete({ _id: roomId }).lean().exec()
+  // Handle both String _id and legacy ObjectId _id values
+  let deleted = await Room.findOneAndDelete({ _id: roomId }).lean().exec()
+  if (!deleted && IS_OBJECT_ID.test(roomId)) {
+    const raw = await Room.collection.findOneAndDelete({
+      _id: new mongoose.Types.ObjectId(roomId),
+    })
+    deleted = raw as typeof deleted
+  }
 
   if (!deleted) {
     // Return 404 when the requested room doesn't exist.

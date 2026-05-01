@@ -3,10 +3,25 @@
 // Role: Admin
 
 import { createError, defineEventHandler, getRouterParam, readBody } from 'h3'
+import mongoose from 'mongoose'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Room, type IRoomEquipment } from '../../models/index'
 import { logAction } from '../../services/auditService'
+
+const IS_OBJECT_ID = /^[0-9a-f]{24}$/i
+
+async function findRoomByAnyId(roomId: string) {
+  const byString = await Room.findById(roomId).lean().exec()
+  if (byString) return byString
+  if (IS_OBJECT_ID.test(roomId)) {
+    const raw = await Room.collection.findOne({
+      _id: new mongoose.Types.ObjectId(roomId),
+    })
+    return raw as typeof byString | null
+  }
+  return null
+}
 
 type RoomPatchPayload = {
   buildingName?: string
@@ -42,7 +57,7 @@ export default defineEventHandler(async (event) => {
 
   const roomId = id.trim().toUpperCase()
 
-  const existing = await Room.findById(roomId).lean().exec()
+  const existing = await findRoomByAnyId(roomId)
   if (!existing) {
     throw createError({
       statusCode: 404,
@@ -121,13 +136,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const updated = await Room.findByIdAndUpdate(
-    roomId,
+  const updated = await Room.collection.findOneAndUpdate(
+    { _id: existing._id },
     { $set: patch },
-    { new: true, runValidators: true },
+    { returnDocument: 'after' },
   )
-    .lean()
-    .exec()
 
   await logAction(
     auth,

@@ -19,6 +19,7 @@ import {
   normalizePreferenceStatus,
   validateCourses,
 } from '../../utils/preferenceValidation'
+import { ensurePreferenceCoursesExist } from '../../utils/ensureCoursesExist'
 
 interface PreferencePayload {
   term: string
@@ -172,6 +173,8 @@ export default defineEventHandler(async (event) => {
 
   targetProf.markModified('preferences')
   await targetProf.save()
+
+  await ensurePreferenceCoursesExist(courses)
 
   await logAction(
     auth,

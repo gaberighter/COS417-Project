@@ -18,6 +18,7 @@ import {
   normalizePreferenceSubmissionStatus,
   validateCourses,
 } from '../../utils/preferenceValidation'
+import { ensurePreferenceCoursesExist } from '../../utils/ensureCoursesExist'
 
 type PreferencePatchPayload = {
   professorId?: string
@@ -203,6 +204,8 @@ export default defineEventHandler(async (event) => {
   targetProf.markModified('preferences')
 
   await targetProf.save()
+
+  if (body.courses) await ensurePreferenceCoursesExist(body.courses)
 
   await logAction(
     auth,
