@@ -21,6 +21,8 @@ export default defineEventHandler(async (event) => {
       createdBy: 1,
       createdAt: 1,
       updatedAt: 1,
+      approvedAt: 1,
+      approvedBy: 1,
     },
   )
     .sort({ term: -1, runNumber: -1 })

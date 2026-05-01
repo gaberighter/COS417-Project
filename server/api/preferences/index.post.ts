@@ -1,8 +1,8 @@
 // server/api/preferences/index.post.ts
 // POST /api/preferences — §4.3.1
-// Role: Faculty — submit or update department preferences for a term.
+// Role: Admin | Faculty — submit or update department preferences for a term.
 //
-// Body: { term: string; departmentCode?: string; status?: PreferenceStatus; courses: ICoursePreference[] }
+// Body: { term: string; professorId?: string; department?: string; status?: PreferenceStatus; courses: ICoursePreference[] }
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
@@ -22,7 +22,7 @@ import {
 
 interface PreferencePayload {
   term: string
-  departmentCode?: string
+  professorId?: string
   department?: string
   status?: IPreferenceSubmission['status']
   courses?: ICoursePreference[]
@@ -34,7 +34,7 @@ function normalizeDepartmentCode(value: string | null | undefined): string {
 }
 
 export default defineEventHandler(async (event) => {
-  const auth = requireAuth(event, ['Faculty'])
+  const auth = requireAuth(event, ['Admin', 'Faculty'])
   await connectDB()
 
   let body: PreferencePayload
@@ -74,17 +74,56 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const prof = await Professor.findOne({
-    $or: [
-      { covenantId: auth.userId.toLowerCase() },
-      { _id: auth.userId.toLowerCase() },
-      { _id: auth.userId },
-    ],
-  }).exec()
+  const canEditOwnPreferences =
+    auth.roles?.includes('Faculty') ?? auth.role === 'Faculty'
+  const canTargetProfessor =
+    auth.roles?.includes('Admin') ?? auth.role === 'Admin'
+
+  let prof
+  if (body.professorId !== undefined) {
+    if (!canTargetProfessor) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Only admins may target another professor',
+      })
+    }
+
+    if (
+      typeof body.professorId !== 'string' ||
+      body.professorId.trim() === ''
+    ) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'professorId must be a non-empty string',
+      })
+    }
+
+    const professorId = body.professorId.trim()
+
+    prof = await Professor.findOne({
+      $or: [{ _id: professorId }, { covenantId: professorId.toLowerCase() }],
+    }).exec()
+  } else if (canEditOwnPreferences) {
+    prof = await Professor.findOne({
+      $or: [
+        { covenantId: auth.userId.toLowerCase() },
+        { _id: auth.userId.toLowerCase() },
+        { _id: auth.userId },
+      ],
+    }).exec()
+  } else {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'professorId is required for admin preference submissions',
+    })
+  }
+
   if (!prof) {
     throw createError({
       statusCode: 404,
-      statusMessage: 'Professor record not found',
+      statusMessage: body.professorId
+        ? `Professor not found: ${body.professorId.trim()}`
+        : 'Professor record not found',
     })
   }
 

@@ -19,6 +19,7 @@
 
   --color-focus-ring: #0369a1;
   --color-text-danger: #b91c1c;
+  --color-example-text: #9ca3af; /* slightly lighter gray for example/placeholder text */
 }
 
 html,
@@ -33,6 +34,18 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: var(--color-bg);
   color: var(--color-text-primary);
+}
+
+/* Lighter text for example inputs/placeholders used across the app */
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-example-text);
+  opacity: 1;
+}
+
+/* optional helper class you can add to elements for example text styling */
+.example-text {
+  color: var(--color-example-text);
 }
 
 #__nuxt {

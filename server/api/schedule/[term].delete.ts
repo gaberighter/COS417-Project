@@ -16,16 +16,14 @@ export default defineEventHandler(async (event) => {
   await connectDB()
 
   const term = getRouterParam(event, 'term')
-  if (!term || !TERM_PATTERN.test(term)) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid term format',
-    })
+  if (!term) {
+    throw createError({ statusCode: 400, statusMessage: 'term is required' })
   }
-
+  if (!TERM_PATTERN.test(term)) {
+    throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
+  }
   const query = getQuery(event)
 
-  // Treat "param present" separately from "valid number"
   let runNumber: number | undefined
   if (query.runNumber !== undefined) {
     const parsed = Number(query.runNumber)
@@ -39,10 +37,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const clientIp = getClientIp(event)
-
-  // Build filter: if runNumber provided, delete specific run; otherwise delete latest
   const filter = runNumber !== undefined ? { term, runNumber } : { term }
-
   let deleteQuery = Schedule.findOneAndDelete(filter)
   if (runNumber === undefined) {
     deleteQuery = deleteQuery.sort({ runNumber: -1 })

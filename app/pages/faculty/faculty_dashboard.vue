@@ -1,11 +1,8 @@
 <template>
   <div class="dashboard-page">
     <div class="dashboard-actions">
-      <button class="dashboard-button" @click="viewChangePreferences">
-        View/Change Existing Preferences
-      </button>
-      <button class="dashboard-button" @click="addNewPreference">
-        Enter Preferences
+      <button class="dashboard-button" @click="manageCoursePreferences">
+        Manage Course Preferences
       </button>
     </div>
   </div>
@@ -20,6 +17,6 @@ definePageMeta({
   pageTitle: 'Faculty Dashboard',
 })
 
-const { viewChangePreferences, addNewPreference } = useFaculty()
+const { manageCoursePreferences } = useFaculty()
 const { redirectToLogin, redirectToAdmin } = useDebugNavigation()
 </script>
