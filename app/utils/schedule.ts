@@ -199,11 +199,27 @@ export function buildScheduleLookupData(input: {
         course.courseId,
         course.section ?? null,
       )
+      const resolvedInstructor = course.instructor
+        ? lookupProfessor(
+            {
+              coursesById,
+              professorsById,
+              roomsById,
+              enrollmentByKey,
+            },
+            course.instructor,
+          )
+        : undefined
       for (const professorKey of [
         submission.professorId,
         submission.covenantId,
         submission.covenantId.toLowerCase(),
+        course.instructor ?? '',
+        resolvedInstructor?._id ?? '',
+        resolvedInstructor?.covenantId ?? '',
+        resolvedInstructor?.displayName ?? '',
       ]) {
+        if (!professorKey) continue
         enrollmentByKey.set(
           buildEnrollmentKey(professorKey, normalized.scheduledCourseId),
           course.expectedEnrollment,
@@ -493,6 +509,9 @@ export function buildTraceTableRows(
     const compactReasons = trace.reasons
       .map((reason) => compactTraceReason(reason, lookups))
       .filter(Boolean)
+    const decisionLog = (trace.decisionLog ?? [])
+      .map((entry) => replaceOpaqueReferences(entry, lookups))
+      .filter(Boolean)
 
     return {
       courseId: trace.courseId,
@@ -521,6 +540,7 @@ export function buildTraceTableRows(
         .replace(/_/g, ' ')
         .replace(/\b\w/g, (character) => character.toUpperCase()),
       candidateCount: trace.candidateCount,
+      selectedTier: trace.selectedTier ?? 'Not recorded',
       chosenPlacement: trace.chosen
         ? `${trace.chosen.days} ${trace.chosen.startTime}-${trace.chosen.endTime} @ ${roomLabel(chosenRoom, trace.chosen.roomId)}`
         : 'None',
@@ -533,6 +553,8 @@ export function buildTraceTableRows(
       candidatePreview: `Rooms: ${summarizeList(candidateRoomLabels)} | Slots: ${summarizeList(candidateSlotLabels)}`,
       reasonsLabel: compactReasons.join('; ') || 'None',
       notesSummary: summarizeList(compactReasons, 1),
+      decisionLog,
+      decisionSummary: summarizeList(decisionLog, 2),
     }
   })
 }

@@ -53,7 +53,9 @@ export interface PlacementTrace {
     endTime: string
   }>
   candidateCount: number
+  selectedTier?: string | null
   reasons: string[]
+  decisionLog: string[]
 }
 
 export interface SavedScheduleSummary {
@@ -135,6 +137,7 @@ export interface PreferenceSubmissionRecord {
     title: string
     expectedEnrollment: number
     creditHours: number
+    instructor?: string | null
   }>
 }
 

@@ -123,6 +123,25 @@ function getBuildingCode(roomAbbreviation: string): string {
   return roomAbbreviation.split(/\s+/)[0] ?? ''
 }
 
+function splitRoomReference(roomReference: string | null | undefined): {
+  buildingCode: string
+  roomNumber: string
+} {
+  const normalized = normalizeWhitespace(String(roomReference ?? ''))
+  if (!normalized) {
+    return {
+      buildingCode: '',
+      roomNumber: '',
+    }
+  }
+
+  const [buildingCode, ...rest] = normalized.split(/\s+/)
+  return {
+    buildingCode: buildingCode ?? '',
+    roomNumber: rest.join(' '),
+  }
+}
+
 function looksLikeOpaqueId(value: string): boolean {
   return /^[a-f0-9]{24}$/i.test(value)
 }
@@ -187,6 +206,53 @@ function formatExportRoomLabel(
   return 'Unresolved room'
 }
 
+function fallbackCourseFields(
+  assignment: IAssignment,
+  course?: {
+    deptCode: string
+    courseNumber: string
+    title: string
+    creditHours: number
+  },
+) {
+  if (course) {
+    return {
+      department: course.deptCode,
+      courseNumber: course.courseNumber,
+      title: course.title,
+      creditHours: course.creditHours,
+    }
+  }
+
+  const normalizedReference = normalizeCourseReference(assignment.courseId)
+  const catalogCourseId = normalizedReference.catalogCourseId
+  const parts = catalogCourseId.split(/\s+/).filter(Boolean)
+
+  return {
+    department: parts[0] ?? '',
+    courseNumber: parts.slice(1).join(' '),
+    title: catalogCourseId || assignment.courseId || 'UNRESOLVED COURSE',
+    creditHours: '',
+  }
+}
+
+function fallbackRoomFields(
+  assignment: IAssignment,
+  room?: {
+    abbreviation: string
+    roomNumber: string
+  },
+) {
+  if (room) {
+    return {
+      buildingCode: getBuildingCode(room.abbreviation),
+      roomNumber: room.roomNumber,
+    }
+  }
+
+  return splitRoomReference(assignment.roomId)
+}
+
 function buildBannerRowData(
   term: string,
   assignments: IAssignment[],
@@ -206,7 +272,6 @@ function buildBannerRowData(
   },
 ): BannerRow[] {
   const rows: BannerRow[] = []
-  const missingFields: string[] = []
 
   for (const assignment of assignments) {
     const catalogCourseId = catalogCourseIdOf(assignment.courseId)
@@ -230,42 +295,30 @@ function buildBannerRowData(
           normalizedReference.catalogCourseId,
         ),
       )
-    const exportRowLabel = [
-      formatExportCourseLabel({ assignment, course }),
-      formatExportProfessorLabel(professor),
-      formatExportRoomLabel(room, assignment.roomId),
-    ].join(' | ')
+    const courseFields = fallbackCourseFields(assignment, course)
+    const roomFields = fallbackRoomFields(assignment, room)
 
     const row: BannerRow = {
-      Department: course?.deptCode ?? '',
-      CourseNumber: course?.courseNumber ?? '',
+      Department: courseFields.department,
+      CourseNumber: courseFields.courseNumber,
       Section: courseSectionOf(assignment.courseId) ?? '',
-      Title: course?.title ?? '',
-      CreditHours: course ? course.creditHours : '',
-      ProfessorCovenantId: professor?.covenantId ?? '',
+      Title: courseFields.title,
+      CreditHours: courseFields.creditHours,
+      ProfessorCovenantId:
+        professor?.covenantId ??
+        (looksLikeOpaqueId(assignment.professorId)
+          ? ''
+          : assignment.professorId),
       Days: assignment.days ?? '',
       StartTime: assignment.startTime ?? '',
       EndTime: assignment.endTime ?? '',
-      BuildingCode: room ? getBuildingCode(room.abbreviation) : '',
-      RoomNumber: room?.roomNumber ?? '',
+      BuildingCode: roomFields.buildingCode,
+      RoomNumber: roomFields.roomNumber,
       EstimatedEnrollment:
         estimatedEnrollment !== undefined ? estimatedEnrollment : '',
     }
 
-    const rowMissing = bannerHeaders.filter((header) => row[header] === '')
-    if (rowMissing.length > 0) {
-      missingFields.push(`${exportRowLabel}: ${rowMissing.join(', ')}`)
-      continue
-    }
-
     rows.push(row)
-  }
-
-  if (missingFields.length > 0) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: `Cannot export schedule with missing required data: ${missingFields.join('; ')}`,
-    })
   }
 
   return rows

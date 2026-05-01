@@ -61,6 +61,7 @@ export interface CoursePreference {
   preferredTimes: string[]
   avoidTimes: string[]
   requiredEquipment: string[]
+  instructor?: string | null
   preferredBuilding: string | null
   preferredRoomId: string | null
   backToBackWith: string | null
@@ -212,6 +213,8 @@ export interface ConstraintEvaluation {
   candidateSlots: TimeSlot[]
   candidates: CandidateSlot[]
   conflict: ScheduleConflict | null
+  selectedTier: string | null
+  decisionLog: string[]
 }
 
 export interface PlacementTrace {
@@ -239,7 +242,9 @@ export interface PlacementTrace {
     endTime: string
   }>
   candidateCount: number
+  selectedTier?: string | null
   reasons: string[]
+  decisionLog: string[]
 }
 
 /**

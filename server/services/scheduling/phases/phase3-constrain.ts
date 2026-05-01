@@ -187,40 +187,265 @@ function buildCandidatePairs(
   return candidates
 }
 
-function applyPreferenceGates(
+function slotKey(slot: TimeSlot): string {
+  return `${slot.days}|${slot.startTime}|${slot.endTime}`
+}
+
+function roomLabel(room: Room): string {
+  return room.displayName ?? `${room.buildingCode} ${room.roomNumber}`
+}
+
+function buildRoomTiers(
+  workItem: CourseWorkItem,
+  candidateRooms: Room[],
+): Array<{ label: string; rooms: Room[] }> {
+  const historicalRoomIds = new Set(workItem.placementProfile.roomIds)
+  const historicalBuildings = new Set(workItem.placementProfile.buildings)
+  const departmentTypicalRoomIds = new Set(workItem.departmentTypicalRoomIds)
+  const roomTiers = [
+    {
+      label: 'preferred room',
+      rooms: candidateRooms.filter(
+        (room) => room._id === workItem.preferredRoomId,
+      ),
+    },
+    {
+      label: 'preferred building',
+      rooms: candidateRooms.filter(
+        (room) => room.buildingCode === workItem.preferredBuilding,
+      ),
+    },
+    {
+      label: 'historical rooms',
+      rooms: candidateRooms.filter((room) => historicalRoomIds.has(room._id)),
+    },
+    {
+      label: 'historical buildings',
+      rooms: candidateRooms.filter((room) =>
+        historicalBuildings.has(room.buildingCode),
+      ),
+    },
+    {
+      label: 'department typical rooms',
+      rooms: candidateRooms.filter((room) =>
+        departmentTypicalRoomIds.has(room._id),
+      ),
+    },
+    {
+      label: 'professor office building',
+      rooms: candidateRooms.filter(
+        (room) => room.buildingCode === workItem.professor.officeBuilding,
+      ),
+    },
+    {
+      label: 'all valid rooms',
+      rooms: candidateRooms,
+    },
+  ]
+
+  const seenRoomSets = new Set<string>()
+
+  return roomTiers.filter((tier) => {
+    if (tier.rooms.length === 0) return false
+    const key = tier.rooms
+      .map((room) => room._id)
+      .sort()
+      .join('|')
+    if (!key || seenRoomSets.has(key)) return false
+    seenRoomSets.add(key)
+    return true
+  })
+}
+
+function buildSlotTiers(
+  workItem: CourseWorkItem,
+  candidateSlots: TimeSlot[],
+): Array<{ label: string; slots: TimeSlot[] }> {
+  const slotTiers = [
+    {
+      label: 'preferred day and time',
+      slots: candidateSlots.filter(
+        (slot) =>
+          workItem.preferredDays.includes(slot.days) &&
+          workItem.preferredTimes.includes(slot.startTime),
+      ),
+    },
+    {
+      label: 'preferred day',
+      slots: candidateSlots.filter((slot) =>
+        workItem.preferredDays.includes(slot.days),
+      ),
+    },
+    {
+      label: 'preferred time',
+      slots: candidateSlots.filter((slot) =>
+        workItem.preferredTimes.includes(slot.startTime),
+      ),
+    },
+    {
+      label: 'any valid time',
+      slots: candidateSlots,
+    },
+  ]
+
+  const seenSlotSets = new Set<string>()
+
+  return slotTiers.filter((tier) => {
+    if (tier.slots.length === 0) return false
+    const key = tier.slots
+      .map((slot) => slotKey(slot))
+      .sort()
+      .join('|')
+    if (!key || seenSlotSets.has(key)) return false
+    seenSlotSets.add(key)
+    return true
+  })
+}
+
+function applyAvoidTimePreference(
   workItem: CourseWorkItem,
   candidates: CandidateSlot[],
+  decisionLog: string[],
 ): CandidateSlot[] {
-  let gated = candidates
+  if (workItem.avoidTimes.length === 0) {
+    return candidates
+  }
 
-  if (workItem.preferredDays.length > 0) {
-    const dayMatched = gated.filter((candidate) =>
-      workItem.preferredDays.includes(candidate.slot.days),
+  const nonAvoided = candidates.filter(
+    (candidate) => !workItem.avoidTimes.includes(candidate.slot.startTime),
+  )
+
+  if (nonAvoided.length > 0 && nonAvoided.length < candidates.length) {
+    decisionLog.push(
+      `Avoid-time preference removed ${
+        candidates.length - nonAvoided.length
+      } pairing(s) from the selected tier.`,
     )
-    if (dayMatched.length > 0) {
-      gated = dayMatched
+    return nonAvoided
+  }
+
+  if (nonAvoided.length === 0) {
+    decisionLog.push(
+      'Every pairing in the selected tier used an avoided time, so the scheduler kept them as a fallback.',
+    )
+  }
+
+  return candidates
+}
+
+function selectCandidateTier(
+  workItem: CourseWorkItem,
+  candidates: CandidateSlot[],
+  candidateRooms: Room[],
+  candidateSlots: TimeSlot[],
+): {
+  candidates: CandidateSlot[]
+  selectedTier: string | null
+  decisionLog: string[]
+} {
+  const decisionLog: string[] = [
+    `Hard constraints kept ${candidateRooms.length} room(s) and ${candidateSlots.length} slot(s).`,
+    `Built ${candidates.length} room/time pairing(s) before fallback selection.`,
+  ]
+
+  const roomTiers = buildRoomTiers(workItem, candidateRooms)
+  const slotTiers = buildSlotTiers(workItem, candidateSlots)
+
+  const roomTierByLabel = new Map(roomTiers.map((tier) => [tier.label, tier]))
+  const slotTierByLabel = new Map(slotTiers.map((tier) => [tier.label, tier]))
+  const tierRequests: Array<[string, string]> = []
+  const pushTier = (roomLabel: string, slotLabel: string) => {
+    if (!roomTierByLabel.has(roomLabel) || !slotTierByLabel.has(slotLabel)) {
+      return
+    }
+
+    tierRequests.push([roomLabel, slotLabel])
+  }
+
+  for (const slotLabel of [
+    'preferred day and time',
+    'preferred day',
+    'preferred time',
+    'any valid time',
+  ]) {
+    pushTier('preferred room', slotLabel)
+  }
+
+  for (const roomLabel of [
+    'preferred building',
+    'historical rooms',
+    'historical buildings',
+    'department typical rooms',
+    'professor office building',
+    'all valid rooms',
+  ]) {
+    pushTier(roomLabel, 'preferred day and time')
+  }
+
+  for (const roomLabel of [
+    'preferred building',
+    'historical rooms',
+    'historical buildings',
+    'department typical rooms',
+    'professor office building',
+    'all valid rooms',
+  ]) {
+    pushTier(roomLabel, 'preferred day')
+    pushTier(roomLabel, 'preferred time')
+    pushTier(roomLabel, 'any valid time')
+  }
+
+  const seenTierKeys = new Set<string>()
+  for (const [roomLabel, slotLabel] of tierRequests) {
+    const roomTier = roomTierByLabel.get(roomLabel)
+    const slotTier = slotTierByLabel.get(slotLabel)
+    if (!roomTier || !slotTier) continue
+
+    const roomIds = new Set(roomTier.rooms.map((room) => room._id))
+    const slotIds = new Set(slotTier.slots.map((slot) => slotKey(slot)))
+    const tierCandidates = candidates.filter(
+      (candidate) =>
+        roomIds.has(candidate.room._id) && slotIds.has(slotKey(candidate.slot)),
+    )
+    const tierKey = tierCandidates
+      .map(
+        (candidate) =>
+          `${candidate.room._id}|${candidate.slot.days}|${candidate.slot.startTime}|${candidate.slot.endTime}`,
+      )
+      .sort()
+      .join('||')
+
+    if (seenTierKeys.has(tierKey)) {
+      continue
+    }
+    seenTierKeys.add(tierKey)
+
+    const tierLabel = `${roomLabel} + ${slotLabel}`
+    decisionLog.push(
+      `Tier "${tierLabel}" kept ${tierCandidates.length} pairing(s).`,
+    )
+    if (tierCandidates.length === 0) {
+      continue
+    }
+
+    const tierAfterAvoid = applyAvoidTimePreference(
+      workItem,
+      tierCandidates,
+      decisionLog,
+    )
+    decisionLog.push(`Selected tier "${tierLabel}" for final ranking.`)
+    return {
+      candidates: tierAfterAvoid,
+      selectedTier: tierLabel,
+      decisionLog,
     }
   }
 
-  if (workItem.preferredTimes.length > 0) {
-    const timeMatched = gated.filter((candidate) =>
-      workItem.preferredTimes.includes(candidate.slot.startTime),
-    )
-    if (timeMatched.length > 0) {
-      gated = timeMatched
-    }
+  return {
+    candidates: applyAvoidTimePreference(workItem, candidates, decisionLog),
+    selectedTier: 'all valid rooms + any valid time',
+    decisionLog,
   }
-
-  if (workItem.avoidTimes.length > 0) {
-    const nonAvoided = gated.filter(
-      (candidate) => !workItem.avoidTimes.includes(candidate.slot.startTime),
-    )
-    if (nonAvoided.length > 0) {
-      gated = nonAvoided
-    }
-  }
-
-  return gated
 }
 
 function resolveConflictReason(
@@ -368,11 +593,8 @@ function buildManualOptions(
 ): string[] {
   const options: string[] = []
   for (const candidate of candidates) {
-    const roomLabel =
-      candidate.room.displayName ??
-      `${candidate.room.buildingCode} ${candidate.room.roomNumber}`
     options.push(
-      `${roomLabel} ${candidate.slot.days} ${candidate.slot.startTime}`,
+      `${roomLabel(candidate.room)} ${candidate.slot.days} ${candidate.slot.startTime}`,
     )
     if (options.length >= limit) {
       return options
@@ -389,9 +611,7 @@ function buildManualOptions(
 
   for (const room of candidateRooms) {
     for (const slot of candidateSlots) {
-      const roomLabel =
-        room.displayName ?? `${room.buildingCode} ${room.roomNumber}`
-      options.push(`${roomLabel} ${slot.days} ${slot.startTime}`)
+      options.push(`${roomLabel(room)} ${slot.days} ${slot.startTime}`)
       if (options.length >= limit) {
         return options
       }
@@ -423,32 +643,6 @@ function filterNormalRooms(
   return { normal, abnormal }
 }
 
-function applyDepartmentTypicalRoomFallback(
-  workItem: CourseWorkItem,
-  candidateRooms: Room[],
-): Room[] {
-  if (workItem.hasSubmittedRoomBuildingPreference) {
-    return candidateRooms
-  }
-
-  if (workItem.hasDirectRoomHistory) {
-    return candidateRooms
-  }
-
-  if (workItem.departmentTypicalRoomIds.length === 0) {
-    return candidateRooms
-  }
-
-  const typicalRoomIdSet = new Set(workItem.departmentTypicalRoomIds)
-  const departmentTypicalRooms = candidateRooms.filter((room) =>
-    typicalRoomIdSet.has(room._id),
-  )
-
-  return departmentTypicalRooms.length > 0
-    ? departmentTypicalRooms
-    : candidateRooms
-}
-
 /**
  * Applies the hard-constraint filters and turns a work item into room/slot candidates.
  *
@@ -462,14 +656,10 @@ export function evaluatePlacementOptions(
   rooms: Room[],
   currentAssignments: ScheduleAssignment[],
 ): ConstraintEvaluation {
-  const unconstrainedCandidateRooms = filterRooms(workItem, rooms)
-  const candidateRooms = applyDepartmentTypicalRoomFallback(
-    workItem,
-    unconstrainedCandidateRooms,
-  )
+  const candidateRooms = filterRooms(workItem, rooms)
   const allSlots = generateAllSlots(
     workItem.course.creditHours,
-    workItem.preferredDays,
+    [],
     workItem.preferredTimes,
   )
   const candidateSlots = allSlots.filter((slot) => {
@@ -490,6 +680,8 @@ export function evaluatePlacementOptions(
       candidateRooms,
       candidateSlots,
       candidates: [],
+      selectedTier: null,
+      decisionLog: [],
       conflict: createConflict(
         workItem,
         resolveConflictReason(
@@ -509,16 +701,24 @@ export function evaluatePlacementOptions(
     candidateRooms,
   )
   const preferredRooms = normalRooms.length > 0 ? normalRooms : abnormalRooms
-
-  const candidates = applyPreferenceGates(
+  const allCandidates = buildCandidatePairs(
     workItem,
-    buildCandidatePairs(
-      workItem,
-      preferredRooms,
-      candidateSlots,
-      currentAssignments,
-    ),
+    preferredRooms,
+    candidateSlots,
+    currentAssignments,
   )
+  const { candidates, selectedTier, decisionLog } = selectCandidateTier(
+    workItem,
+    allCandidates,
+    preferredRooms,
+    candidateSlots,
+  )
+
+  if (normalRooms.length > 0 && abnormalRooms.length > 0) {
+    decisionLog.push(
+      `Withheld ${abnormalRooms.length} abnormal room(s) because ${normalRooms.length} normal room(s) were still available.`,
+    )
+  }
 
   if (candidates.length === 0) {
     return {
@@ -526,6 +726,8 @@ export function evaluatePlacementOptions(
       candidateRooms,
       candidateSlots,
       candidates,
+      selectedTier,
+      decisionLog,
       conflict: createConflict(
         workItem,
         resolveConflictReason(
@@ -545,6 +747,8 @@ export function evaluatePlacementOptions(
     candidateRooms,
     candidateSlots,
     candidates,
+    selectedTier,
+    decisionLog,
     conflict: null,
   }
 }
