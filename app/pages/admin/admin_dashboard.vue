@@ -19,6 +19,9 @@
       <button class="dashboard-button" @click="viewAuditLogs">
         View Audit Logs
       </button>
+      <button class="dashboard-button" @click="viewPreferences">
+        View Faculty Preferences
+      </button>
     </div>
   </div>
   <div class="temporary-debug-buttons">
@@ -39,6 +42,7 @@ const {
   viewProfessorData,
   viewCourseCatalog,
   viewAuditLogs,
+  viewPreferences,
 } = useAdmin()
 const { redirectToLogin, redirectToFaculty } = useDebugNavigation()
 </script>
