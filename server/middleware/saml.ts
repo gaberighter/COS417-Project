@@ -26,9 +26,7 @@ const UsersCollection = Users as any
 
 let providers: SAMLProviders | null = null
 
-const REGISTRAR_ONLY = [
-  '/api/audit-logs',
-]
+const REGISTRAR_ONLY = ['/api/audit-logs']
 
 const FACULTY_READ_ONLY = [
   '/api/professors',
