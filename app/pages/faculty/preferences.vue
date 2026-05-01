@@ -63,6 +63,13 @@
                   @click="resetTable"
                 />
                 <Button
+                  label="Upload CSV"
+                  severity="secondary"
+                  outlined
+                  :disabled="loadPending || savePending"
+                  @click="triggerCsvUpload"
+                />
+                <Button
                   :label="saveNotSubmittedLabel"
                   severity="secondary"
                   :disabled="referencePending || loadPending || savePending"
@@ -294,23 +301,32 @@
             <!-- Time -->
             <Column header="Time" style="width: 5rem">
               <template #body="{ data }">
-                <AutoComplete
-                  v-model="data.time"
-                  :suggestions="timeSuggestions"
-                  dropdown
-                  completeOnFocus
-                  :minLength="0"
-                  appendTo="body"
-                  fluid
-                  inputClass="pref-cell-input"
-                  panelClass="pref-autocomplete-panel"
-                  :placeholder="
-                    data.localId === rows[0]?.localId ? '12:00' : ''
-                  "
-                  @complete="searchTimeSuggestions"
-                  @update:modelValue="clearRowError(data)"
-                  @blur="handleTimeChange(data)"
-                />
+                <div class="pref-time-cell">
+                  <AutoComplete
+                    v-model="data.time"
+                    :suggestions="timeSuggestions"
+                    dropdown
+                    completeOnFocus
+                    :minLength="0"
+                    appendTo="body"
+                    fluid
+                    inputClass="pref-cell-input"
+                    panelClass="pref-autocomplete-panel"
+                    :placeholder="
+                      data.localId === rows[0]?.localId ? '12:00' : ''
+                    "
+                    @complete="searchTimeSuggestions"
+                    @update:modelValue="clearRowError(data)"
+                    @blur="handleTimeChange(data)"
+                  />
+                  <SelectButton
+                    :modelValue="timePeriodForRow(data)"
+                    :options="timePeriodOptions"
+                    :allowEmpty="false"
+                    class="pref-time-period"
+                    @update:modelValue="setTimePeriod(data, $event)"
+                  />
+                </div>
               </template>
             </Column>
 
@@ -439,6 +455,79 @@
         </template>
       </Card>
     </div>
+
+    <input
+      ref="csvFileInput"
+      type="file"
+      accept=".csv,text/csv"
+      style="display: none"
+      @change="handleCsvUpload"
+    />
+    <!-- ─────────────── NEW ENTITY CONFIRMATION DIALOG ─────────────── -->
+    <Dialog
+      v-model:visible="showNewEntityDialog"
+      modal
+      :closable="false"
+      header="New Information Detected"
+      class="pref-new-entity-dialog"
+      style="width: 32rem"
+    >
+      <p class="pref-ned__desc">
+        The following information does not currently exist in the database and
+        will be persisted with your preferences. Review and confirm to continue,
+        or cancel to go back and edit.
+      </p>
+
+      <div
+        v-if="pendingNewEntities.newInstructors.length > 0"
+        class="pref-ned__group"
+      >
+        <span class="pref-ned__label">New Instructors</span>
+        <ul class="pref-ned__list">
+          <li v-for="name in pendingNewEntities.newInstructors" :key="name">
+            {{ name }}
+          </li>
+        </ul>
+      </div>
+
+      <div
+        v-if="pendingNewEntities.newBuildings.length > 0"
+        class="pref-ned__group"
+      >
+        <span class="pref-ned__label">New Buildings</span>
+        <ul class="pref-ned__list">
+          <li v-for="code in pendingNewEntities.newBuildings" :key="code">
+            {{ code }}
+          </li>
+        </ul>
+      </div>
+
+      <div
+        v-if="pendingNewEntities.newRooms.length > 0"
+        class="pref-ned__group"
+      >
+        <span class="pref-ned__label">New Rooms</span>
+        <ul class="pref-ned__list">
+          <li v-for="room in pendingNewEntities.newRooms" :key="room">
+            {{ room }}
+          </li>
+        </ul>
+      </div>
+
+      <template #footer>
+        <Button
+          label="Cancel & Edit"
+          severity="secondary"
+          outlined
+          @click="cancelNewEntitySave"
+        />
+        <Button
+          label="Continue"
+          severity="primary"
+          @click="confirmNewEntitySave"
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -499,7 +588,6 @@ type FacultyPreferenceSubmission = {
   displayName: string
   departmentCode: string
   term: string
-  department: string
   submittedBy: string
   submittedAt?: string | null
   status: PreferenceStatus
@@ -565,6 +653,18 @@ type AutoCompleteCompleteEvent = {
   query: string
 }
 
+type NewEntityInfo = {
+  newInstructors: string[]
+  newBuildings: string[]
+  newRooms: string[]
+}
+
+type PendingSave = {
+  status: PreferenceStatus
+  courses: PreferencePayloadCourse[]
+  nt: string
+}
+
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 const CRN_PATTERN = /^\d{4,10}$/
 const SECTION_PATTERN = /^[A-Za-z0-9-]{1,8}$/
@@ -594,6 +694,7 @@ const dayPatternOptions = [
   'T',
   'R',
 ]
+const timePeriodOptions = ['AM', 'PM']
 
 const courseCatalog = ref<CourseRecord[]>([])
 const professors = ref<ProfessorRecord[]>([])
@@ -608,9 +709,16 @@ const loadPending = ref(false)
 const savePending = ref(false)
 const submissionExists = ref(false)
 const submissionStatus = ref<FacultyPreferenceSubmission['status'] | null>(null)
-const submissionDepartment = ref<string | null>(null)
+const submissionDepartmentCode = ref<string | null>(null)
 const loadedTerm = ref('')
 const loadedSnapshot = ref('[]')
+const showNewEntityDialog = ref(false)
+const pendingNewEntities = ref<NewEntityInfo>({
+  newInstructors: [],
+  newBuildings: [],
+  newRooms: [],
+})
+const pendingSave = ref<PendingSave | null>(null)
 
 const termSuggestions = ref<string[]>([])
 const subjectSuggestions = ref<string[]>([])
@@ -853,6 +961,26 @@ function normalizeTimeValue(v: string): string {
   if (!TIME_PATTERN.test(t)) return t
   const [h, m] = t.split(':')
   return `${String(Number(h)).padStart(2, '0')}:${m}`
+}
+
+function timePeriodForRow(row: PreferenceRow): 'AM' | 'PM' {
+  const nt = normalizeTimeValue(row.time)
+  if (!TIME_PATTERN.test(nt)) return 'AM'
+  const [h] = nt.split(':')
+  return Number(h) >= 12 ? 'PM' : 'AM'
+}
+
+function setTimePeriod(row: PreferenceRow, period: 'AM' | 'PM') {
+  const nt = normalizeTimeValue(row.time)
+  if (!TIME_PATTERN.test(nt)) {
+    row.time = row.time.trim()
+    return
+  }
+  const [h, m] = nt.split(':')
+  let hour = Number(h)
+  if (period === 'AM' && hour >= 12) hour = hour === 12 ? 0 : hour - 12
+  if (period === 'PM' && hour < 12) hour += 12
+  row.time = `${String(hour).padStart(2, '0')}:${m}`
 }
 
 function subjectLabel(c: CourseRecord): string {
@@ -1100,7 +1228,7 @@ function setLoadedState(
   term.value = normalizedTerm
   submissionExists.value = submission !== null
   submissionStatus.value = submission?.status ?? null
-  submissionDepartment.value = submission?.department ?? null
+  submissionDepartmentCode.value = submission?.departmentCode ?? null
   rows.value = submission?.courses?.length
     ? submission.courses.map((c) => mapSavedCourseToRow(c))
     : [createEmptyRow()]
@@ -1117,11 +1245,11 @@ async function loadSavedSubmission(
   const reqId = ++latestLoadRequest
   loadPending.value = true
   try {
-    const res = await $fetch<
+    const response = await $fetch<
       FacultyPreferenceSubmission | FacultyPreferenceSubmission[] | null
     >(`/api/preferences/${encodeURIComponent(nt)}`)
+    const sub = Array.isArray(response) ? (response[0] ?? null) : response
     if (reqId !== latestLoadRequest) return
-    const sub = Array.isArray(res) ? (res[0] ?? null) : res
     setLoadedState(nt, sub)
     if (sub && !options.silent) {
       statusMessage.value = `Loaded saved preferences for ${nt}.`
@@ -1467,6 +1595,106 @@ function validateRow(
   }
 }
 
+function detectNewEntities(courses: PreferencePayloadCourse[]): NewEntityInfo {
+  const knownInstructors = new Set(
+    professors.value
+      .map((p) => normalizeLookupValue(p.displayName))
+      .filter(Boolean),
+  )
+  const knownBuildings = new Set(
+    buildingOptions.value.map((b) => normalizeLookupValue(b.code)),
+  )
+  const knownRoomIds = new Set([
+    ...roomOptions.value.map((r) => normalizeLookupValue(r._id)),
+    ...roomOptions.value.map((r) => normalizeLookupValue(r.abbreviation)),
+  ])
+
+  const newInstructors = new Set<string>()
+  const newBuildings = new Set<string>()
+  const newRooms = new Set<string>()
+
+  for (const c of courses) {
+    if (
+      c.instructor &&
+      !knownInstructors.has(normalizeLookupValue(c.instructor))
+    )
+      newInstructors.add(c.instructor)
+    if (
+      c.preferredBuilding &&
+      !knownBuildings.has(normalizeLookupValue(c.preferredBuilding))
+    )
+      newBuildings.add(c.preferredBuilding)
+    if (
+      c.preferredRoomId &&
+      !knownRoomIds.has(normalizeLookupValue(c.preferredRoomId))
+    )
+      newRooms.add(c.preferredRoomId)
+  }
+
+  return {
+    newInstructors: [...newInstructors],
+    newBuildings: [...newBuildings],
+    newRooms: [...newRooms],
+  }
+}
+
+async function executeSave(
+  status: PreferenceStatus,
+  courses: PreferencePayloadCourse[],
+  nt: string,
+) {
+  savePending.value = true
+  try {
+    const patch = submissionExists.value && loadedTerm.value === nt
+    if (patch) {
+      await $fetch(`/api/preferences/${encodeURIComponent(nt)}`, {
+        method: 'PATCH',
+        body: {
+          departmentCode: submissionDepartmentCode.value ?? undefined,
+          status,
+          courses,
+        },
+      })
+    } else {
+      await $fetch('/api/preferences', {
+        method: 'POST',
+        body: {
+          term: nt,
+          departmentCode: submissionDepartmentCode.value ?? undefined,
+          status,
+          courses,
+        },
+      })
+    }
+    submissionExists.value = true
+    submissionStatus.value = status
+    loadedTerm.value = nt
+    loadedSnapshot.value = serializeRows(rows.value)
+    statusMessage.value =
+      status === 'submitted'
+        ? `Submitted ${courses.length} row(s) for ${nt}.`
+        : `Saved ${courses.length} row(s) as draft for ${nt}.`
+    statusTone.value = 'success'
+  } catch (error) {
+    statusMessage.value = extractErrorMessage(error)
+    statusTone.value = 'error'
+  } finally {
+    savePending.value = false
+  }
+}
+
+async function confirmNewEntitySave() {
+  showNewEntityDialog.value = false
+  const ps = pendingSave.value
+  pendingSave.value = null
+  if (ps) await executeSave(ps.status, ps.courses, ps.nt)
+}
+
+function cancelNewEntitySave() {
+  showNewEntityDialog.value = false
+  pendingSave.value = null
+}
+
 async function savePreferences(status: PreferenceStatus) {
   statusMessage.value = ''
   statusTone.value = 'info'
@@ -1491,44 +1719,18 @@ async function savePreferences(status: PreferenceStatus) {
     statusTone.value = 'error'
     return
   }
-  savePending.value = true
-  try {
-    const patch = submissionExists.value && loadedTerm.value === nt
-    if (patch) {
-      await $fetch(`/api/preferences/${encodeURIComponent(nt)}`, {
-        method: 'PATCH',
-        body: {
-          department: submissionDepartment.value ?? undefined,
-          status,
-          courses,
-        },
-      })
-    } else {
-      await $fetch('/api/preferences', {
-        method: 'POST',
-        body: {
-          term: nt,
-          department: submissionDepartment.value ?? undefined,
-          status,
-          courses,
-        },
-      })
-    }
-    submissionExists.value = true
-    submissionStatus.value = status
-    loadedTerm.value = nt
-    loadedSnapshot.value = serializeRows(rows.value)
-    statusMessage.value =
-      status === 'submitted'
-        ? `Submitted ${courses.length} row(s) for ${nt}.`
-        : `Saved ${courses.length} row(s) as draft for ${nt}.`
-    statusTone.value = 'success'
-  } catch (error) {
-    statusMessage.value = extractErrorMessage(error)
-    statusTone.value = 'error'
-  } finally {
-    savePending.value = false
+  const newEntities = detectNewEntities(courses)
+  if (
+    newEntities.newInstructors.length > 0 ||
+    newEntities.newBuildings.length > 0 ||
+    newEntities.newRooms.length > 0
+  ) {
+    pendingNewEntities.value = newEntities
+    pendingSave.value = { status, courses, nt }
+    showNewEntityDialog.value = true
+    return
   }
+  await executeSave(status, courses, nt)
 }
 
 async function loadReferenceData() {
@@ -1577,6 +1779,217 @@ async function loadPageData() {
   } finally {
     referencePending.value = false
   }
+}
+
+const csvFileInput = ref<HTMLInputElement | null>(null)
+
+function triggerCsvUpload() {
+  csvFileInput.value?.click()
+}
+
+function parseCsvLine(line: string): string[] {
+  const fields: string[] = []
+  let current = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+    } else if (ch === ',' && !inQuotes) {
+      fields.push(current)
+      current = ''
+    } else {
+      current += ch ?? ''
+    }
+  }
+  fields.push(current)
+  return fields
+}
+
+// 'courseNumber' is a virtual field — combined with 'subject' to form "DEPT NUM"
+type CsvFieldTarget = keyof PreferenceRow | 'courseNumber'
+
+const CSV_COLUMN_MAP: Record<string, CsvFieldTarget> = {
+  // subject / dept
+  subject: 'subject',
+  dept: 'subject',
+  department: 'subject',
+  course_code: 'subject',
+  // course number (separate column, e.g. "course #" or "course number")
+  course_number: 'courseNumber',
+  course_num: 'courseNumber',
+  coursenum: 'courseNumber',
+  coursenumber: 'courseNumber',
+  num: 'courseNumber',
+  number: 'courseNumber',
+  // crn
+  crn: 'crn',
+  course_reference_number: 'crn',
+  // section
+  section: 'section',
+  sec: 'section',
+  // course title / name
+  course_title: 'courseName',
+  coursetitle: 'courseName',
+  course_name: 'courseName',
+  coursename: 'courseName',
+  title: 'courseName',
+  // credit hours
+  credit_hours: 'creditHours',
+  credithours: 'creditHours',
+  credits: 'creditHours',
+  credit: 'creditHours',
+  hours: 'creditHours',
+  // max enrollment — "class max" in Covenant sheet
+  class_max: 'maxEnrollment',
+  classmax: 'maxEnrollment',
+  max_enrollment: 'maxEnrollment',
+  maxenrollment: 'maxEnrollment',
+  max_enroll: 'maxEnrollment',
+  max: 'maxEnrollment',
+  enrollment: 'maxEnrollment',
+  capacity: 'maxEnrollment',
+  max_capacity: 'maxEnrollment',
+  // days
+  days: 'days',
+  day_pattern: 'days',
+  meeting_days: 'days',
+  // time
+  time: 'time',
+  start_time: 'time',
+  meeting_time: 'time',
+  // instructor
+  instructor: 'instructor',
+  professor: 'instructor',
+  faculty: 'instructor',
+  // building
+  building_preference: 'buildingPreference',
+  buildingpreference: 'buildingPreference',
+  building: 'buildingPreference',
+  bldg: 'buildingPreference',
+  // room
+  room_preference: 'roomPreference',
+  roompreference: 'roomPreference',
+  room: 'roomPreference',
+  // fee
+  course_fee: 'courseFee',
+  coursefee: 'courseFee',
+  fee: 'courseFee',
+}
+
+const NON_EDITABLE_FIELDS = new Set<keyof PreferenceRow>([
+  'localId',
+  'courseId',
+  'error',
+])
+
+function normalizeCsvHeader(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/#/g, 'number') // "course #" → "course number"
+    .replace(/[^a-z0-9]+/g, '_') // spaces/special chars → underscore
+    .replace(/^_+|_+$/g, '') // trim leading/trailing underscores
+}
+
+function findHeaderLineIndex(lines: string[]): number {
+  // Scan the first few lines and pick the one with the most recognized column names.
+  // This skips title rows like "Covenant College" or "Spring 2026 Course Offerings".
+  let best = 0
+  let bestCount = 0
+  const limit = Math.min(lines.length, 8)
+  for (let i = 0; i < limit; i++) {
+    const count = parseCsvLine(lines[i]!)
+      .map(normalizeCsvHeader)
+      .filter((h) => h.length > 0 && h in CSV_COLUMN_MAP).length
+    if (count > bestCount) {
+      bestCount = count
+      best = i
+    }
+  }
+  return best
+}
+
+function handleCsvUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  input.value = ''
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const text = e.target?.result as string
+    if (!text) return
+
+    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0)
+    if (lines.length === 0) {
+      statusMessage.value = 'The file is empty.'
+      statusTone.value = 'error'
+      return
+    }
+
+    const headerIdx = findHeaderLineIndex(lines)
+    const headers = parseCsvLine(lines[headerIdx]!).map(normalizeCsvHeader)
+    const fieldMap = headers.map((h) => CSV_COLUMN_MAP[h] ?? null)
+
+    if (fieldMap.every((f) => f === null)) {
+      statusMessage.value =
+        'No recognized column headers found. Check the CSV format.'
+      statusTone.value = 'error'
+      return
+    }
+
+    const newRows: PreferenceRow[] = []
+    for (let i = headerIdx + 1; i < lines.length; i++) {
+      const values = parseCsvLine(lines[i]!)
+      if (values.every((v) => v.trim().length === 0)) continue
+      const row = createEmptyRow()
+      let courseNumber = ''
+      for (let j = 0; j < headers.length; j++) {
+        const target = fieldMap[j]
+        if (!target) continue
+        const val = (values[j] ?? '').trim()
+        if (target === 'courseNumber') {
+          courseNumber = val
+        } else if (!NON_EDITABLE_FIELDS.has(target as keyof PreferenceRow)) {
+          ;(row as unknown as Record<string, string>)[target] = val
+        }
+      }
+      // Merge separate dept + course# columns into a single subject string
+      if (courseNumber) {
+        row.subject = row.subject
+          ? `${row.subject} ${courseNumber}`.trim()
+          : courseNumber
+      }
+      // Skip rows that produced no recognizable field values
+      if (!rowHasAnyContent(row)) continue
+      newRows.push(row)
+    }
+
+    if (newRows.length === 0) {
+      statusMessage.value = 'No valid rows found in CSV.'
+      statusTone.value = 'error'
+      return
+    }
+
+    const hasContent = rows.value.some((r) => rowHasAnyContent(r))
+    if (hasContent) {
+      const ok = window.confirm(
+        `Replace the current ${rows.value.length} row(s) with ${newRows.length} row(s) from CSV?`,
+      )
+      if (!ok) return
+    }
+
+    rows.value = newRows
+    statusMessage.value = `Loaded ${newRows.length} row(s) from CSV.`
+    statusTone.value = 'success'
+  }
+  reader.readAsText(file)
 }
 
 onMounted(loadPageData)
@@ -1839,6 +2252,21 @@ onMounted(loadPageData)
   font-size: 0.84rem;
 }
 
+.pref-time-cell {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.pref-time-period {
+  min-width: 5.1rem;
+}
+
+:deep(.pref-time-period .p-button) {
+  padding: 0.35rem 0.45rem;
+}
+
 :deep(.pref-page .p-inputtext::placeholder) {
   color: inherit;
   opacity: 0.7;
@@ -1933,5 +2361,38 @@ onMounted(loadPageData)
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* ─── New entity confirmation dialog ─── */
+.pref-ned__desc {
+  margin: 0 0 1rem;
+  color: var(--p-text-color, #1e293b);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.pref-ned__group {
+  margin-bottom: 0.875rem;
+}
+
+.pref-ned__label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color, #64748b);
+  margin-bottom: 0.25rem;
+}
+
+.pref-ned__list {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--p-text-color, #1e293b);
+  font-size: 0.875rem;
+}
+
+.pref-ned__list li {
+  margin-bottom: 0.15rem;
 }
 </style>

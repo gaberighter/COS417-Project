@@ -21,6 +21,10 @@ export const useAdmin = () => {
     await navigateTo('/admin/audit_log_viewer')
   }
 
+  const viewPreferences = async () => {
+    await navigateTo('/admin/preference_viewer')
+  }
+
   return {
     viewExistingSchedule,
     createNewSchedule,
@@ -28,5 +32,6 @@ export const useAdmin = () => {
     viewProfessorData,
     viewCourseCatalog,
     viewAuditLogs,
+    viewPreferences,
   }
 }
