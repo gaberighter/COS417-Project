@@ -425,19 +425,39 @@ const normalizeOptionalNumber = (value: number | null) => {
 
 const submitProfessor = async () => {
   try {
-    await $fetch('/api/professors', {
-      method: 'POST',
-      body: {
-        covenantId: professorForm.covenantId.trim().toLowerCase(),
-        displayName: professorForm.displayName.trim(),
-        departmentCode: professorForm.departmentCode.trim().toUpperCase(),
-        officeBuilding: normalizeOptionalString(professorForm.officeBuilding),
-        officeRoom: normalizeOptionalString(professorForm.officeRoom),
-        seniorityYear: normalizeOptionalNumber(professorForm.seniorityYear),
-        active: professorForm.active,
-      },
-      headers: { 'x-dev-role': 'Admin' },
-    })
+    if (isEditMode.value) {
+      await $fetch(
+        `/api/professors/${encodeURIComponent(professorForm.covenantId.trim().toLowerCase())}`,
+        {
+          method: 'PATCH',
+          body: {
+            displayName: professorForm.displayName.trim(),
+            departmentCode: professorForm.departmentCode.trim().toUpperCase(),
+            officeBuilding: normalizeOptionalString(
+              professorForm.officeBuilding,
+            ),
+            officeRoom: normalizeOptionalString(professorForm.officeRoom),
+            seniorityYear: normalizeOptionalNumber(professorForm.seniorityYear),
+            active: professorForm.active,
+          },
+          headers: { 'x-dev-role': 'Admin' },
+        },
+      )
+    } else {
+      await $fetch('/api/professors', {
+        method: 'POST',
+        body: {
+          covenantId: professorForm.covenantId.trim().toLowerCase(),
+          displayName: professorForm.displayName.trim(),
+          departmentCode: professorForm.departmentCode.trim().toUpperCase(),
+          officeBuilding: normalizeOptionalString(professorForm.officeBuilding),
+          officeRoom: normalizeOptionalString(professorForm.officeRoom),
+          seniorityYear: normalizeOptionalNumber(professorForm.seniorityYear),
+          active: professorForm.active,
+        },
+        headers: { 'x-dev-role': 'Admin' },
+      })
+    }
     actionMessage.value = isEditMode.value
       ? 'Professor updated.'
       : 'Professor created.'

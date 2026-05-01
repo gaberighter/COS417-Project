@@ -322,6 +322,7 @@ const deleteMessage = ref('')
 const actionMessage = ref('')
 const showCourseModal = ref(false)
 const isEditMode = ref(false)
+const editingCourseId = ref('')
 
 const dayOptions: DayPattern[] = [
   'MWF',
@@ -454,6 +455,7 @@ const openAddCourseModal = () => {
 
 const openEditCourseModal = (course: Course) => {
   isEditMode.value = true
+  editingCourseId.value = course._id
   actionMessage.value = ''
   Object.assign(courseForm, {
     deptCode: course.deptCode,
@@ -476,6 +478,7 @@ const openEditCourseModal = (course: Course) => {
 const closeCourseModal = () => {
   showCourseModal.value = false
   isEditMode.value = false
+  editingCourseId.value = ''
   Object.assign(courseForm, createEmptyCourseForm())
 }
 
@@ -490,27 +493,56 @@ const normalizeOptionalNumber = (value: number | null) => {
 
 const submitCourse = async () => {
   try {
-    await $fetch('/api/courses', {
-      method: 'POST',
-      body: {
-        deptCode: courseForm.deptCode.trim().toUpperCase(),
-        courseNumber: courseForm.courseNumber.trim(),
-        title: courseForm.title.trim(),
-        creditHours: courseForm.creditHours,
-        typicalEnrollment: normalizeOptionalNumber(
-          courseForm.typicalEnrollment,
-        ),
-        requiredEquipment: splitCsv(courseForm.requiredEquipment),
-        labComponent: courseForm.labComponent,
-        active: courseForm.active,
-        typicalProfessor: normalizeOptionalString(courseForm.typicalProfessor),
-        typicalDays: courseForm.typicalDays || null,
-        typicalTime: normalizeOptionalString(courseForm.typicalTime),
-        prerequisites: splitCsv(courseForm.prerequisites),
-        corequisites: splitCsv(courseForm.corequisites),
-      },
-      headers: { 'x-dev-role': 'Admin' },
-    })
+    if (isEditMode.value) {
+      await $fetch(
+        `/api/courses/${encodeURIComponent(editingCourseId.value)}`,
+        {
+          method: 'PATCH',
+          body: {
+            title: courseForm.title.trim(),
+            creditHours: courseForm.creditHours,
+            typicalEnrollment: normalizeOptionalNumber(
+              courseForm.typicalEnrollment,
+            ),
+            requiredEquipment: splitCsv(courseForm.requiredEquipment),
+            labComponent: courseForm.labComponent,
+            active: courseForm.active,
+            typicalProfessor: normalizeOptionalString(
+              courseForm.typicalProfessor,
+            ),
+            typicalDays: courseForm.typicalDays || null,
+            typicalTime: normalizeOptionalString(courseForm.typicalTime),
+            prerequisites: splitCsv(courseForm.prerequisites),
+            corequisites: splitCsv(courseForm.corequisites),
+          },
+          headers: { 'x-dev-role': 'Admin' },
+        },
+      )
+    } else {
+      await $fetch('/api/courses', {
+        method: 'POST',
+        body: {
+          deptCode: courseForm.deptCode.trim().toUpperCase(),
+          courseNumber: courseForm.courseNumber.trim(),
+          title: courseForm.title.trim(),
+          creditHours: courseForm.creditHours,
+          typicalEnrollment: normalizeOptionalNumber(
+            courseForm.typicalEnrollment,
+          ),
+          requiredEquipment: splitCsv(courseForm.requiredEquipment),
+          labComponent: courseForm.labComponent,
+          active: courseForm.active,
+          typicalProfessor: normalizeOptionalString(
+            courseForm.typicalProfessor,
+          ),
+          typicalDays: courseForm.typicalDays || null,
+          typicalTime: normalizeOptionalString(courseForm.typicalTime),
+          prerequisites: splitCsv(courseForm.prerequisites),
+          corequisites: splitCsv(courseForm.corequisites),
+        },
+        headers: { 'x-dev-role': 'Admin' },
+      })
+    }
     actionMessage.value = isEditMode.value
       ? 'Course updated.'
       : 'Course created.'
