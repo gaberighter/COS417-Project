@@ -4,14 +4,16 @@
 // Body: Partial<IAssignment> with at minimum courseId to identify the target.
 
 import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
-import { requireAuth, type AuthContext } from '../../../utils/auth'
+import { requireAuth } from '../../../utils/auth'
 import { connectDB } from '../../../utils/db'
 import { Professor, Schedule, type IAssignment } from '../../../models/index'
 import { logAction } from '../../../services/auditService'
+import { isLockedScheduleStatus } from '../../../services/scheduling/scheduleRecords'
 
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 
 type AssignmentPatchPayload = Partial<IAssignment> & {
+  runNumber?: number
   courseId?: string
   originalCourseId?: string
   previousCourseId?: string
@@ -76,13 +78,34 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const schedule = await Schedule.findOne({ term })
-    .sort({ runNumber: -1 })
+  let runNumber: number | undefined
+  if (body.runNumber !== undefined) {
+    const parsed = Number(body.runNumber)
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'runNumber must be a positive integer',
+      })
+    }
+    runNumber = parsed
+  }
+
+  const filter = runNumber !== undefined ? { term, runNumber } : { term }
+  const schedule = await Schedule.findOne(filter)
+    .sort(runNumber !== undefined ? undefined : { runNumber: -1 })
     .exec()
   if (!schedule) {
     throw createError({
       statusCode: 404,
       statusMessage: `No schedule for term: ${term}`,
+    })
+  }
+
+  if (isLockedScheduleStatus(schedule.status)) {
+    throw createError({
+      statusCode: 409,
+      statusMessage:
+        'Approved or exported schedules must be reopened before assignments can be changed.',
     })
   }
 
@@ -146,7 +169,7 @@ export default defineEventHandler(async (event) => {
     'SCHEDULE_OVERRIDE',
     'schedules',
     schedule._id,
-    `Manually overrode assignment for course ${courseId} in ${term}`,
+    `Manually overrode assignment for course ${courseId} in ${term} run ${schedule.runNumber}`,
   )
 
   return schedule.assignments[assignmentIndex]

@@ -1,8 +1,17 @@
 import mongoose, { type Model, Schema } from 'mongoose'
 
-export type DayPattern = 'MWF' | 'TR' | 'MW' | 'MTWF' | 'MWRF' | 'W' | 'T' | 'R'
+export type DayPattern =
+  | 'MWF'
+  | 'TR'
+  | 'MW'
+  | 'MTWF'
+  | 'MWRF'
+  | 'M'
+  | 'W'
+  | 'T'
+  | 'R'
 export type RoomType = 'classroom' | 'lab'
-export type PreferenceStatus = 'empty' | 'draft' | 'submitted' | 'approved'
+export type PreferenceStatus = 'not_submitted' | 'submitted'
 export type ScheduleStatus = 'draft' | 'under_review' | 'approved' | 'exported'
 
 export interface IRoomEquipment {
@@ -46,6 +55,8 @@ export interface ICourse {
 
 export interface ICoursePreference {
   courseId: string
+  section?: string | null
+  crn?: string | null
   title: string
   expectedEnrollment: number
   maxCapacity?: number | null
@@ -54,15 +65,17 @@ export interface ICoursePreference {
   preferredTimes?: string[]
   avoidTimes?: string[]
   requiredEquipment?: string[]
+  instructor?: string | null
   preferredBuilding?: string | null
   preferredRoomId?: string | null
+  courseFee?: number | null
   backToBackWith?: string | null
   coreqWith?: string[]
 }
 
 export interface IPreferenceSubmission {
   term: string
-  department: string
+  departmentCode: string
   submittedBy: string
   submittedAt?: Date | null
   status: PreferenceStatus
@@ -100,6 +113,35 @@ export interface IConflict {
   resolvedAt?: Date | null
 }
 
+export interface IPlacementTraceSlot {
+  days: DayPattern
+  startTime: string
+  endTime: string
+}
+
+export interface IPlacementTraceChoice extends IPlacementTraceSlot {
+  roomId: string
+}
+
+export interface IPlacementTrace {
+  courseId: string
+  catalogCourseId: string
+  professorId: string
+  status: 'assigned' | 'conflict'
+  stage:
+    | 'single_candidate'
+    | 'optimized'
+    | 'constraint_conflict'
+    | 'evaluation_failed'
+    | 'optimization_failed'
+    | 'assignment_failed'
+  chosen?: IPlacementTraceChoice | null
+  candidateRooms: string[]
+  candidateSlots: IPlacementTraceSlot[]
+  candidateCount: number
+  reasons: string[]
+}
+
 export interface ISchedule {
   _id?: string
   term: string
@@ -108,6 +150,11 @@ export interface ISchedule {
   createdBy: string
   assignments: IAssignment[]
   conflicts: IConflict[]
+  warnings: string[]
+  nearHardFlags: IConflict[]
+  traces: IPlacementTrace[]
+  approvedAt?: Date | null
+  approvedBy?: string | null
 }
 
 export interface IAuditLog {
@@ -192,7 +239,7 @@ const courseSchema = new Schema<ICourse>(
     typicalProfessor: { type: String, default: null, trim: true },
     typicalDays: {
       type: String,
-      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'W', 'T', 'R'],
+      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'M', 'W', 'T', 'R'],
       default: null,
     },
     typicalTime: { type: String, default: null, trim: true },
@@ -211,20 +258,24 @@ courseSchema.pre('validate', function setCourseId() {
 const coursePreferenceSchema = new Schema<ICoursePreference>(
   {
     courseId: { type: String, required: true, trim: true },
+    section: { type: String, default: null, trim: true },
+    crn: { type: String, default: null, trim: true },
     title: { type: String, required: true, trim: true },
     expectedEnrollment: { type: Number, required: true, min: 0 },
     maxCapacity: { type: Number, default: null, min: 0 },
     creditHours: { type: Number, required: true, min: 0 },
     preferredDays: {
       type: [String],
-      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'W', 'T', 'R'],
+      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'M', 'W', 'T', 'R'],
       default: [],
     },
     preferredTimes: { type: [String], default: [] },
     avoidTimes: { type: [String], default: [] },
     requiredEquipment: { type: [String], default: [] },
+    instructor: { type: String, default: null, trim: true },
     preferredBuilding: { type: String, default: null, trim: true },
     preferredRoomId: { type: String, default: null, trim: true },
+    courseFee: { type: Number, default: null, min: 0 },
     backToBackWith: { type: String, default: null, trim: true },
     coreqWith: { type: [String], default: [] },
   },
@@ -234,14 +285,19 @@ const coursePreferenceSchema = new Schema<ICoursePreference>(
 const preferenceSubmissionSchema = new Schema<IPreferenceSubmission>(
   {
     term: { type: String, required: true, trim: true },
-    department: { type: String, required: true, trim: true, uppercase: true },
+    departmentCode: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+    },
     submittedBy: { type: String, required: true, trim: true },
     submittedAt: { type: Date, default: null },
     status: {
       type: String,
       required: true,
-      enum: ['empty', 'draft', 'submitted', 'approved'],
-      default: 'draft',
+      enum: ['not_submitted', 'submitted'],
+      default: 'not_submitted',
     },
     courses: { type: [coursePreferenceSchema], required: true, default: [] },
   },
@@ -278,6 +334,20 @@ professorSchema.pre('validate', function setProfessorId() {
   }
 })
 
+professorSchema.pre('validate', function normalizeLegacyPreferenceStatuses() {
+  const legacyMap: Record<string, 'not_submitted' | 'submitted'> = {
+    empty: 'not_submitted',
+    draft: 'not_submitted',
+    approved: 'submitted',
+  }
+  for (const pref of this.preferences) {
+    const mapped = legacyMap[pref.status as string]
+    if (mapped) {
+      pref.status = mapped
+    }
+  }
+})
+
 const assignmentSchema = new Schema<IAssignment>(
   {
     courseId: { type: String, required: true, trim: true },
@@ -286,7 +356,7 @@ const assignmentSchema = new Schema<IAssignment>(
     days: {
       type: String,
       required: true,
-      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'W', 'T', 'R'],
+      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'M', 'W', 'T', 'R'],
     },
     startTime: { type: String, required: true, trim: true },
     endTime: { type: String, required: true, trim: true },
@@ -305,6 +375,68 @@ const conflictSchema = new Schema<IConflict>(
   { _id: false },
 )
 
+const placementTraceSlotSchema = new Schema<IPlacementTraceSlot>(
+  {
+    days: {
+      type: String,
+      required: true,
+      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'M', 'W', 'T', 'R'],
+    },
+    startTime: { type: String, required: true, trim: true },
+    endTime: { type: String, required: true, trim: true },
+  },
+  { _id: false },
+)
+
+const placementTraceChoiceSchema = new Schema<IPlacementTraceChoice>(
+  {
+    roomId: { type: String, required: true, trim: true },
+    days: {
+      type: String,
+      required: true,
+      enum: ['MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'M', 'W', 'T', 'R'],
+    },
+    startTime: { type: String, required: true, trim: true },
+    endTime: { type: String, required: true, trim: true },
+  },
+  { _id: false },
+)
+
+const placementTraceSchema = new Schema<IPlacementTrace>(
+  {
+    courseId: { type: String, required: true, trim: true },
+    catalogCourseId: { type: String, required: true, trim: true },
+    professorId: { type: String, required: true, trim: true },
+    status: {
+      type: String,
+      required: true,
+      enum: ['assigned', 'conflict'],
+    },
+    stage: {
+      type: String,
+      required: true,
+      enum: [
+        'single_candidate',
+        'optimized',
+        'constraint_conflict',
+        'evaluation_failed',
+        'optimization_failed',
+        'assignment_failed',
+      ],
+    },
+    chosen: { type: placementTraceChoiceSchema, default: null },
+    candidateRooms: { type: [String], required: true, default: [] },
+    candidateSlots: {
+      type: [placementTraceSlotSchema],
+      required: true,
+      default: [],
+    },
+    candidateCount: { type: Number, required: true, min: 0, default: 0 },
+    reasons: { type: [String], required: true, default: [] },
+  },
+  { _id: false },
+)
+
 const scheduleSchema = new Schema<ISchedule>(
   {
     _id: { type: String },
@@ -319,6 +451,11 @@ const scheduleSchema = new Schema<ISchedule>(
     createdBy: { type: String, required: true, trim: true },
     assignments: { type: [assignmentSchema], required: true, default: [] },
     conflicts: { type: [conflictSchema], required: true, default: [] },
+    warnings: { type: [String], required: true, default: [] },
+    nearHardFlags: { type: [conflictSchema], required: true, default: [] },
+    traces: { type: [placementTraceSchema], required: true, default: [] },
+    approvedAt: { type: Date, default: null },
+    approvedBy: { type: String, default: null, trim: true },
   },
   { collection: 'schedules', timestamps: true, versionKey: false },
 )

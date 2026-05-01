@@ -1,6 +1,6 @@
 // server/api/schedule/[term].get.ts
 // GET /api/schedule/:term — §4.5.2
-// Role: Admin — retrieve the latest schedule result for a term.
+// Role: Admin | Faculty — retrieve the latest schedule result for a term.
 
 import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
@@ -10,7 +10,7 @@ import { Schedule } from '../../models/index'
 const TERM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 
 export default defineEventHandler(async (event) => {
-  requireAuth(event, ['Admin'])
+  requireAuth(event, ['Admin', 'Faculty'])
   await connectDB()
 
   const term = getRouterParam(event, 'term')
@@ -20,7 +20,6 @@ export default defineEventHandler(async (event) => {
   if (!TERM_PATTERN.test(term)) {
     throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
   }
-
   const schedule = await Schedule.findOne({ term })
     .sort({ runNumber: -1 })
     .lean()

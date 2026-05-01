@@ -11,6 +11,7 @@ export type UserRole = 'Admin' | 'Faculty'
 export interface AuthContext {
   userId: string
   role: UserRole
+  roles?: UserRole[]
 }
 
 /**
@@ -25,7 +26,8 @@ export function requireAuth(
   // SSO mode: SAML middleware already populated event.context.auth from session.
   if (event.context.auth) {
     const ctx = event.context.auth as AuthContext
-    if (!allowedRoles.includes(ctx.role)) {
+    const roles = ctx.roles ?? [ctx.role]
+    if (!roles.some((role) => allowedRoles.includes(role))) {
       throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
     }
     return ctx
@@ -39,6 +41,7 @@ export function requireAuth(
   const ctx: AuthContext = {
     userId: devUserId,
     role: devRole ?? 'Admin',
+    roles: [devRole ?? 'Admin'],
   }
 
   if (!allowedRoles.includes(ctx.role)) {

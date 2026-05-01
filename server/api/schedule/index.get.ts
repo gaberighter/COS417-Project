@@ -1,6 +1,6 @@
 // server/api/schedule/index.get.ts
 // GET /api/schedule — returns available schedules for selection.
-// Role: Admin — lists schedule summaries.
+// Role: Admin | Faculty — lists schedule summaries.
 
 import { defineEventHandler } from 'h3'
 import { requireAuth } from '../../utils/auth'
@@ -8,7 +8,7 @@ import { connectDB } from '../../utils/db'
 import { Schedule } from '../../models/index'
 
 export default defineEventHandler(async (event) => {
-  requireAuth(event, ['Admin'])
+  requireAuth(event, ['Admin', 'Faculty'])
   await connectDB()
 
   return Schedule.find(
@@ -21,6 +21,8 @@ export default defineEventHandler(async (event) => {
       createdBy: 1,
       createdAt: 1,
       updatedAt: 1,
+      approvedAt: 1,
+      approvedBy: 1,
     },
   )
     .sort({ term: -1, runNumber: -1 })

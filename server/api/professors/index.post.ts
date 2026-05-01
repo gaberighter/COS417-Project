@@ -13,7 +13,14 @@ import {
 } from '../../models/index'
 import { logAction } from '../../services/auditService'
 
-type ProfessorInput = Partial<IProfessor>
+type PreferenceSubmissionInput = IPreferenceSubmission & {
+  department?: string
+}
+
+type ProfessorInput = Partial<Omit<IProfessor, 'preferences'>> & {
+  department?: string
+  preferences?: PreferenceSubmissionInput[]
+}
 
 interface Payload {
   professors?: ProfessorInput[]
@@ -64,11 +71,11 @@ function parseProfessorKey(input: ProfessorInput): ProfessorKey {
 }
 
 function normalizePreferences(
-  preferences: IPreferenceSubmission[] | undefined,
+  preferences: PreferenceSubmissionInput[] | undefined,
 ): IPreferenceSubmission[] {
   return (preferences ?? []).map((submission) => ({
     term: submission.term,
-    department: submission.department,
+    departmentCode: submission.departmentCode ?? submission.department ?? 'UNK',
     submittedBy: submission.submittedBy,
     submittedAt: submission.submittedAt ?? null,
     status: submission.status,
@@ -78,12 +85,14 @@ function normalizePreferences(
 
 function normalizeProfessor(input: ProfessorInput): IProfessor {
   const key = parseProfessorKey(input)
+  const departmentCode =
+    (input.departmentCode ?? input.department)?.trim().toUpperCase() ?? 'UNK'
 
   return {
     _id: key._id,
     covenantId: key.covenantId,
     displayName: input.displayName?.trim() ?? key.covenantId,
-    departmentCode: input.departmentCode?.trim().toUpperCase() ?? 'UNK',
+    departmentCode,
     officeBuilding: input.officeBuilding ?? null,
     officeRoom: input.officeRoom ?? null,
     seniorityYear: input.seniorityYear ?? null,
@@ -106,7 +115,9 @@ function mergeProfessor(
       : (existing?.displayName ?? base.displayName),
     departmentCode: hasOwn(input, 'departmentCode')
       ? base.departmentCode
-      : (existing?.departmentCode ?? base.departmentCode),
+      : hasOwn(input, 'department')
+        ? base.departmentCode
+        : (existing?.departmentCode ?? base.departmentCode),
     officeBuilding: hasOwn(input, 'officeBuilding')
       ? (input.officeBuilding ?? null)
       : (existing?.officeBuilding ?? null),
