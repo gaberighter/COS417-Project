@@ -1,3 +1,5 @@
+import { APP_API_BASE_PATH } from '../../shared/app-config'
+
 export type ScheduleExportFormat = 'csv' | 'xlsx'
 
 function extensionForFormat(format: ScheduleExportFormat): string {
@@ -9,9 +11,10 @@ export async function downloadScheduleExport(
   runNumber: number,
   format: ScheduleExportFormat,
 ) {
-  const exportUrl = `/api/schedule/${encodeURIComponent(term)}/export?runNumber=${runNumber}&format=${format}`
+  const exportUrl = `${APP_API_BASE_PATH}/schedule/${encodeURIComponent(term)}/export?runNumber=${runNumber}&format=${format}&_ts=${Date.now()}`
   const response = await fetch(exportUrl, {
     credentials: 'include',
+    cache: 'no-store',
   })
 
   if (!response.ok) {
