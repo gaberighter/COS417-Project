@@ -1,8 +1,8 @@
 // server/api/preferences/[term].delete.ts
-// DELETE /api/preferences/:term — remove all preferences for current user for a term.
-// Role: Faculty — removes their own preferences only
+// DELETE /api/preferences/:term — remove all preferences for a professor for a term.
+// Role: Admin | Faculty — faculty removes their own, admins may pass ?professorId=...
 
-import { defineEventHandler, getRouterParam, createError } from 'h3'
+import { defineEventHandler, getRouterParam, getQuery, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Professor } from '../../models/index'
@@ -10,7 +10,7 @@ import { logAction } from '../../services/auditService'
 import { getClientIp } from '../../utils/ip'
 
 export default defineEventHandler(async (event) => {
-  const auth = requireAuth(event, ['Faculty'])
+  const auth = requireAuth(event, ['Admin', 'Faculty'])
   await connectDB()
 
   const term = getRouterParam(event, 'term')
@@ -20,21 +20,51 @@ export default defineEventHandler(async (event) => {
   }
 
   const clientIp = getClientIp(event)
+  const { professorId } = getQuery(event)
+  const requestedProfessorId =
+    typeof professorId === 'string' ? professorId.trim() : ''
+  const canEditOwnPreferences =
+    auth.roles?.includes('Faculty') ?? auth.role === 'Faculty'
+  const canTargetProfessor =
+    auth.roles?.includes('Admin') ?? auth.role === 'Admin'
 
-  // Find the professor making the request
-  const prof = await Professor.findOne({
-    $or: [
-      { covenantId: auth.userId.toLowerCase() },
-      { _id: auth.userId.toLowerCase() },
-      { _id: auth.userId },
-    ],
-  }).exec()
+  let prof
+  if (requestedProfessorId) {
+    if (!canTargetProfessor) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Only admins may target another professor',
+      })
+    }
+
+    prof = await Professor.findOne({
+      $or: [
+        { _id: requestedProfessorId },
+        { covenantId: requestedProfessorId.toLowerCase() },
+      ],
+    }).exec()
+  } else if (canEditOwnPreferences) {
+    prof = await Professor.findOne({
+      $or: [
+        { covenantId: auth.userId.toLowerCase() },
+        { _id: auth.userId.toLowerCase() },
+        { _id: auth.userId },
+      ],
+    }).exec()
+  } else {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'professorId is required for admin preference deletion',
+    })
+  }
 
   if (!prof) {
     // The requesting professor must exist in the DB — return 404 when not found.
     throw createError({
       statusCode: 404,
-      statusMessage: 'Professor record not found',
+      statusMessage: requestedProfessorId
+        ? `Professor not found: ${requestedProfessorId}`
+        : 'Professor record not found',
     })
   }
 

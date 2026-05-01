@@ -82,28 +82,14 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  const canEditOwnPreferences =
+    auth.roles?.includes('Faculty') ?? auth.role === 'Faculty'
+  const canTargetProfessor =
+    auth.roles?.includes('Admin') ?? auth.role === 'Admin'
+
   let prof
-  const roles = auth.roles ?? [auth.role]
-  const canUpdateOwnSubmission = roles.includes('Faculty')
-  const canUpdateAnySubmission = roles.includes('Admin')
-  const requestedProfessorId =
-    typeof body.professorId === 'string' ? body.professorId.trim() : ''
-
-  if (requestedProfessorId) {
-    if (!canUpdateAnySubmission) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'Only admins can update another professor',
-      })
-    }
-
-    prof = await Professor.findOne({
-      $or: [
-        { _id: requestedProfessorId },
-        { covenantId: requestedProfessorId.toLowerCase() },
-      ],
-    }).exec()
-  } else if (canUpdateOwnSubmission) {
+  let requestedProfessorId = ''
+  if (canEditOwnPreferences && !body.professorId) {
     prof = await Professor.findOne({
       $or: [
         { covenantId: auth.userId.toLowerCase() },
@@ -112,17 +98,38 @@ export default defineEventHandler(async (event) => {
       ],
     }).exec()
   } else {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'professorId is required and must be a non-empty string',
-    })
+    if (
+      typeof body.professorId !== 'string' ||
+      body.professorId.trim() === ''
+    ) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'professorId is required and must be a non-empty string',
+      })
+    }
+
+    if (!canTargetProfessor) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Only admins may target another professor',
+      })
+    }
+
+    requestedProfessorId = body.professorId.trim()
+
+    prof = await Professor.findOne({
+      $or: [
+        { _id: requestedProfessorId },
+        { covenantId: requestedProfessorId.toLowerCase() },
+      ],
+    }).exec()
   }
 
   if (!prof) {
     throw createError({
       statusCode: 404,
       statusMessage:
-        requestedProfessorId.length === 0
+        canEditOwnPreferences && !body.professorId
           ? 'Professor record not found'
           : `Professor not found: ${requestedProfessorId}`,
     })
