@@ -14,6 +14,7 @@ interface RoomEquipment {
 }
 
 interface Room {
+  abbreviation: string
   buildingCode: string
   roomNumber: string
   displayName: string
@@ -36,6 +37,7 @@ interface NewRoomForm {
 export const useRoomForm = (onRoomSaved: () => Promise<void>) => {
   const showAddRoomModal = ref(false)
   const isEditMode = ref(false)
+  const editingRoomId = ref('')
   const buildingCodeError = ref('')
   const roomTypeValidationError = ref('')
   const actionMessage = ref('')
@@ -90,6 +92,7 @@ export const useRoomForm = (onRoomSaved: () => Promise<void>) => {
 
   const openEditRoomModal = (room: Room) => {
     isEditMode.value = true
+    editingRoomId.value = room.abbreviation.trim().toUpperCase()
     actionMessage.value = ''
     Object.assign(newRoomForm, {
       buildingCode: room.buildingCode,
@@ -114,18 +117,13 @@ export const useRoomForm = (onRoomSaved: () => Promise<void>) => {
   const closeAddRoomModal = () => {
     showAddRoomModal.value = false
     isEditMode.value = false
+    editingRoomId.value = ''
     Object.assign(newRoomForm, createEmptyRoomForm())
     buildingCodeError.value = ''
     roomTypeValidationError.value = ''
   }
 
   const submitNewRoom = async () => {
-    // Validate building code
-    if (!validateBuildingCode()) {
-      return
-    }
-
-    // Validate room type if lab stations selected
     if (newRoomForm.equipment.labStations && newRoomForm.roomType !== 'lab') {
       roomTypeValidationError.value =
         'Lab stations require room type to be "Lab"'
@@ -133,29 +131,45 @@ export const useRoomForm = (onRoomSaved: () => Promise<void>) => {
     }
 
     try {
-      await $fetch('/api/rooms', {
-        method: 'POST',
-        body: {
-          buildingCode: newRoomForm.buildingCode.toUpperCase(),
-          roomNumber: newRoomForm.roomNumber,
-          displayName: newRoomForm.displayName,
-          capacity: newRoomForm.capacity,
-          roomType: newRoomForm.roomType,
-          available: newRoomForm.available,
-          equipment: newRoomForm.equipment,
-        },
-        headers: { 'x-dev-role': 'Admin' },
-      })
+      if (isEditMode.value) {
+        await $fetch(`/api/rooms/${encodeURIComponent(editingRoomId.value)}`, {
+          method: 'PATCH',
+          body: {
+            displayName: newRoomForm.displayName,
+            capacity: newRoomForm.capacity,
+            roomType: newRoomForm.roomType,
+            available: newRoomForm.available,
+            equipment: newRoomForm.equipment,
+          },
+          headers: { 'x-dev-role': 'Admin' },
+        })
+      } else {
+        if (!validateBuildingCode()) {
+          return
+        }
+        await $fetch('/api/rooms', {
+          method: 'POST',
+          body: {
+            buildingCode: newRoomForm.buildingCode.toUpperCase(),
+            roomNumber: newRoomForm.roomNumber,
+            displayName: newRoomForm.displayName,
+            capacity: newRoomForm.capacity,
+            roomType: newRoomForm.roomType,
+            available: newRoomForm.available,
+            equipment: newRoomForm.equipment,
+          },
+          headers: { 'x-dev-role': 'Admin' },
+        })
+      }
       actionMessage.value = isEditMode.value ? 'Room updated.' : 'Room created.'
       await onRoomSaved()
       closeAddRoomModal()
     } catch (e) {
-      console.error('Failed to create room:', e)
+      console.error('Failed to save room:', e)
       actionMessage.value =
         e instanceof Error && e.message
           ? `Failed to save room: ${e.message}`
           : 'Failed to save room.'
-      return
     }
   }
 
