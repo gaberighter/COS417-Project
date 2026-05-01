@@ -4,7 +4,7 @@
 // Note: preferences are embedded in professor documents, so this queries
 //       active professors and filters embedded submissions by term.
 
-import { defineEventHandler, getRouterParam, createError, getQuery } from 'h3'
+import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Professor } from '../../models/index'
