@@ -138,6 +138,7 @@ export default defineEventHandler(async (event) => {
     'days',
     'startTime',
     'endTime',
+    'enrollmentOverride',
     'overrideBy',
   ] as const) {
     if (hasOwn(patchSource, field) && patchSource[field] !== undefined) {

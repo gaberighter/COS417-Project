@@ -165,6 +165,7 @@ export interface ScheduleAssignment {
   days: DayPattern
   startTime: string
   endTime: string
+  enrollmentOverride?: number | null
   overrideBy?: string
 }
 

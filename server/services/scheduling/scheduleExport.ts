@@ -357,10 +357,13 @@ function buildExportRowData(
       Building: roomFields.buildingCode,
       Room: roomLabel,
       EstimatedEnrollment:
-        preferenceFields?.estimatedEnrollment !== null &&
-        preferenceFields?.estimatedEnrollment !== undefined
-          ? preferenceFields.estimatedEnrollment
-          : '',
+        assignment.enrollmentOverride !== null &&
+        assignment.enrollmentOverride !== undefined
+          ? assignment.enrollmentOverride
+          : preferenceFields?.estimatedEnrollment !== null &&
+              preferenceFields?.estimatedEnrollment !== undefined
+            ? preferenceFields.estimatedEnrollment
+            : '',
       OverrideBy: formatExportOverrideLabel({
         overrideBy: assignment.overrideBy,
         professorsById: lookups.professorsById,

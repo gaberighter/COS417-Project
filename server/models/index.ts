@@ -103,6 +103,7 @@ export interface IAssignment {
   days: DayPattern
   startTime: string
   endTime: string
+  enrollmentOverride?: number | null
   overrideBy?: string | null
 }
 
@@ -362,6 +363,7 @@ const assignmentSchema = new Schema<IAssignment>(
     },
     startTime: { type: String, required: true, trim: true },
     endTime: { type: String, required: true, trim: true },
+    enrollmentOverride: { type: Number, default: null, min: 0 },
     overrideBy: { type: String, default: null, trim: true },
   },
   { _id: false },

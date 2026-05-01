@@ -285,6 +285,15 @@ function validateAssignments(assignments: unknown): string | null {
     ) {
       return `Assignment ${i}: overrideBy must be a string or null`
     }
+    if (
+      assignment.enrollmentOverride !== undefined &&
+      assignment.enrollmentOverride !== null &&
+      (typeof assignment.enrollmentOverride !== 'number' ||
+        !Number.isFinite(assignment.enrollmentOverride) ||
+        assignment.enrollmentOverride < 0)
+    ) {
+      return `Assignment ${i}: enrollmentOverride must be a non-negative number or null`
+    }
   }
 
   return null

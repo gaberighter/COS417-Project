@@ -418,7 +418,7 @@ export function buildEnrichedScheduleRows(
       building: roomBuilding(room),
       roomNumber: room?.roomNumber ?? assignment.roomId,
       roomLabel: roomLabel(room, assignment.roomId),
-      enrollment,
+      enrollment: assignment.enrollmentOverride ?? enrollment,
       days: assignment.days,
       startTime: assignment.startTime,
       endTime: assignment.endTime,
