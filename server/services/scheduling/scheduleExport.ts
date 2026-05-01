@@ -7,12 +7,7 @@ import {
   type IAssignment,
   type ISchedule,
 } from '../../models/index'
-import { Users } from '../../models/user.model'
-import {
-  catalogCourseIdOf,
-  courseSectionOf,
-  normalizeCourseReference,
-} from '../../utils/courseReferences'
+import { normalizeCourseReference } from '../../utils/courseReferences'
 import { isLockedScheduleStatus } from './scheduleRecords'
 
 export type ScheduleExportFormat = 'csv' | 'xlsx'
@@ -23,26 +18,23 @@ type ExportSchedule = Pick<
 >
 
 const exportHeaders = [
-  'Department',
+  'Dept',
   'Course',
   'Section',
   'Title',
-  'CreditHours',
-  'CRN',
-  'CourseFee',
   'Instructor',
-  'InstructorCovenantId',
-  'Days',
-  'StartTime',
-  'EndTime',
   'Time',
   'Building',
   'Room',
-  'EstimatedEnrollment',
-  'OverrideBy',
+  'Enroll',
+  'CRN',
+  'Course Fee',
 ] as const
 
 type ExportRow = Record<(typeof exportHeaders)[number], string | number>
+const UNRESOLVED_COURSE_CELL = 'ERROR: Unresolved course'
+const UNRESOLVED_INSTRUCTOR_CELL = 'ERROR: Unresolved instructor'
+const UNRESOLVED_ROOM_CELL = 'ERROR: Unresolved room'
 
 function normalizeWhitespace(value: string): string {
   return value.trim().replace(/\s+/g, ' ')
@@ -135,116 +127,71 @@ function getBuildingCode(roomAbbreviation: string): string {
   return roomAbbreviation.split(/\s+/)[0] ?? ''
 }
 
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 function splitRoomReference(roomReference: string | null | undefined): {
   buildingCode: string
-  roomNumber: string
+  roomLabel: string
 } {
-  const normalized = normalizeWhitespace(String(roomReference ?? ''))
+  const normalized = readableValueOrError(roomReference, UNRESOLVED_ROOM_CELL)
   if (!normalized) {
     return {
       buildingCode: '',
-      roomNumber: '',
+      roomLabel: '',
     }
   }
 
-  const [buildingCode, ...rest] = normalized.split(/\s+/)
+  if (normalized === UNRESOLVED_ROOM_CELL) {
+    return {
+      buildingCode: UNRESOLVED_ROOM_CELL,
+      roomLabel: UNRESOLVED_ROOM_CELL,
+    }
+  }
+
+  const buildingCode = getBuildingCode(normalized)
   return {
     buildingCode: buildingCode ?? '',
-    roomNumber: rest.join(' '),
+    roomLabel: normalized,
   }
 }
 
-function looksLikeOpaqueId(value: string): boolean {
-  return /^[a-f0-9]{24}$/i.test(value)
+function readableValueOrBlank(value: string | null | undefined): string {
+  const normalized = normalizeWhitespace(String(value ?? ''))
+  if (!normalized || looksLikeOpaqueReference(normalized)) {
+    return ''
+  }
+
+  return normalized
 }
 
-function formatExportCourseLabel(input: {
-  assignment: IAssignment
-  course?: {
-    deptCode: string
-    courseNumber: string
-    title: string
-    creditHours: number
-  }
-}) {
-  const section = courseSectionOf(input.assignment.courseId)
-  const base = input.course
-    ? [input.course.deptCode, input.course.courseNumber]
-        .filter(Boolean)
-        .join(' ')
-    : null
-
-  if (base) {
-    return section ? `${base}-${section}` : base
+function readableValueOrError(
+  value: string | null | undefined,
+  errorMessage: string,
+): string {
+  const normalized = normalizeWhitespace(String(value ?? ''))
+  if (!normalized) {
+    return ''
   }
 
-  return section ? `Unresolved course (${section})` : 'Unresolved course'
+  return looksLikeOpaqueReference(normalized) ? errorMessage : normalized
 }
 
-function formatExportProfessorLabel(professor?: {
-  covenantId: string
-  displayName?: string
-}) {
-  if (professor?.displayName) {
-    return professor.displayName
-  }
-
-  if (professor?.covenantId && !looksLikeOpaqueId(professor.covenantId)) {
-    return professor.covenantId
-  }
-
-  return 'Unresolved professor'
-}
-
-function formatExportOverrideLabel(input: {
-  overrideBy?: string | null
-  professorsById: Map<string, { covenantId: string; displayName?: string }>
-  overrideActorsById: Map<string, string>
-}) {
-  const overrideBy = normalizeWhitespace(String(input.overrideBy ?? ''))
-  if (!overrideBy) return ''
-
-  const professor = getLookupValue(input.professorsById, overrideBy)
-  if (professor?.displayName) {
-    return professor.displayName
-  }
-
-  const overrideActor = getLookupValue(input.overrideActorsById, overrideBy)
-  if (overrideActor) {
-    return overrideActor
-  }
-
-  if (looksLikeOpaqueReference(overrideBy)) {
-    return 'Administrative override'
-  }
-
-  return `Admin (${overrideBy})`
-}
-
-function formatExportRoomLabel(
-  room?: {
-    abbreviation: string
-    roomNumber: string
+function formatExportProfessorLabel(
+  professor?: {
+    covenantId: string
+    displayName?: string
   },
-  roomId?: string,
+  professorId?: string,
 ) {
-  if (room?.abbreviation) {
-    return room.abbreviation
+  const displayName = readableValueOrBlank(professor?.displayName)
+  if (displayName) {
+    return displayName
   }
 
-  if (room?.roomNumber) {
-    return `Room ${room.roomNumber}`
+  const covenantId = readableValueOrBlank(professor?.covenantId)
+  if (covenantId) {
+    return covenantId
   }
 
-  if (roomId && !looksLikeOpaqueReference(roomId)) {
-    return roomId
-  }
-
-  return 'Unresolved room'
+  return readableValueOrError(professorId, UNRESOLVED_INSTRUCTOR_CELL)
 }
 
 function formatExportTimeLabel(assignment: IAssignment) {
@@ -264,27 +211,43 @@ function fallbackCourseFields(
     deptCode: string
     courseNumber: string
     title: string
-    creditHours: number
   },
 ) {
+  const normalizedReference = normalizeCourseReference(assignment.courseId)
+  const readableCatalogCourseId =
+    readableValueOrBlank(normalizedReference.catalogCourseId) ||
+    readableValueOrBlank(normalizedReference.rawCourseId)
+  const unresolvedCourseCell =
+    readableValueOrError(
+      normalizedReference.catalogCourseId || normalizedReference.rawCourseId,
+      UNRESOLVED_COURSE_CELL,
+    ) || UNRESOLVED_COURSE_CELL
+
   if (course) {
     return {
-      department: course.deptCode,
-      courseNumber: course.courseNumber,
-      title: course.title,
-      creditHours: course.creditHours,
+      department:
+        readableValueOrBlank(course.deptCode) ||
+        readableCatalogCourseId.split(/\s+/)[0] ||
+        unresolvedCourseCell,
+      courseNumber:
+        readableValueOrBlank(course.courseNumber) ||
+        readableCatalogCourseId.split(/\s+/).slice(1).join(' ') ||
+        unresolvedCourseCell,
+      section: normalizedReference.section ?? '',
+      title:
+        readableValueOrBlank(course.title) ||
+        readableCatalogCourseId ||
+        unresolvedCourseCell,
     }
   }
 
-  const normalizedReference = normalizeCourseReference(assignment.courseId)
-  const catalogCourseId = normalizedReference.catalogCourseId
-  const parts = catalogCourseId.split(/\s+/).filter(Boolean)
+  const parts = readableCatalogCourseId.split(/\s+/).filter(Boolean)
 
   return {
-    department: parts[0] ?? '',
-    courseNumber: parts.slice(1).join(' '),
-    title: catalogCourseId || assignment.courseId || 'UNRESOLVED COURSE',
-    creditHours: '',
+    department: parts[0] || unresolvedCourseCell,
+    courseNumber: parts.slice(1).join(' ') || unresolvedCourseCell,
+    section: normalizedReference.section ?? '',
+    title: readableCatalogCourseId || unresolvedCourseCell,
   }
 }
 
@@ -293,16 +256,42 @@ function fallbackRoomFields(
   room?: {
     abbreviation: string
     roomNumber: string
+    displayName?: string
   },
 ) {
-  if (room) {
+  const abbreviation = readableValueOrBlank(room?.abbreviation)
+  if (abbreviation) {
     return {
-      buildingCode: getBuildingCode(room.abbreviation),
-      roomNumber: room.roomNumber,
+      buildingCode: getBuildingCode(abbreviation),
+      roomLabel: abbreviation,
+    }
+  }
+
+  const displayName = readableValueOrBlank(room?.displayName)
+  if (displayName) {
+    return {
+      buildingCode: displayName.includes(' ')
+        ? getBuildingCode(displayName)
+        : '',
+      roomLabel: displayName,
+    }
+  }
+
+  const roomNumber = readableValueOrBlank(room?.roomNumber)
+  if (roomNumber) {
+    return {
+      buildingCode: '',
+      roomLabel: roomNumber,
     }
   }
 
   return splitRoomReference(assignment.roomId)
+}
+
+function formatCourseFee(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value.toFixed(2)
+    : ''
 }
 
 function buildExportRowData(
@@ -314,26 +303,29 @@ function buildExportRowData(
         deptCode: string
         courseNumber: string
         title: string
-        creditHours: number
       }
     >
     professorsById: Map<string, { covenantId: string; displayName?: string }>
-    overrideActorsById: Map<string, string>
-    roomsById: Map<string, { abbreviation: string; roomNumber: string }>
+    roomsById: Map<
+      string,
+      { abbreviation: string; roomNumber: string; displayName?: string }
+    >
     preferenceFieldsByKey: Map<string, PreferenceExportFields>
   },
 ): ExportRow[] {
   const rows: ExportRow[] = []
 
   for (const assignment of assignments) {
-    const catalogCourseId = catalogCourseIdOf(assignment.courseId)
-    const course = getLookupValue(lookups.coursesById, catalogCourseId)
+    const normalizedReference = normalizeCourseReference(assignment.courseId)
+    const course = getLookupValue(
+      lookups.coursesById,
+      normalizedReference.catalogCourseId,
+    )
     const professor = getLookupValue(
       lookups.professorsById,
       assignment.professorId,
     )
     const room = getLookupValue(lookups.roomsById, assignment.roomId)
-    const normalizedReference = normalizeCourseReference(assignment.courseId)
     const preferenceFields =
       lookups.preferenceFieldsByKey.get(
         buildEnrollmentKey(
@@ -349,30 +341,17 @@ function buildExportRowData(
       )
     const courseFields = fallbackCourseFields(assignment, course)
     const roomFields = fallbackRoomFields(assignment, room)
-    const roomLabel = formatExportRoomLabel(room, assignment.roomId)
 
     const row: ExportRow = {
-      Department: courseFields.department,
+      Dept: courseFields.department,
       Course: courseFields.courseNumber,
-      Section: courseSectionOf(assignment.courseId) ?? '',
+      Section: courseFields.section,
       Title: courseFields.title,
-      CreditHours: courseFields.creditHours,
-      CRN: preferenceFields?.crn ?? '',
-      CourseFee:
-        preferenceFields?.courseFee !== null &&
-        preferenceFields?.courseFee !== undefined
-          ? preferenceFields.courseFee
-          : '',
-      Instructor: formatExportProfessorLabel(professor),
-      InstructorCovenantId:
-        professor?.covenantId || assignment.professorId || '',
-      Days: assignment.days ?? '',
-      StartTime: assignment.startTime ?? '',
-      EndTime: assignment.endTime ?? '',
+      Instructor: formatExportProfessorLabel(professor, assignment.professorId),
       Time: formatExportTimeLabel(assignment),
       Building: roomFields.buildingCode,
-      Room: roomLabel,
-      EstimatedEnrollment:
+      Room: roomFields.roomLabel,
+      Enroll:
         assignment.enrollmentOverride !== null &&
         assignment.enrollmentOverride !== undefined
           ? assignment.enrollmentOverride
@@ -380,11 +359,8 @@ function buildExportRowData(
               preferenceFields?.estimatedEnrollment !== undefined
             ? preferenceFields.estimatedEnrollment
             : '',
-      OverrideBy: formatExportOverrideLabel({
-        overrideBy: assignment.overrideBy,
-        professorsById: lookups.professorsById,
-        overrideActorsById: lookups.overrideActorsById,
-      }),
+      CRN: readableValueOrBlank(preferenceFields?.crn ?? ''),
+      'Course Fee': formatCourseFee(preferenceFields?.courseFee),
     }
 
     rows.push(row)
@@ -423,16 +399,17 @@ export async function buildScheduleExportFile(
   const courseIds = [
     ...new Set(
       schedule.assignments.flatMap((assignment) =>
-        expandQueryKeys(catalogCourseIdOf(assignment.courseId)),
+        expandQueryKeys(
+          normalizeCourseReference(assignment.courseId).catalogCourseId,
+        ),
       ),
     ),
   ]
   const professorIds = [
     ...new Set(
-      schedule.assignments.flatMap((assignment) => [
-        ...expandQueryKeys(assignment.professorId),
-        ...expandQueryKeys(assignment.overrideBy),
-      ]),
+      schedule.assignments.flatMap((assignment) =>
+        expandQueryKeys(assignment.professorId),
+      ),
     ),
   ]
   const roomIds = [
@@ -442,18 +419,10 @@ export async function buildScheduleExportFile(
       ),
     ),
   ]
-  const overrideIds = [
-    ...new Set(
-      schedule.assignments.flatMap((assignment) =>
-        expandQueryKeys(assignment.overrideBy),
-      ),
-    ),
-  ]
-
-  const [courses, professors, rooms, users] = await Promise.all([
+  const [courses, professors, rooms] = await Promise.all([
     CourseCatalog.find(
       { _id: { $in: courseIds } },
-      { _id: 1, deptCode: 1, courseNumber: 1, title: 1, creditHours: 1 },
+      { _id: 1, deptCode: 1, courseNumber: 1, title: 1 },
     )
       .lean()
       .exec(),
@@ -466,6 +435,7 @@ export async function buildScheduleExportFile(
               $in: professorIds.map((id) => id.toLowerCase()),
             },
           },
+          { displayName: { $in: professorIds } },
         ],
       },
       {
@@ -475,6 +445,7 @@ export async function buildScheduleExportFile(
         preferences: { $elemMatch: { term: schedule.term } },
       },
     )
+      .collation({ locale: 'en', strength: 2 })
       .lean()
       .exec(),
     Room.find(
@@ -490,21 +461,6 @@ export async function buildScheduleExportFile(
       .collation({ locale: 'en', strength: 2 })
       .lean()
       .exec(),
-    overrideIds.length
-      ? Users.find(
-          {
-            $or: [
-              { username: { $in: overrideIds } },
-              ...overrideIds.map((id) => ({
-                email: { $regex: `^${escapeRegex(id)}@`, $options: 'i' },
-              })),
-            ],
-          } as any,
-          { _id: 1, username: 1, email: 1, name: 1, preferred: 1 } as any,
-        )
-          .lean()
-          .exec()
-      : Promise.resolve([]),
   ])
 
   const coursesById = new Map<
@@ -513,21 +469,18 @@ export async function buildScheduleExportFile(
       deptCode: string
       courseNumber: string
       title: string
-      creditHours: number
     }
   >()
   const professorsById = new Map<
     string,
     { covenantId: string; displayName?: string }
   >()
-  const overrideActorsById = new Map<string, string>()
   const preferenceFieldsByKey = new Map<string, PreferenceExportFields>()
   for (const course of courses) {
     const payload = {
       deptCode: course.deptCode,
       courseNumber: course.courseNumber,
       title: course.title,
-      creditHours: course.creditHours,
     }
     setLookupAlias(coursesById, course._id, payload)
   }
@@ -539,14 +492,6 @@ export async function buildScheduleExportFile(
     setLookupAlias(professorsById, professor._id, payload)
     setLookupAlias(professorsById, professor.covenantId, payload)
     setLookupAlias(professorsById, professor.displayName, payload)
-    if (professor.displayName) {
-      setLookupAlias(overrideActorsById, professor._id, professor.displayName)
-      setLookupAlias(
-        overrideActorsById,
-        professor.covenantId,
-        professor.displayName,
-      )
-    }
 
     for (const submission of professor.preferences ?? []) {
       if (submission.term !== schedule.term) continue
@@ -588,30 +533,15 @@ export async function buildScheduleExportFile(
     }
   }
 
-  for (const user of users) {
-    const displayName =
-      normalizeWhitespace(String(user.preferred ?? '')) ||
-      normalizeWhitespace(String(user.name ?? '')) ||
-      normalizeWhitespace(String(user.username ?? ''))
-
-    if (!displayName) continue
-
-    setLookupAlias(overrideActorsById, user.username, displayName)
-
-    const email = normalizeWhitespace(String(user.email ?? ''))
-    if (email.includes('@')) {
-      setLookupAlias(overrideActorsById, email.split('@')[0], displayName)
-    }
-  }
-
   const roomsById = new Map<
     string,
-    { abbreviation: string; roomNumber: string }
+    { abbreviation: string; roomNumber: string; displayName?: string }
   >()
   for (const room of rooms) {
     const payload = {
       abbreviation: room.abbreviation,
       roomNumber: room.roomNumber,
+      displayName: room.displayName,
     }
     setLookupAlias(roomsById, room._id, payload)
     setLookupAlias(roomsById, room.abbreviation, payload)
@@ -621,7 +551,6 @@ export async function buildScheduleExportFile(
   const rows = buildExportRowData(schedule.assignments, {
     coursesById,
     professorsById,
-    overrideActorsById,
     roomsById,
     preferenceFieldsByKey,
   })

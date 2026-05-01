@@ -1,6 +1,6 @@
 // server/api/schedule/[term]/export.get.ts
 // GET /api/schedule/:term/export — §4.5.2
-// Role: Admin | Faculty — download Banner-compatible CSV or Excel.
+// Role: Admin | Faculty — download a human-readable schedule as CSV or Excel.
 
 import {
   defineEventHandler,
