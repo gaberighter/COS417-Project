@@ -50,6 +50,7 @@ export default defineEventHandler(async (event) => {
           days: 'MWF',
           startTime: '09:00',
           endTime: '10:30',
+          enrollmentOverride: null,
           overrideBy: null,
         },
         conflictExample: {
@@ -96,6 +97,7 @@ export default defineEventHandler(async (event) => {
         days: 'MWF',
         startTime: '09:00',
         endTime: '10:30',
+        enrollmentOverride: null,
         overrideBy: null,
       },
       conflictExample: {

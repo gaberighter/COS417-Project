@@ -7,6 +7,7 @@ import {
   type IAssignment,
   type ISchedule,
 } from '../../models/index'
+import { Users } from '../../models/user.model'
 import {
   catalogCourseIdOf,
   courseSectionOf,
@@ -21,22 +22,27 @@ type ExportSchedule = Pick<
   '_id' | 'term' | 'runNumber' | 'status' | 'assignments'
 >
 
-const bannerHeaders = [
+const exportHeaders = [
   'Department',
-  'CourseNumber',
+  'Course',
   'Section',
   'Title',
   'CreditHours',
-  'ProfessorCovenantId',
+  'CRN',
+  'CourseFee',
+  'Instructor',
+  'InstructorCovenantId',
   'Days',
   'StartTime',
   'EndTime',
-  'BuildingCode',
-  'RoomNumber',
+  'Time',
+  'Building',
+  'Room',
   'EstimatedEnrollment',
+  'OverrideBy',
 ] as const
 
-type BannerRow = Record<(typeof bannerHeaders)[number], string | number>
+type ExportRow = Record<(typeof exportHeaders)[number], string | number>
 
 function normalizeWhitespace(value: string): string {
   return value.trim().replace(/\s+/g, ' ')
@@ -106,6 +112,12 @@ function buildEnrollmentKey(professorKey: string, courseKey: string) {
   return `${normalizeLookupKey(professorKey)}::${normalizeLookupKey(courseKey)}`
 }
 
+type PreferenceExportFields = {
+  estimatedEnrollment: number | null
+  crn: string | null
+  courseFee: number | null
+}
+
 async function loadXlsxModule() {
   const module = await import('xlsx')
   return module.default ?? module
@@ -121,6 +133,10 @@ function escapeCsv(value: string): string {
 
 function getBuildingCode(roomAbbreviation: string): string {
   return roomAbbreviation.split(/\s+/)[0] ?? ''
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function splitRoomReference(roomReference: string | null | undefined): {
@@ -184,6 +200,31 @@ function formatExportProfessorLabel(professor?: {
   return 'Unresolved professor'
 }
 
+function formatExportOverrideLabel(input: {
+  overrideBy?: string | null
+  professorsById: Map<string, { covenantId: string; displayName?: string }>
+  overrideActorsById: Map<string, string>
+}) {
+  const overrideBy = normalizeWhitespace(String(input.overrideBy ?? ''))
+  if (!overrideBy) return ''
+
+  const professor = getLookupValue(input.professorsById, overrideBy)
+  if (professor?.displayName) {
+    return professor.displayName
+  }
+
+  const overrideActor = getLookupValue(input.overrideActorsById, overrideBy)
+  if (overrideActor) {
+    return overrideActor
+  }
+
+  if (looksLikeOpaqueReference(overrideBy)) {
+    return 'Administrative override'
+  }
+
+  return `Admin (${overrideBy})`
+}
+
 function formatExportRoomLabel(
   room?: {
     abbreviation: string
@@ -204,6 +245,17 @@ function formatExportRoomLabel(
   }
 
   return 'Unresolved room'
+}
+
+function formatExportTimeLabel(assignment: IAssignment) {
+  const parts = [
+    assignment.days ?? '',
+    [assignment.startTime ?? '', assignment.endTime ?? '']
+      .filter(Boolean)
+      .join('-'),
+  ].filter(Boolean)
+
+  return parts.join(' ')
 }
 
 function fallbackCourseFields(
@@ -253,8 +305,7 @@ function fallbackRoomFields(
   return splitRoomReference(assignment.roomId)
 }
 
-function buildBannerRowData(
-  term: string,
+function buildExportRowData(
   assignments: IAssignment[],
   lookups: {
     coursesById: Map<
@@ -267,11 +318,12 @@ function buildBannerRowData(
       }
     >
     professorsById: Map<string, { covenantId: string; displayName?: string }>
+    overrideActorsById: Map<string, string>
     roomsById: Map<string, { abbreviation: string; roomNumber: string }>
-    estimatedEnrollmentByKey: Map<string, number>
+    preferenceFieldsByKey: Map<string, PreferenceExportFields>
   },
-): BannerRow[] {
-  const rows: BannerRow[] = []
+): ExportRow[] {
+  const rows: ExportRow[] = []
 
   for (const assignment of assignments) {
     const catalogCourseId = catalogCourseIdOf(assignment.courseId)
@@ -282,14 +334,14 @@ function buildBannerRowData(
     )
     const room = getLookupValue(lookups.roomsById, assignment.roomId)
     const normalizedReference = normalizeCourseReference(assignment.courseId)
-    const estimatedEnrollment =
-      lookups.estimatedEnrollmentByKey.get(
+    const preferenceFields =
+      lookups.preferenceFieldsByKey.get(
         buildEnrollmentKey(
           assignment.professorId,
           normalizedReference.scheduledCourseId,
         ),
       ) ??
-      lookups.estimatedEnrollmentByKey.get(
+      lookups.preferenceFieldsByKey.get(
         buildEnrollmentKey(
           assignment.professorId,
           normalizedReference.catalogCourseId,
@@ -297,25 +349,42 @@ function buildBannerRowData(
       )
     const courseFields = fallbackCourseFields(assignment, course)
     const roomFields = fallbackRoomFields(assignment, room)
+    const roomLabel = formatExportRoomLabel(room, assignment.roomId)
 
-    const row: BannerRow = {
+    const row: ExportRow = {
       Department: courseFields.department,
-      CourseNumber: courseFields.courseNumber,
+      Course: courseFields.courseNumber,
       Section: courseSectionOf(assignment.courseId) ?? '',
       Title: courseFields.title,
       CreditHours: courseFields.creditHours,
-      ProfessorCovenantId:
-        professor?.covenantId ??
-        (looksLikeOpaqueId(assignment.professorId)
-          ? ''
-          : assignment.professorId),
+      CRN: preferenceFields?.crn ?? '',
+      CourseFee:
+        preferenceFields?.courseFee !== null &&
+        preferenceFields?.courseFee !== undefined
+          ? preferenceFields.courseFee
+          : '',
+      Instructor: formatExportProfessorLabel(professor),
+      InstructorCovenantId:
+        professor?.covenantId || assignment.professorId || '',
       Days: assignment.days ?? '',
       StartTime: assignment.startTime ?? '',
       EndTime: assignment.endTime ?? '',
-      BuildingCode: roomFields.buildingCode,
-      RoomNumber: roomFields.roomNumber,
+      Time: formatExportTimeLabel(assignment),
+      Building: roomFields.buildingCode,
+      Room: roomLabel,
       EstimatedEnrollment:
-        estimatedEnrollment !== undefined ? estimatedEnrollment : '',
+        assignment.enrollmentOverride !== null &&
+        assignment.enrollmentOverride !== undefined
+          ? assignment.enrollmentOverride
+          : preferenceFields?.estimatedEnrollment !== null &&
+              preferenceFields?.estimatedEnrollment !== undefined
+            ? preferenceFields.estimatedEnrollment
+            : '',
+      OverrideBy: formatExportOverrideLabel({
+        overrideBy: assignment.overrideBy,
+        professorsById: lookups.professorsById,
+        overrideActorsById: lookups.overrideActorsById,
+      }),
     }
 
     rows.push(row)
@@ -360,9 +429,10 @@ export async function buildScheduleExportFile(
   ]
   const professorIds = [
     ...new Set(
-      schedule.assignments.flatMap((assignment) =>
-        expandQueryKeys(assignment.professorId),
-      ),
+      schedule.assignments.flatMap((assignment) => [
+        ...expandQueryKeys(assignment.professorId),
+        ...expandQueryKeys(assignment.overrideBy),
+      ]),
     ),
   ]
   const roomIds = [
@@ -372,8 +442,15 @@ export async function buildScheduleExportFile(
       ),
     ),
   ]
+  const overrideIds = [
+    ...new Set(
+      schedule.assignments.flatMap((assignment) =>
+        expandQueryKeys(assignment.overrideBy),
+      ),
+    ),
+  ]
 
-  const [courses, professors, rooms] = await Promise.all([
+  const [courses, professors, rooms, users] = await Promise.all([
     CourseCatalog.find(
       { _id: { $in: courseIds } },
       { _id: 1, deptCode: 1, courseNumber: 1, title: 1, creditHours: 1 },
@@ -413,6 +490,21 @@ export async function buildScheduleExportFile(
       .collation({ locale: 'en', strength: 2 })
       .lean()
       .exec(),
+    overrideIds.length
+      ? Users.find(
+          {
+            $or: [
+              { username: { $in: overrideIds } },
+              ...overrideIds.map((id) => ({
+                email: { $regex: `^${escapeRegex(id)}@`, $options: 'i' },
+              })),
+            ],
+          } as any,
+          { _id: 1, username: 1, email: 1, name: 1, preferred: 1 } as any,
+        )
+          .lean()
+          .exec()
+      : Promise.resolve([]),
   ])
 
   const coursesById = new Map<
@@ -428,7 +520,8 @@ export async function buildScheduleExportFile(
     string,
     { covenantId: string; displayName?: string }
   >()
-  const estimatedEnrollmentByKey = new Map<string, number>()
+  const overrideActorsById = new Map<string, string>()
+  const preferenceFieldsByKey = new Map<string, PreferenceExportFields>()
   for (const course of courses) {
     const payload = {
       deptCode: course.deptCode,
@@ -445,6 +538,15 @@ export async function buildScheduleExportFile(
     }
     setLookupAlias(professorsById, professor._id, payload)
     setLookupAlias(professorsById, professor.covenantId, payload)
+    setLookupAlias(professorsById, professor.displayName, payload)
+    if (professor.displayName) {
+      setLookupAlias(overrideActorsById, professor._id, professor.displayName)
+      setLookupAlias(
+        overrideActorsById,
+        professor.covenantId,
+        professor.displayName,
+      )
+    }
 
     for (const submission of professor.preferences ?? []) {
       if (submission.term !== schedule.term) continue
@@ -453,35 +555,52 @@ export async function buildScheduleExportFile(
           coursePreference.courseId,
           coursePreference.section ?? null,
         )
-        estimatedEnrollmentByKey.set(
-          buildEnrollmentKey(
-            professor._id,
-            normalizedReference.scheduledCourseId,
-          ),
-          coursePreference.expectedEnrollment,
-        )
-        estimatedEnrollmentByKey.set(
-          buildEnrollmentKey(
-            professor._id,
-            normalizedReference.catalogCourseId,
-          ),
-          coursePreference.expectedEnrollment,
-        )
-        estimatedEnrollmentByKey.set(
-          buildEnrollmentKey(
-            professor.covenantId,
-            normalizedReference.scheduledCourseId,
-          ),
-          coursePreference.expectedEnrollment,
-        )
-        estimatedEnrollmentByKey.set(
-          buildEnrollmentKey(
-            professor.covenantId,
-            normalizedReference.catalogCourseId,
-          ),
-          coursePreference.expectedEnrollment,
-        )
+        const preferencePayload: PreferenceExportFields = {
+          estimatedEnrollment: coursePreference.expectedEnrollment ?? null,
+          crn: coursePreference.crn ?? null,
+          courseFee: coursePreference.courseFee ?? null,
+        }
+
+        for (const professorKey of [
+          professor._id,
+          professor.covenantId,
+          professor.displayName,
+          coursePreference.instructor ?? '',
+        ]) {
+          if (!professorKey) continue
+
+          preferenceFieldsByKey.set(
+            buildEnrollmentKey(
+              professorKey,
+              normalizedReference.scheduledCourseId,
+            ),
+            preferencePayload,
+          )
+          preferenceFieldsByKey.set(
+            buildEnrollmentKey(
+              professorKey,
+              normalizedReference.catalogCourseId,
+            ),
+            preferencePayload,
+          )
+        }
       }
+    }
+  }
+
+  for (const user of users) {
+    const displayName =
+      normalizeWhitespace(String(user.preferred ?? '')) ||
+      normalizeWhitespace(String(user.name ?? '')) ||
+      normalizeWhitespace(String(user.username ?? ''))
+
+    if (!displayName) continue
+
+    setLookupAlias(overrideActorsById, user.username, displayName)
+
+    const email = normalizeWhitespace(String(user.email ?? ''))
+    if (email.includes('@')) {
+      setLookupAlias(overrideActorsById, email.split('@')[0], displayName)
     }
   }
 
@@ -499,11 +618,12 @@ export async function buildScheduleExportFile(
     setLookupAlias(roomsById, room.displayName, payload)
   }
 
-  const rows = buildBannerRowData(schedule.term, schedule.assignments, {
+  const rows = buildExportRowData(schedule.assignments, {
     coursesById,
     professorsById,
+    overrideActorsById,
     roomsById,
-    estimatedEnrollmentByKey,
+    preferenceFieldsByKey,
   })
 
   const baseFilename = `schedule_${schedule.term}_run_${schedule.runNumber}`
@@ -511,7 +631,7 @@ export async function buildScheduleExportFile(
   if (format === 'xlsx') {
     const XLSX = await loadXlsxModule()
     const worksheet = XLSX.utils.json_to_sheet(rows, {
-      header: [...bannerHeaders],
+      header: [...exportHeaders],
     })
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Schedule')
@@ -526,11 +646,11 @@ export async function buildScheduleExportFile(
   }
 
   const csvRows = rows.map((row) =>
-    bannerHeaders
+    exportHeaders
       .map((header) => escapeCsv(String(row[header] ?? '')))
       .join(','),
   )
-  const body = [bannerHeaders.join(','), ...csvRows].join('\n')
+  const body = [exportHeaders.join(','), ...csvRows].join('\n')
 
   return {
     body,

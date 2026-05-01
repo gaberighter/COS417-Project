@@ -352,59 +352,133 @@
                     No schedule rows match the current filters.
                   </div>
                 </template>
-                <Column field="department" header="Dept" sortable>
+                <Column
+                  field="department"
+                  header="Dept"
+                  sortable
+                  :style="{ width: '6.5rem' }"
+                >
                   <template #body="{ data }">
                     <ScheduleCellPreview
-                      :value="data.department"
+                      :value="
+                        isEditingRow(data.courseId)
+                          ? editedCourseDepartment
+                          : data.department
+                      "
                       title="Department"
+                      :max-lines="1"
                     />
                   </template>
                 </Column>
-                <Column field="courseNumber" header="Course" sortable>
+                <Column
+                  field="courseNumber"
+                  header="Course"
+                  sortable
+                  :style="{ width: '9rem' }"
+                >
                   <template #body="{ data }">
                     <ScheduleCellPreview
+                      v-if="!isEditingRow(data.courseId)"
                       :value="data.courseNumber"
                       title="Course"
+                      :max-lines="1"
                     />
+                    <select
+                      v-else
+                      v-model="editCourseCatalogId"
+                      class="schedule-native-select"
+                    >
+                      <option value="" disabled>Select course</option>
+                      <option
+                        v-for="option in editableCourseOptions"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
                   </template>
                 </Column>
-                <Column field="section" header="Section" sortable>
+                <Column
+                  field="section"
+                  header="Section"
+                  sortable
+                  :style="{ width: '6rem' }"
+                >
                   <template #body="{ data }">
                     <ScheduleCellPreview
+                      v-if="!isEditingRow(data.courseId)"
                       :value="data.section || 'N/A'"
                       title="Section"
+                      :max-lines="1"
+                    />
+                    <InputText
+                      v-else
+                      v-model="editCourseSection"
+                      fluid
+                      placeholder="section"
                     />
                   </template>
                 </Column>
-                <Column field="courseTitle" header="Title" sortable>
+                <Column
+                  field="courseTitle"
+                  header="Title"
+                  sortable
+                  :style="{ width: '16rem' }"
+                >
                   <template #body="{ data }">
                     <ScheduleCellPreview
-                      :value="data.courseTitle"
+                      :value="
+                        isEditingRow(data.courseId)
+                          ? editedCourseTitle
+                          : data.courseTitle
+                      "
                       title="Course Title"
+                      :max-lines="1"
                     />
                   </template>
                 </Column>
-                <Column field="instructorName" header="Instructor" sortable>
+                <Column
+                  field="instructorName"
+                  header="Instructor"
+                  sortable
+                  :style="{ width: '14rem' }"
+                >
                   <template #body="{ data }">
                     <ScheduleCellPreview
                       v-if="!isEditingRow(data.courseId)"
                       :value="data.instructorName"
                       title="Instructor"
+                      :max-lines="1"
                     />
-                    <InputText
+                    <select
                       v-else
                       v-model="editDraft.professorId"
-                      fluid
-                      placeholder="professor id"
-                    />
+                      class="schedule-native-select"
+                    >
+                      <option value="" disabled>Select instructor</option>
+                      <option
+                        v-for="option in editableInstructorOptions"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
                   </template>
                 </Column>
-                <Column field="timeLabel" header="Time" sortable>
+                <Column
+                  field="timeLabel"
+                  header="Time"
+                  sortable
+                  :style="{ width: '11rem' }"
+                >
                   <template #body="{ data }">
                     <ScheduleCellPreview
                       v-if="!isEditingRow(data.courseId)"
                       :value="data.timeLabel"
                       title="Time"
+                      :max-lines="1"
                     />
                     <div v-else class="schedule-edit-time">
                       <select
@@ -432,46 +506,91 @@
                     </div>
                   </template>
                 </Column>
-                <Column field="building" header="Building" sortable>
+                <Column
+                  field="building"
+                  header="Building"
+                  sortable
+                  :style="{ width: '8rem' }"
+                >
                   <template #body="{ data }">
                     <ScheduleCellPreview
-                      :value="data.building"
+                      :value="
+                        isEditingRow(data.courseId)
+                          ? editedRoomBuilding
+                          : data.building
+                      "
                       title="Building"
+                      :max-lines="1"
                     />
                   </template>
                 </Column>
-                <Column field="roomLabel" header="Room" sortable>
+                <Column
+                  field="roomLabel"
+                  header="Room"
+                  sortable
+                  :style="{ width: '10rem' }"
+                >
                   <template #body="{ data }">
                     <ScheduleCellPreview
                       v-if="!isEditingRow(data.courseId)"
                       :value="data.roomLabel"
                       title="Room"
+                      :max-lines="1"
                     />
-                    <InputText
+                    <select
                       v-else
                       v-model="editDraft.roomId"
-                      fluid
-                      placeholder="room id"
-                    />
+                      class="schedule-native-select"
+                    >
+                      <option value="" disabled>Select room</option>
+                      <option
+                        v-for="option in editableRoomOptions"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
                   </template>
                 </Column>
-                <Column field="enrollment" header="Enroll" sortable>
+                <Column
+                  field="enrollment"
+                  header="Enroll"
+                  sortable
+                  :style="{ width: '7rem' }"
+                >
                   <template #body="{ data }">
                     <ScheduleCellPreview
+                      v-if="!isEditingRow(data.courseId)"
                       :value="data.enrollment ?? 'N/A'"
                       title="Enrollment"
+                      :max-lines="1"
+                    />
+                    <input
+                      v-else
+                      v-model="editEnrollmentValue"
+                      type="number"
+                      min="0"
+                      class="schedule-native-input"
+                      placeholder="enrollment"
                     />
                   </template>
                 </Column>
-                <Column field="overrideBy" header="Override By" sortable>
+                <Column
+                  field="overrideBy"
+                  header="Override By"
+                  sortable
+                  :style="{ width: '11rem' }"
+                >
                   <template #body="{ data }">
                     <ScheduleCellPreview
                       :value="data.overrideBy || 'N/A'"
                       title="Override By"
+                      :max-lines="1"
                     />
                   </template>
                 </Column>
-                <Column header="Actions">
+                <Column header="Actions" :style="{ width: '9rem' }">
                   <template #body="{ data }">
                     <div class="schedule-row-actions">
                       <template v-if="!isEditingRow(data.courseId)">
@@ -778,9 +897,11 @@
 
 <script setup lang="ts">
 import {
+  buildScheduledCourseId,
   buildEnrichedScheduleRows,
   buildIssueTableRows,
   buildTraceTableRows,
+  normalizeCourseReference,
 } from '~~/app/utils/schedule'
 import {
   downloadScheduleExport,
@@ -788,7 +909,8 @@ import {
 } from '~~/app/utils/scheduleExport'
 import { useScheduleReferenceData } from '~~/app/composables/useScheduleReferenceData'
 import type {
-  EnrichedScheduleRow,
+  ProfessorRecord,
+  RoomRecord,
   SavedScheduleDetails,
   SavedScheduleSummary,
   ScheduleAssignment,
@@ -807,6 +929,11 @@ type ScheduleRunResponse = {
   term: string
   count: number
   schedules: SavedScheduleDetails[]
+}
+
+type EditSelectOption = {
+  value: string
+  label: string
 }
 
 const scheduleItems = ref<SavedScheduleSummary[]>([])
@@ -840,8 +967,13 @@ const editDraft = reactive<ScheduleAssignment>({
   days: 'MWF',
   startTime: '',
   endTime: '',
+  enrollmentOverride: null,
   overrideBy: null,
 })
+
+const editCourseCatalogId = ref('')
+const editCourseSection = ref('')
+const editEnrollmentValue = ref('')
 
 const dayPatternOptions: ScheduleAssignment['days'][] = [
   'MWF',
@@ -855,7 +987,8 @@ const dayPatternOptions: ScheduleAssignment['days'][] = [
   'R',
 ]
 
-const { lookups, loadForTerm } = useScheduleReferenceData()
+const { lookups, courses, professors, rooms, loadForTerm } =
+  useScheduleReferenceData()
 
 const schedulesByTerm = computed(() => {
   return termEntries.value.reduce<Record<string, SavedScheduleSummary[]>>(
@@ -986,6 +1119,138 @@ const buildingOptions = computed(() =>
 const roomOptions = computed(() =>
   [...new Set(enrichedRows.value.map((row) => row.roomLabel))].sort(),
 )
+
+function formatEditableCourseLabel(course: {
+  deptCode: string
+  courseNumber: string
+  title: string
+}) {
+  return `${course.deptCode} ${course.courseNumber} - ${course.title}`
+}
+
+function formatEditableInstructorLabel(professor: ProfessorRecord) {
+  const name = professor.displayName?.trim() ?? ''
+  const covenantId = professor.covenantId?.trim() ?? ''
+  return name && covenantId ? `${name} (${covenantId})` : name || covenantId
+}
+
+function formatEditableRoomLabel(room: RoomRecord) {
+  return (
+    room.abbreviation?.trim() ||
+    room.displayName?.trim() ||
+    `${room.buildingName} ${room.roomNumber}`.trim()
+  )
+}
+
+function includeCurrentOption(
+  options: EditSelectOption[],
+  currentValue: string,
+  label: string,
+) {
+  if (
+    !currentValue ||
+    options.some((option) => option.value === currentValue)
+  ) {
+    return options
+  }
+
+  return [{ value: currentValue, label }, ...options]
+}
+
+const editableCourseOptions = computed<EditSelectOption[]>(() => {
+  const options = courses.value
+    .map((course) => ({
+      value: course._id,
+      label: formatEditableCourseLabel(course),
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label))
+
+  const currentValue = editCourseCatalogId.value.trim()
+  const currentCourse = lookups.value.coursesById.get(currentValue)
+  const currentLabel = currentCourse
+    ? formatEditableCourseLabel(currentCourse)
+    : currentValue
+
+  return includeCurrentOption(options, currentValue, currentLabel)
+})
+
+const editableInstructorOptions = computed<EditSelectOption[]>(() => {
+  const options = professors.value
+    .map((professor) => ({
+      value: professor._id,
+      label: formatEditableInstructorLabel(professor),
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label))
+
+  const currentValue = editDraft.professorId.trim()
+  const currentLabel =
+    lookups.value.professorsById.get(currentValue)?.displayName ?? currentValue
+
+  return includeCurrentOption(options, currentValue, currentLabel)
+})
+
+const editedCourseRecord = computed(() => {
+  const currentValue = editCourseCatalogId.value.trim()
+  if (!currentValue) return null
+
+  return (
+    courses.value.find((course) => course._id === currentValue) ??
+    lookups.value.coursesById.get(currentValue) ??
+    null
+  )
+})
+
+const editedCourseDepartment = computed(() => {
+  if (editedCourseRecord.value) {
+    return editedCourseRecord.value.deptCode
+  }
+
+  return normalizeCourseReference(editDraft.courseId).catalogCourseId.split(
+    /\s+/,
+  )[0]
+})
+
+const editedCourseTitle = computed(() => {
+  if (editedCourseRecord.value) {
+    return editedCourseRecord.value.title
+  }
+
+  return normalizeCourseReference(editDraft.courseId).catalogCourseId
+})
+
+const editedRoomRecord = computed(() => {
+  const currentValue = editDraft.roomId.trim()
+  if (!currentValue) return null
+
+  return rooms.value.find((room) => room._id === currentValue) ?? null
+})
+
+const editedRoomBuilding = computed(() => {
+  if (editedRoomRecord.value) {
+    return (
+      editedRoomRecord.value.abbreviation?.split(/\s+/)[0] ||
+      editedRoomRecord.value.buildingName
+    )
+  }
+
+  const fallbackRoom = lookups.value.roomsById.get(editDraft.roomId.trim())
+  return fallbackRoom?.abbreviation?.split(/\s+/)[0] ?? editDraft.roomId
+})
+
+const editableRoomOptions = computed<EditSelectOption[]>(() => {
+  const options = rooms.value
+    .map((room) => ({
+      value: room._id,
+      label: formatEditableRoomLabel(room),
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label))
+
+  const currentValue = editDraft.roomId.trim()
+  const currentLabel =
+    lookups.value.roomsById.get(currentValue)?.abbreviation ?? currentValue
+
+  return includeCurrentOption(options, currentValue, currentLabel)
+})
 
 const hasActiveFilters = computed(() => {
   return Boolean(
@@ -1136,13 +1401,28 @@ function startEdit(courseId: string) {
 
   editingCourseId.value = courseId
   Object.assign(editDraft, assignment)
+  const normalizedCourse = normalizeCourseReference(assignment.courseId)
+  editCourseCatalogId.value = normalizedCourse.catalogCourseId
+  editCourseSection.value = normalizedCourse.section ?? ''
+  editEnrollmentValue.value =
+    assignment.enrollmentOverride !== null &&
+    assignment.enrollmentOverride !== undefined
+      ? String(assignment.enrollmentOverride)
+      : ''
 }
 
 function cancelEdit() {
   editingCourseId.value = null
+  editCourseCatalogId.value = ''
+  editCourseSection.value = ''
+  editEnrollmentValue.value = ''
 }
 
 function validateEditDraft() {
+  if (!editCourseCatalogId.value.trim()) {
+    return 'Please provide a course before saving.'
+  }
+
   const requiredFields: Array<[string, string]> = [
     ['professor', editDraft.professorId],
     ['room', editDraft.roomId],
@@ -1154,6 +1434,14 @@ function validateEditDraft() {
   const missing = requiredFields.find(([, value]) => !value?.trim())
   if (missing) {
     return `Please provide a ${missing[0]} before saving.`
+  }
+
+  const enrollmentText = editEnrollmentValue.value.trim()
+  if (
+    enrollmentText &&
+    (!/^\d+$/.test(enrollmentText) || Number(enrollmentText) < 0)
+  ) {
+    return 'Please provide a non-negative enrollment value.'
   }
 
   return ''
@@ -1170,6 +1458,14 @@ async function saveEdit() {
 
   rowActionPending.value = true
   try {
+    const nextCourseId = buildScheduledCourseId(
+      editCourseCatalogId.value,
+      editCourseSection.value || null,
+    )
+    const enrollmentOverride = editEnrollmentValue.value.trim()
+      ? Number(editEnrollmentValue.value.trim())
+      : null
+
     await $fetch(
       `/api/schedule/${encodeURIComponent(selectedSchedule.value.term)}/assignment`,
       {
@@ -1178,12 +1474,13 @@ async function saveEdit() {
           runNumber: selectedSchedule.value.runNumber,
           originalCourseId: editingCourseId.value,
           assignment: {
-            courseId: editingCourseId.value,
+            courseId: nextCourseId,
             professorId: editDraft.professorId,
             roomId: editDraft.roomId,
             days: editDraft.days,
             startTime: editDraft.startTime,
             endTime: editDraft.endTime,
+            enrollmentOverride,
           },
         },
       },
@@ -1191,6 +1488,9 @@ async function saveEdit() {
 
     await refreshSelectedSchedule()
     editingCourseId.value = null
+    editCourseCatalogId.value = ''
+    editCourseSection.value = ''
+    editEnrollmentValue.value = ''
     setStatus(
       `Updated ${selectedSchedule.value.term} run ${selectedSchedule.value.runNumber}.`,
       'success',
@@ -1484,7 +1784,8 @@ onMounted(async () => {
   color: var(--color-text-secondary);
 }
 
-.schedule-native-select {
+.schedule-native-select,
+.schedule-native-input {
   width: 100%;
   min-height: 2.75rem;
   padding: 0.7rem 0.85rem;
@@ -1492,9 +1793,11 @@ onMounted(async () => {
   border: 1px solid rgba(148, 163, 184, 0.42);
   background: #fff;
   color: var(--color-text-primary);
+  box-sizing: border-box;
 }
 
-.schedule-native-select:focus-visible {
+.schedule-native-select:focus-visible,
+.schedule-native-input:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 1px;
 }
