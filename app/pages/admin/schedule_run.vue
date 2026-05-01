@@ -360,20 +360,20 @@
 
             <div v-else class="schedule-saved-meta">
               <div class="schedule-saved-meta__grid">
-                <div>
-                  <span class="schedule-saved-meta__label">Run</span>
+                <div class="schedule-saved-meta__item">
+                  <span class="schedule-saved-meta__label">Run: </span>
                   <strong>{{ savedSchedule.runNumber }}</strong>
                 </div>
-                <div>
-                  <span class="schedule-saved-meta__label">Status</span>
+                <div class="schedule-saved-meta__item">
+                  <span class="schedule-saved-meta__label">Status: </span>
                   <strong>{{ savedSchedule.status }}</strong>
                 </div>
-                <div>
-                  <span class="schedule-saved-meta__label">Created</span>
+                <div class="schedule-saved-meta__item">
+                  <span class="schedule-saved-meta__label">Created: </span>
                   <strong>{{ formatDateTime(savedSchedule.createdAt) }}</strong>
                 </div>
-                <div>
-                  <span class="schedule-saved-meta__label">Approved</span>
+                <div class="schedule-saved-meta__item">
+                  <span class="schedule-saved-meta__label">Approved: </span>
                   <strong>
                     {{
                       savedSchedule.approvedAt
@@ -419,6 +419,7 @@ import type {
   SavedScheduleSummary,
   ScheduleRunResponse,
   ScheduleStatus,
+  ScheduleTermIndexEntry,
 } from '~~/types/schedule'
 
 definePageMeta({
@@ -433,16 +434,11 @@ type ScheduleSaveResponse = {
   schedules: SavedScheduleDetails[]
 }
 
-type ProfessorTermCarrier = {
-  preferences?: Array<{
-    term?: string | null
-  }>
-}
-
 const term = ref('')
 const selectedTerm = ref('')
 const termSuggestions = ref<string[]>([])
 const availableTerms = ref<string[]>([])
+const termEntries = ref<ScheduleTermIndexEntry[]>([])
 const runResult = ref<ScheduleRunResponse | null>(null)
 const savedSchedule = ref<SavedScheduleDetails | null>(null)
 const termContextPending = ref(false)
@@ -629,39 +625,23 @@ function searchTermSuggestions(event: { query?: string }) {
 }
 
 async function loadAvailableTerms() {
-  const [scheduleSummaries, professors] = await Promise.all([
-    $fetch<SavedScheduleSummary[]>('/api/schedule'),
-    $fetch<ProfessorTermCarrier[]>('/api/professors'),
-  ])
-
-  historyItems.value = scheduleSummaries
-
-  const nextTerms = new Set<string>()
-  for (const schedule of scheduleSummaries) {
-    const scheduleTerm = schedule.term?.trim()
-    if (scheduleTerm) {
-      nextTerms.add(scheduleTerm)
-    }
-  }
-
-  for (const professor of professors) {
-    for (const preference of professor.preferences ?? []) {
-      const preferenceTerm = preference.term?.trim()
-      if (preferenceTerm) {
-        nextTerms.add(preferenceTerm)
-      }
-    }
-  }
-
-  availableTerms.value = [...nextTerms].sort((left, right) =>
-    right.localeCompare(left),
+  termEntries.value = await $fetch<ScheduleTermIndexEntry[]>(
+    '/api/schedule/terms',
   )
+  historyItems.value = termEntries.value.flatMap((entry) => entry.runs)
+  availableTerms.value = termEntries.value.map((entry) => entry.term)
   if (!term.value && availableTerms.value[0]) {
     term.value = availableTerms.value[0]
   }
 }
 
 async function loadLatestSavedSchedule(termValue: string) {
+  const termEntry = termEntries.value.find((entry) => entry.term === termValue)
+  if (!termEntry || termEntry.runs.length === 0) {
+    savedSchedule.value = null
+    return
+  }
+
   try {
     savedSchedule.value = await $fetch<SavedScheduleDetails>(
       `/api/schedule/${encodeURIComponent(termValue)}`,
@@ -1147,6 +1127,13 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.85rem;
+}
+
+.schedule-saved-meta__item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.2rem;
+  flex-wrap: wrap;
 }
 
 .schedule-stat {

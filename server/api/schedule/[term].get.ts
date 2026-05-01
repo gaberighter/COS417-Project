@@ -20,17 +20,24 @@ export default defineEventHandler(async (event) => {
   if (!TERM_PATTERN.test(term)) {
     throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
   }
-  const schedule = await Schedule.findOne({ term })
+  const schedule = await Schedule.findOne({
+    term,
+    'assignments.0': { $exists: true },
+  })
     .sort({ runNumber: -1 })
     .lean()
     .exec()
 
-  if (!schedule) {
+  const latestSchedule =
+    schedule ??
+    (await Schedule.findOne({ term }).sort({ runNumber: -1 }).lean().exec())
+
+  if (!latestSchedule) {
     throw createError({
       statusCode: 404,
       statusMessage: `No schedule for term: ${term}`,
     })
   }
 
-  return schedule
+  return latestSchedule
 })

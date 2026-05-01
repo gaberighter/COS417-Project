@@ -3,7 +3,7 @@
     <div class="schedule-history-page-header">
       <h1 class="schedule-history-page-header__title">Schedule Viewer</h1>
       <Button
-        label="Run New Schedule"
+        label="Create New Schedule"
         severity="secondary"
         outlined
         @click="navigateTo('/admin/schedule_run')"
@@ -57,7 +57,13 @@
               :open="termKey === selectedTerm || termKey === termKeys[0]"
             >
               <summary>{{ termKey }}</summary>
-              <div class="schedule-term-group__items">
+              <div
+                v-if="(schedulesByTerm[termKey] ?? []).length === 0"
+                class="schedule-term-group__empty"
+              >
+                No saved runs yet for this term.
+              </div>
+              <div v-else class="schedule-term-group__items">
                 <button
                   v-for="schedule in schedulesByTerm[termKey]"
                   :key="schedule._id"
@@ -71,6 +77,9 @@
                 >
                   <strong>Run {{ schedule.runNumber }}</strong>
                   <span>{{ schedule.status }}</span>
+                  <small v-if="(schedule.assignmentCount ?? 0) === 0">
+                    No assignments saved in this run
+                  </small>
                   <small>
                     {{
                       formatDateTime(schedule.updatedAt || schedule.createdAt)
@@ -578,6 +587,7 @@ import type {
   SavedScheduleSummary,
   ScheduleAssignment,
   ScheduleStatus,
+  ScheduleTermIndexEntry,
 } from '~~/types/schedule'
 
 definePageMeta({
@@ -594,6 +604,7 @@ type ScheduleRunResponse = {
 }
 
 const scheduleItems = ref<SavedScheduleSummary[]>([])
+const termEntries = ref<ScheduleTermIndexEntry[]>([])
 const schedulePending = ref(false)
 const selectedSchedulePending = ref(false)
 const selectedScheduleId = ref<string | null>(null)
@@ -641,22 +652,16 @@ const dayPatternOptions: ScheduleAssignment['days'][] = [
 const { lookups, loadForTerm } = useScheduleReferenceData()
 
 const schedulesByTerm = computed(() => {
-  return scheduleItems.value.reduce<Record<string, SavedScheduleSummary[]>>(
-    (accumulator, schedule) => {
-      const bucket =
-        accumulator[schedule.term] ?? (accumulator[schedule.term] = [])
-      bucket.push(schedule)
+  return termEntries.value.reduce<Record<string, SavedScheduleSummary[]>>(
+    (accumulator, entry) => {
+      accumulator[entry.term] = entry.runs
       return accumulator
     },
     {},
   )
 })
 
-const termKeys = computed(() =>
-  Object.keys(schedulesByTerm.value).sort((left, right) =>
-    right.localeCompare(left),
-  ),
-)
+const termKeys = computed(() => termEntries.value.map((entry) => entry.term))
 
 const enrichedRows = computed(() =>
   buildEnrichedScheduleRows(
@@ -850,13 +855,20 @@ function findScheduleFromQuery() {
 
   if (!termQuery) return null
 
+  const matchingSchedules = scheduleItems.value.filter(
+    (schedule) => schedule.term === termQuery,
+  )
+
+  if (hasRunQuery) {
+    return (
+      matchingSchedules.find((schedule) => schedule.runNumber === runQuery) ??
+      null
+    )
+  }
+
   return (
-    scheduleItems.value.find(
-      (schedule) =>
-        schedule.term === termQuery &&
-        (!hasRunQuery || schedule.runNumber === runQuery),
-    ) ??
-    scheduleItems.value.find((schedule) => schedule.term === termQuery) ??
+    matchingSchedules.find((schedule) => (schedule.assignmentCount ?? 0) > 0) ??
+    matchingSchedules[0] ??
     null
   )
 }
@@ -872,7 +884,10 @@ function resetFilters() {
 async function loadSchedules() {
   schedulePending.value = true
   try {
-    scheduleItems.value = await $fetch<SavedScheduleSummary[]>('/api/schedule')
+    termEntries.value = await $fetch<ScheduleTermIndexEntry[]>(
+      '/api/schedule/terms',
+    )
+    scheduleItems.value = termEntries.value.flatMap((entry) => entry.runs)
   } catch (error) {
     setStatus(extractErrorMessage(error), 'error')
   } finally {
@@ -897,18 +912,7 @@ async function refreshSelectedSchedule() {
   selectedSchedule.value =
     scheduleDetailsCache.get(selectedSchedule.value._id) ??
     selectedSchedule.value
-
-  scheduleItems.value = scheduleItems.value.map((summary) =>
-    summary._id === selectedSchedule.value?._id
-      ? {
-          ...summary,
-          status: selectedSchedule.value.status,
-          updatedAt: selectedSchedule.value.updatedAt,
-          approvedAt: selectedSchedule.value.approvedAt ?? null,
-          approvedBy: selectedSchedule.value.approvedBy ?? null,
-        }
-      : summary,
-  )
+  await loadSchedules()
 }
 
 async function selectSchedule(schedule: SavedScheduleSummary) {
@@ -1080,7 +1084,13 @@ async function exportSelectedSchedule(format: ScheduleExportFormat) {
 onMounted(async () => {
   await loadSchedules()
   const initialSchedule =
-    findScheduleFromQuery() ?? scheduleItems.value[0] ?? null
+    findScheduleFromQuery() ??
+    scheduleItems.value.find((schedule) => (schedule.assignmentCount ?? 0) > 0) ??
+    scheduleItems.value[0] ??
+    null
+  if (!initialSchedule) {
+    selectedTerm.value = normalizeQueryValue(route.query.term).trim() || termKeys.value[0] || ''
+  }
   if (initialSchedule) {
     await selectSchedule(initialSchedule)
   }
@@ -1193,6 +1203,11 @@ onMounted(async () => {
   display: grid;
   gap: 0.65rem;
   padding: 0 1rem 1rem;
+}
+
+.schedule-term-group__empty {
+  padding: 0 1rem 1rem;
+  color: var(--color-text-muted);
 }
 
 .schedule-run-button {
