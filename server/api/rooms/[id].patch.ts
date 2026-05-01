@@ -34,14 +34,20 @@ export default defineEventHandler(async (event) => {
   try {
     body = (await readBody<RoomPatchPayload>(event)) ?? {}
   } catch {
-    throw createError({ statusCode: 400, statusMessage: 'Missing or invalid JSON body' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Missing or invalid JSON body',
+    })
   }
 
   const roomId = id.trim().toUpperCase()
 
   const existing = await Room.findById(roomId).lean().exec()
   if (!existing) {
-    throw createError({ statusCode: 404, statusMessage: `Room not found: ${roomId}` })
+    throw createError({
+      statusCode: 404,
+      statusMessage: `Room not found: ${roomId}`,
+    })
   }
 
   const patch: Record<string, unknown> = {}
@@ -50,7 +56,10 @@ export default defineEventHandler(async (event) => {
   if (hasOwn(body, 'buildingName')) {
     const v = body.buildingName?.trim()
     if (!v) {
-      throw createError({ statusCode: 400, statusMessage: 'buildingName must not be empty' })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'buildingName must not be empty',
+      })
     }
     patch.buildingName = v
     changes++
@@ -62,14 +71,20 @@ export default defineEventHandler(async (event) => {
   }
   if (hasOwn(body, 'capacity')) {
     if (!Number.isInteger(body.capacity) || (body.capacity ?? 0) < 1) {
-      throw createError({ statusCode: 400, statusMessage: 'capacity must be an integer >= 1' })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'capacity must be an integer >= 1',
+      })
     }
     patch.capacity = body.capacity
     changes++
   }
   if (hasOwn(body, 'roomType')) {
     if (!['classroom', 'lab'].includes(body.roomType ?? '')) {
-      throw createError({ statusCode: 400, statusMessage: "roomType must be 'classroom' or 'lab'" })
+      throw createError({
+        statusCode: 400,
+        statusMessage: "roomType must be 'classroom' or 'lab'",
+      })
     }
     patch.roomType = body.roomType
     changes++
@@ -79,7 +94,10 @@ export default defineEventHandler(async (event) => {
     changes++
   }
   if (hasOwn(body, 'equipment')) {
-    patch.equipment = { ...(existing.equipment ?? {}), ...(body.equipment ?? {}) }
+    patch.equipment = {
+      ...(existing.equipment ?? {}),
+      ...(body.equipment ?? {}),
+    }
     changes++
   }
 

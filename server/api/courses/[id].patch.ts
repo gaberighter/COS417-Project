@@ -11,7 +11,15 @@ import { logAction } from '../../services/auditService'
 type DayPattern = 'MWF' | 'TR' | 'MW' | 'MTWF' | 'MWRF' | 'M' | 'W' | 'T' | 'R'
 
 const VALID_DAY_PATTERNS: DayPattern[] = [
-  'MWF', 'TR', 'MW', 'MTWF', 'MWRF', 'M', 'W', 'T', 'R',
+  'MWF',
+  'TR',
+  'MW',
+  'MTWF',
+  'MWRF',
+  'M',
+  'W',
+  'T',
+  'R',
 ]
 
 type CoursePatchPayload = {
@@ -38,21 +46,30 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')
   if (!id?.trim()) {
-    throw createError({ statusCode: 400, statusMessage: 'Course id is required' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Course id is required',
+    })
   }
 
   let body: CoursePatchPayload
   try {
     body = (await readBody<CoursePatchPayload>(event)) ?? {}
   } catch {
-    throw createError({ statusCode: 400, statusMessage: 'Missing or invalid JSON body' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Missing or invalid JSON body',
+    })
   }
 
   const courseId = id.trim()
 
   const existing = await CourseCatalog.findById(courseId).lean().exec()
   if (!existing) {
-    throw createError({ statusCode: 404, statusMessage: `Course not found: ${courseId}` })
+    throw createError({
+      statusCode: 404,
+      statusMessage: `Course not found: ${courseId}`,
+    })
   }
 
   const patch: Record<string, unknown> = {}
@@ -61,7 +78,10 @@ export default defineEventHandler(async (event) => {
   if (hasOwn(body, 'title')) {
     const v = body.title?.trim()
     if (!v) {
-      throw createError({ statusCode: 400, statusMessage: 'title must not be empty' })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'title must not be empty',
+      })
     }
     patch.title = v
     changes++
@@ -69,7 +89,10 @@ export default defineEventHandler(async (event) => {
   if (hasOwn(body, 'creditHours')) {
     const v = body.creditHours
     if (v === undefined || v === null || !Number.isFinite(v) || v < 0) {
-      throw createError({ statusCode: 400, statusMessage: 'creditHours must be a non-negative number' })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'creditHours must be a non-negative number',
+      })
     }
     patch.creditHours = v
     changes++
@@ -79,7 +102,8 @@ export default defineEventHandler(async (event) => {
     if (v !== null && v !== undefined && (!Number.isInteger(v) || v < 0)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'typicalEnrollment must be a non-negative integer or null',
+        statusMessage:
+          'typicalEnrollment must be a non-negative integer or null',
       })
     }
     patch.typicalEnrollment = v ?? null
@@ -87,7 +111,10 @@ export default defineEventHandler(async (event) => {
   }
   if (hasOwn(body, 'requiredEquipment')) {
     if (!Array.isArray(body.requiredEquipment)) {
-      throw createError({ statusCode: 400, statusMessage: 'requiredEquipment must be an array of strings' })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'requiredEquipment must be an array of strings',
+      })
     }
     patch.requiredEquipment = body.requiredEquipment
     changes++
@@ -124,14 +151,20 @@ export default defineEventHandler(async (event) => {
   }
   if (hasOwn(body, 'prerequisites')) {
     if (!Array.isArray(body.prerequisites)) {
-      throw createError({ statusCode: 400, statusMessage: 'prerequisites must be an array of strings' })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'prerequisites must be an array of strings',
+      })
     }
     patch.prerequisites = body.prerequisites
     changes++
   }
   if (hasOwn(body, 'corequisites')) {
     if (!Array.isArray(body.corequisites)) {
-      throw createError({ statusCode: 400, statusMessage: 'corequisites must be an array of strings' })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'corequisites must be an array of strings',
+      })
     }
     patch.corequisites = body.corequisites
     changes++

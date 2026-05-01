@@ -494,23 +494,30 @@ const normalizeOptionalNumber = (value: number | null) => {
 const submitCourse = async () => {
   try {
     if (isEditMode.value) {
-      await $fetch(`/api/courses/${encodeURIComponent(editingCourseId.value)}`, {
-        method: 'PATCH',
-        body: {
-          title: courseForm.title.trim(),
-          creditHours: courseForm.creditHours,
-          typicalEnrollment: normalizeOptionalNumber(courseForm.typicalEnrollment),
-          requiredEquipment: splitCsv(courseForm.requiredEquipment),
-          labComponent: courseForm.labComponent,
-          active: courseForm.active,
-          typicalProfessor: normalizeOptionalString(courseForm.typicalProfessor),
-          typicalDays: courseForm.typicalDays || null,
-          typicalTime: normalizeOptionalString(courseForm.typicalTime),
-          prerequisites: splitCsv(courseForm.prerequisites),
-          corequisites: splitCsv(courseForm.corequisites),
+      await $fetch(
+        `/api/courses/${encodeURIComponent(editingCourseId.value)}`,
+        {
+          method: 'PATCH',
+          body: {
+            title: courseForm.title.trim(),
+            creditHours: courseForm.creditHours,
+            typicalEnrollment: normalizeOptionalNumber(
+              courseForm.typicalEnrollment,
+            ),
+            requiredEquipment: splitCsv(courseForm.requiredEquipment),
+            labComponent: courseForm.labComponent,
+            active: courseForm.active,
+            typicalProfessor: normalizeOptionalString(
+              courseForm.typicalProfessor,
+            ),
+            typicalDays: courseForm.typicalDays || null,
+            typicalTime: normalizeOptionalString(courseForm.typicalTime),
+            prerequisites: splitCsv(courseForm.prerequisites),
+            corequisites: splitCsv(courseForm.corequisites),
+          },
+          headers: { 'x-dev-role': 'Admin' },
         },
-        headers: { 'x-dev-role': 'Admin' },
-      })
+      )
     } else {
       await $fetch('/api/courses', {
         method: 'POST',
@@ -525,7 +532,9 @@ const submitCourse = async () => {
           requiredEquipment: splitCsv(courseForm.requiredEquipment),
           labComponent: courseForm.labComponent,
           active: courseForm.active,
-          typicalProfessor: normalizeOptionalString(courseForm.typicalProfessor),
+          typicalProfessor: normalizeOptionalString(
+            courseForm.typicalProfessor,
+          ),
           typicalDays: courseForm.typicalDays || null,
           typicalTime: normalizeOptionalString(courseForm.typicalTime),
           prerequisites: splitCsv(courseForm.prerequisites),

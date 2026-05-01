@@ -27,14 +27,20 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')
   if (!id?.trim()) {
-    throw createError({ statusCode: 400, statusMessage: 'Professor id is required' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Professor id is required',
+    })
   }
 
   let body: ProfessorPatchPayload
   try {
     body = (await readBody<ProfessorPatchPayload>(event)) ?? {}
   } catch {
-    throw createError({ statusCode: 400, statusMessage: 'Missing or invalid JSON body' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Missing or invalid JSON body',
+    })
   }
 
   const professorId = id.trim().toLowerCase()
@@ -46,7 +52,10 @@ export default defineEventHandler(async (event) => {
     .exec()
 
   if (!existing) {
-    throw createError({ statusCode: 404, statusMessage: `Professor not found: ${professorId}` })
+    throw createError({
+      statusCode: 404,
+      statusMessage: `Professor not found: ${professorId}`,
+    })
   }
 
   const patch: Record<string, unknown> = {}
@@ -55,7 +64,10 @@ export default defineEventHandler(async (event) => {
   if (hasOwn(body, 'displayName')) {
     const v = body.displayName?.trim()
     if (!v) {
-      throw createError({ statusCode: 400, statusMessage: 'displayName must not be empty' })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'displayName must not be empty',
+      })
     }
     patch.displayName = v
     changes++
@@ -63,7 +75,10 @@ export default defineEventHandler(async (event) => {
   if (hasOwn(body, 'departmentCode')) {
     const v = body.departmentCode?.trim().toUpperCase()
     if (!v) {
-      throw createError({ statusCode: 400, statusMessage: 'departmentCode must not be empty' })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'departmentCode must not be empty',
+      })
     }
     patch.departmentCode = v
     changes++

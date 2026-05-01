@@ -433,7 +433,9 @@ const submitProfessor = async () => {
           body: {
             displayName: professorForm.displayName.trim(),
             departmentCode: professorForm.departmentCode.trim().toUpperCase(),
-            officeBuilding: normalizeOptionalString(professorForm.officeBuilding),
+            officeBuilding: normalizeOptionalString(
+              professorForm.officeBuilding,
+            ),
             officeRoom: normalizeOptionalString(professorForm.officeRoom),
             seniorityYear: normalizeOptionalNumber(professorForm.seniorityYear),
             active: professorForm.active,
