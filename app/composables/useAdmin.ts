@@ -3,7 +3,9 @@ export const useAdmin = () => {
     await navigateTo('/admin/schedule_viewer')
   }
 
-  const createNewSchedule = () => {}
+  const createNewSchedule = async () => {
+    await navigateTo('/admin/schedule_run')
+  }
 
   const viewRoomData = async () => {
     await navigateTo('/admin/room_viewer')

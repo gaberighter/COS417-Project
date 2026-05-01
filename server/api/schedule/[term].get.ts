@@ -20,7 +20,6 @@ export default defineEventHandler(async (event) => {
   if (!TERM_PATTERN.test(term)) {
     throw createError({ statusCode: 400, statusMessage: 'invalid term format' })
   }
-
   const schedule = await Schedule.findOne({ term })
     .sort({ runNumber: -1 })
     .lean()

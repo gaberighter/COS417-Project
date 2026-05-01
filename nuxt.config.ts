@@ -5,7 +5,12 @@ import Aura from '@primeuix/themes/aura'
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   modules: ['@pinia/nuxt', 'nuxt-auth-utils', '@primevue/nuxt-module'],
-  css: ['~/assets/css/global.css'],
+  css: ['primeicons/primeicons.css', '~/assets/css/global.css'],
+  nitro: {
+    externals: {
+      inline: ['xlsx'],
+    },
+  },
   primevue: {
     options: {
       ripple: false,
