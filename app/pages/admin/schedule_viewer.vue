@@ -1085,11 +1085,14 @@ onMounted(async () => {
   await loadSchedules()
   const initialSchedule =
     findScheduleFromQuery() ??
-    scheduleItems.value.find((schedule) => (schedule.assignmentCount ?? 0) > 0) ??
+    scheduleItems.value.find(
+      (schedule) => (schedule.assignmentCount ?? 0) > 0,
+    ) ??
     scheduleItems.value[0] ??
     null
   if (!initialSchedule) {
-    selectedTerm.value = normalizeQueryValue(route.query.term).trim() || termKeys.value[0] || ''
+    selectedTerm.value =
+      normalizeQueryValue(route.query.term).trim() || termKeys.value[0] || ''
   }
   if (initialSchedule) {
     await selectSchedule(initialSchedule)
