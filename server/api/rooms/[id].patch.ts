@@ -12,11 +12,18 @@ import { logAction } from '../../services/auditService'
 const IS_OBJECT_ID = /^[0-9a-f]{24}$/i
 
 async function findRoomByAnyId(roomId: string) {
-  const byString = await Room.findById(roomId).lean().exec()
+  const byString = await Room.findOne({
+    $or: [{ _id: roomId }, { abbreviation: roomId }],
+  })
+    .lean()
+    .exec()
   if (byString) return byString
   if (IS_OBJECT_ID.test(roomId)) {
     const raw = await Room.collection.findOne({
-      _id: new mongoose.Types.ObjectId(roomId),
+      $or: [
+        { _id: new mongoose.Types.ObjectId(roomId) },
+        { abbreviation: roomId },
+      ],
     })
     return raw as typeof byString | null
   }

@@ -14,6 +14,7 @@ interface RoomEquipment {
 }
 
 interface Room {
+  _id?: string
   abbreviation: string
   buildingCode: string
   buildingName: string
@@ -66,7 +67,9 @@ export const useRoomCRUD = () => {
   const retryLoad = () => loadRooms()
 
   const buildRoomId = (room: Room) => {
-    return room.abbreviation.trim().toUpperCase()
+    return typeof room._id === 'string' && room._id.trim()
+      ? room._id.trim()
+      : room.abbreviation.trim().toUpperCase()
   }
 
   const deleteRoom = async (room: Room) => {
