@@ -6,6 +6,7 @@ import { defineEventHandler } from 'h3'
 import { requireAuth } from '../../utils/auth'
 import { connectDB } from '../../utils/db'
 import { Professor, Schedule, type ScheduleStatus } from '../../models/index'
+import { compareAcademicTermsDesc } from '../../../shared/academicTerms'
 
 type ScheduleSummaryAggregate = {
   _id: string
@@ -100,7 +101,13 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  return [...entriesByTerm.values()].sort((left, right) =>
-    right.term.localeCompare(left.term),
+  const entries = [...entriesByTerm.values()]
+
+  for (const entry of entries) {
+    entry.runs.sort((left, right) => right.runNumber - left.runNumber)
+  }
+
+  return entries.sort((left, right) =>
+    compareAcademicTermsDesc(left.term, right.term),
   )
 })

@@ -213,7 +213,7 @@
             </Column>
 
             <!-- Course Name -->
-            <Column header="Course Name" style="width: 15rem">
+            <Column header="Course Name" style="width: 13rem">
               <template #body="{ data }">
                 <AutoComplete
                   v-model="data.courseName"
@@ -319,13 +319,19 @@
                     @update:modelValue="clearRowError(data)"
                     @blur="handleTimeChange(data)"
                   />
-                  <SelectButton
-                    :modelValue="timePeriodForRow(data)"
-                    :options="timePeriodOptions"
-                    :allowEmpty="false"
-                    class="pref-time-period"
-                    @update:modelValue="setTimePeriod(data, $event)"
-                  />
+                  <select
+                    :value="timePeriodForRow(data)"
+                    class="pref-time-period-select"
+                    @change="handleTimePeriodChange(data, $event)"
+                  >
+                    <option
+                      v-for="option in timePeriodOptions"
+                      :key="option"
+                      :value="option"
+                    >
+                      {{ option }}
+                    </option>
+                  </select>
                 </div>
               </template>
             </Column>
@@ -423,7 +429,7 @@
             </Column>
 
             <!-- Row Actions -->
-            <Column header="Actions" style="width: 12rem">
+            <Column header="Actions" style="width: 10rem">
               <template #body="{ data }">
                 <div class="pref-row-actions">
                   <div class="pref-row-actions__buttons">
@@ -1000,6 +1006,11 @@ function timePeriodForRow(row: PreferenceRow): 'AM' | 'PM' {
   if (!TIME_PATTERN.test(nt)) return 'AM'
   const [h] = nt.split(':')
   return Number(h) >= 12 ? 'PM' : 'AM'
+}
+
+function handleTimePeriodChange(row: PreferenceRow, event: Event) {
+  const nextValue = (event.target as HTMLSelectElement | null)?.value
+  setTimePeriod(row, nextValue === 'PM' ? 'PM' : 'AM')
 }
 
 function setTimePeriod(row: PreferenceRow, period: 'AM' | 'PM') {
@@ -2259,6 +2270,13 @@ onMounted(loadPageData)
     box-shadow 0.15s;
 }
 
+:deep(.pref-cell-input::placeholder),
+:deep(.pref-autocomplete-input::placeholder),
+:deep(.pref-page .p-inputtext::placeholder) {
+  color: var(--color-example-text, #c8cace) !important;
+  opacity: 1 !important;
+}
+
 :deep(.pref-cell-input:hover) {
   border-color: var(--p-primary-300, #93c5fd) !important;
 }
@@ -2291,17 +2309,21 @@ onMounted(loadPageData)
   align-items: center;
 }
 
-.pref-time-period {
-  min-width: 5.1rem;
-}
-
-:deep(.pref-time-period .p-button) {
-  padding: 0.35rem 0.45rem;
-}
-
-:deep(.pref-page .p-inputtext::placeholder) {
+.pref-time-period-select {
+  min-width: 4.2rem;
+  height: 2rem;
+  padding: 0.35rem 1.55rem 0.35rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid var(--p-surface-300, #cbd5e1);
+  background: var(--p-surface-0, #ffffff);
   color: inherit;
-  opacity: 0.7;
+  font-size: 0.76rem;
+}
+
+.pref-time-period-select:focus-visible {
+  border-color: var(--p-primary-400, #60a5fa);
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.18);
+  outline: none;
 }
 
 :deep(.pref-page .p-button.p-button-outlined) {
@@ -2334,7 +2356,7 @@ onMounted(loadPageData)
 
 .pref-row-hint {
   font-size: 0.69rem;
-  color: var(--p-text-muted-color, #94a3b8);
+  color: var(--color-example-text, #c8cace);
   line-height: 1.35;
 }
 

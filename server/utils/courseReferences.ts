@@ -24,6 +24,16 @@ function parseEmbeddedSection(normalizedCourseId: string): {
   catalogCourseId: string
   section: string | null
 } {
+  const opaqueMatch = normalizedCourseId.match(/^([a-f0-9]{24})-([A-Z0-9]+)$/i)
+  if (opaqueMatch) {
+    return {
+      catalogCourseId: normalizeCourseIdText(
+        opaqueMatch[1] ?? normalizedCourseId,
+      ),
+      section: normalizeSectionText(opaqueMatch[2] ?? null),
+    }
+  }
+
   const match = normalizedCourseId.match(/^(.+\s+\S+)-([A-Z0-9]+)$/)
   if (!match) {
     return {

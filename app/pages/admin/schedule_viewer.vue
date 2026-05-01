@@ -344,29 +344,53 @@
               <DataTable
                 :value="filteredRows"
                 stripedRows
-                scrollable
                 showGridlines
-                tableStyle="min-width: 88rem"
-                class="schedule-table"
+                class="schedule-table schedule-table--main"
               >
                 <template #empty>
                   <div class="schedule-table-empty">
                     No schedule rows match the current filters.
                   </div>
                 </template>
-                <Column field="department" header="Dept" sortable />
-                <Column field="courseNumber" header="Course" sortable />
-                <Column field="section" header="Section" sortable>
+                <Column field="department" header="Dept" sortable>
                   <template #body="{ data }">
-                    {{ data.section || 'N/A' }}
+                    <ScheduleCellPreview
+                      :value="data.department"
+                      title="Department"
+                    />
                   </template>
                 </Column>
-                <Column field="courseTitle" header="Title" sortable />
+                <Column field="courseNumber" header="Course" sortable>
+                  <template #body="{ data }">
+                    <ScheduleCellPreview
+                      :value="data.courseNumber"
+                      title="Course"
+                    />
+                  </template>
+                </Column>
+                <Column field="section" header="Section" sortable>
+                  <template #body="{ data }">
+                    <ScheduleCellPreview
+                      :value="data.section || 'N/A'"
+                      title="Section"
+                    />
+                  </template>
+                </Column>
+                <Column field="courseTitle" header="Title" sortable>
+                  <template #body="{ data }">
+                    <ScheduleCellPreview
+                      :value="data.courseTitle"
+                      title="Course Title"
+                    />
+                  </template>
+                </Column>
                 <Column field="instructorName" header="Instructor" sortable>
                   <template #body="{ data }">
-                    <span v-if="!isEditingRow(data.courseId)">{{
-                      data.instructorName
-                    }}</span>
+                    <ScheduleCellPreview
+                      v-if="!isEditingRow(data.courseId)"
+                      :value="data.instructorName"
+                      title="Instructor"
+                    />
                     <InputText
                       v-else
                       v-model="editDraft.professorId"
@@ -377,9 +401,11 @@
                 </Column>
                 <Column field="timeLabel" header="Time" sortable>
                   <template #body="{ data }">
-                    <div v-if="!isEditingRow(data.courseId)">
-                      {{ data.timeLabel }}
-                    </div>
+                    <ScheduleCellPreview
+                      v-if="!isEditingRow(data.courseId)"
+                      :value="data.timeLabel"
+                      title="Time"
+                    />
                     <div v-else class="schedule-edit-time">
                       <select
                         v-model="editDraft.days"
@@ -406,12 +432,21 @@
                     </div>
                   </template>
                 </Column>
-                <Column field="building" header="Building" sortable />
+                <Column field="building" header="Building" sortable>
+                  <template #body="{ data }">
+                    <ScheduleCellPreview
+                      :value="data.building"
+                      title="Building"
+                    />
+                  </template>
+                </Column>
                 <Column field="roomLabel" header="Room" sortable>
                   <template #body="{ data }">
-                    <span v-if="!isEditingRow(data.courseId)">{{
-                      data.roomLabel
-                    }}</span>
+                    <ScheduleCellPreview
+                      v-if="!isEditingRow(data.courseId)"
+                      :value="data.roomLabel"
+                      title="Room"
+                    />
                     <InputText
                       v-else
                       v-model="editDraft.roomId"
@@ -422,12 +457,18 @@
                 </Column>
                 <Column field="enrollment" header="Enroll" sortable>
                   <template #body="{ data }">
-                    {{ data.enrollment ?? 'N/A' }}
+                    <ScheduleCellPreview
+                      :value="data.enrollment ?? 'N/A'"
+                      title="Enrollment"
+                    />
                   </template>
                 </Column>
                 <Column field="overrideBy" header="Override By" sortable>
                   <template #body="{ data }">
-                    {{ data.overrideBy || 'N/A' }}
+                    <ScheduleCellPreview
+                      :value="data.overrideBy || 'N/A'"
+                      title="Override By"
+                    />
                   </template>
                 </Column>
                 <Column header="Actions">
@@ -486,21 +527,56 @@
                 <DataTable
                   :value="selectedConflictRows"
                   stripedRows
-                  scrollable
                   showGridlines
-                  tableStyle="min-width: 65rem"
+                  class="schedule-table schedule-table--issues"
                 >
                   <template #empty>
                     <div class="schedule-table-empty">
                       No conflicts saved for this run.
                     </div>
                   </template>
-                  <Column field="courseId" header="Course" sortable />
-                  <Column field="instructor" header="Instructor" sortable />
-                  <Column field="room" header="Room" sortable />
-                  <Column field="time" header="Time" sortable />
-                  <Column field="issueType" header="Issue Type" sortable />
-                  <Column field="reason" header="Reason" />
+                  <Column field="courseLabel" header="Course" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.courseLabel"
+                        title="Course"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="instructor" header="Instructor" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.instructor"
+                        title="Instructor"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="room" header="Room" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview :value="data.room" title="Room" />
+                    </template>
+                  </Column>
+                  <Column field="time" header="Time" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview :value="data.time" title="Time" />
+                    </template>
+                  </Column>
+                  <Column field="issueType" header="Issue Type" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.issueType"
+                        title="Issue Type"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="reason" header="Reason">
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.reason"
+                        title="Reason"
+                      />
+                    </template>
+                  </Column>
                 </DataTable>
               </div>
 
@@ -509,58 +585,132 @@
                 <DataTable
                   :value="selectedNearHardFlagRows"
                   stripedRows
-                  scrollable
                   showGridlines
-                  tableStyle="min-width: 65rem"
+                  class="schedule-table schedule-table--issues"
                 >
                   <template #empty>
                     <div class="schedule-table-empty">
                       No near-hard flags were saved for this run.
                     </div>
                   </template>
-                  <Column field="courseId" header="Course" sortable />
-                  <Column field="instructor" header="Instructor" sortable />
-                  <Column field="room" header="Room" sortable />
-                  <Column field="time" header="Time" sortable />
-                  <Column field="issueType" header="Issue Type" sortable />
-                  <Column field="reason" header="Reason" />
+                  <Column field="courseLabel" header="Course" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.courseLabel"
+                        title="Course"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="instructor" header="Instructor" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.instructor"
+                        title="Instructor"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="room" header="Room" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview :value="data.room" title="Room" />
+                    </template>
+                  </Column>
+                  <Column field="time" header="Time" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview :value="data.time" title="Time" />
+                    </template>
+                  </Column>
+                  <Column field="issueType" header="Issue Type" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.issueType"
+                        title="Issue Type"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="reason" header="Reason">
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.reason"
+                        title="Reason"
+                      />
+                    </template>
+                  </Column>
                 </DataTable>
               </div>
 
               <div class="schedule-subsection">
                 <h3>Trace Output</h3>
+                <p class="schedule-trace-note">
+                  Condensed placement trace for review. Open the saved export if
+                  you need the full raw trace payload.
+                </p>
                 <DataTable
                   :value="selectedTraceRows"
                   stripedRows
-                  scrollable
                   showGridlines
-                  tableStyle="min-width: 95rem"
+                  class="schedule-table schedule-table--trace"
                 >
                   <template #empty>
                     <div class="schedule-table-empty">
                       No placement traces were saved for this run.
                     </div>
                   </template>
-                  <Column field="courseId" header="Course" sortable />
-                  <Column
-                    field="catalogCourseId"
-                    header="Catalog Course"
-                    sortable
-                  />
-                  <Column field="professorId" header="Professor Id" sortable />
-                  <Column field="status" header="Status" sortable />
-                  <Column field="stageLabel" header="Stage" sortable />
-                  <Column field="candidateCount" header="Candidates" sortable />
-                  <Column field="chosenPlacement" header="Chosen Placement" />
-                  <Column
-                    field="candidateRoomsLabel"
-                    header="Candidate Rooms"
-                  />
-                  <Column
-                    field="candidateSlotsLabel"
-                    header="Candidate Slots"
-                  />
-                  <Column field="reasonsLabel" header="Reasons" />
+                  <Column field="courseLabel" header="Course" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.courseLabel"
+                        title="Course"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="professorName" header="Professor" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.professorName"
+                        title="Professor"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="outcomeLabel" header="Outcome" sortable>
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.outcomeLabel"
+                        title="Outcome"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="chosenPlacement" header="Placement">
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.chosenPlacement"
+                        title="Placement"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="candidateSummary" header="Candidates">
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.candidateSummary"
+                        title="Candidates"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="candidatePreview" header="Preview">
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.candidatePreview"
+                        title="Candidate Preview"
+                      />
+                    </template>
+                  </Column>
+                  <Column field="notesSummary" header="Notes">
+                    <template #body="{ data }">
+                      <ScheduleCellPreview
+                        :value="data.notesSummary"
+                        title="Notes"
+                      />
+                    </template>
+                  </Column>
                 </DataTable>
               </div>
             </div>
@@ -575,6 +725,7 @@
 import {
   buildEnrichedScheduleRows,
   buildIssueTableRows,
+  buildTraceTableRows,
 } from '~~/app/utils/schedule'
 import {
   downloadScheduleExport,
@@ -701,6 +852,7 @@ const selectedConflictRows = computed(() =>
   buildIssueTableRows(
     selectedSchedule.value?.conflicts ?? [],
     enrichedRows.value,
+    lookups.value,
   ),
 )
 
@@ -708,6 +860,7 @@ const selectedNearHardFlagRows = computed(() =>
   buildIssueTableRows(
     selectedSchedule.value?.nearHardFlags ?? [],
     enrichedRows.value,
+    lookups.value,
   ),
 )
 
@@ -723,25 +876,7 @@ const selectedRecommendedStatus = computed<ScheduleStatus>(() => {
 })
 
 const selectedTraceRows = computed(() =>
-  (selectedSchedule.value?.traces ?? []).map((trace) => ({
-    courseId: trace.courseId,
-    catalogCourseId: trace.catalogCourseId,
-    professorId: trace.professorId,
-    status: trace.status,
-    stageLabel: trace.stage
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (character) => character.toUpperCase()),
-    candidateCount: trace.candidateCount,
-    chosenPlacement: trace.chosen
-      ? `${trace.chosen.days} ${trace.chosen.startTime}-${trace.chosen.endTime} @ ${trace.chosen.roomId}`
-      : 'None',
-    candidateRoomsLabel: trace.candidateRooms.join(', ') || 'None',
-    candidateSlotsLabel:
-      trace.candidateSlots
-        .map((slot) => `${slot.days} ${slot.startTime}-${slot.endTime}`)
-        .join(', ') || 'None',
-    reasonsLabel: trace.reasons.join('; ') || 'None',
-  })),
+  buildTraceTableRows(selectedSchedule.value?.traces ?? [], lookups.value),
 )
 
 const selectedScheduleTitle = computed(() => {
@@ -866,11 +1001,7 @@ function findScheduleFromQuery() {
     )
   }
 
-  return (
-    matchingSchedules.find((schedule) => (schedule.assignmentCount ?? 0) > 0) ??
-    matchingSchedules[0] ??
-    null
-  )
+  return matchingSchedules[0] ?? null
 }
 
 function resetFilters() {
@@ -1084,12 +1215,7 @@ async function exportSelectedSchedule(format: ScheduleExportFormat) {
 onMounted(async () => {
   await loadSchedules()
   const initialSchedule =
-    findScheduleFromQuery() ??
-    scheduleItems.value.find(
-      (schedule) => (schedule.assignmentCount ?? 0) > 0,
-    ) ??
-    scheduleItems.value[0] ??
-    null
+    findScheduleFromQuery() ?? scheduleItems.value[0] ?? null
   if (!initialSchedule) {
     selectedTerm.value =
       normalizeQueryValue(route.query.term).trim() || termKeys.value[0] || ''
@@ -1131,6 +1257,7 @@ onMounted(async () => {
 .schedule-history-main,
 .schedule-history-main-card {
   height: 100%;
+  min-width: 0;
 }
 
 .schedule-history-sidebar :deep(.p-card),
@@ -1243,6 +1370,7 @@ onMounted(async () => {
 .schedule-subsection {
   display: grid;
   gap: 1rem;
+  min-width: 0;
 }
 
 .schedule-meta-grid,
@@ -1260,8 +1388,10 @@ onMounted(async () => {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.75rem;
   grid-column: 1 / -1;
+  min-width: 0;
 }
 
 .schedule-filter-grid__count {
@@ -1289,6 +1419,7 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
+  min-width: 0;
 }
 
 .schedule-filter-grid label {
@@ -1342,6 +1473,58 @@ onMounted(async () => {
   margin-top: 0.9rem;
 }
 
+.schedule-table {
+  width: 100%;
+  min-width: 0;
+}
+
+.schedule-table :deep(.p-datatable-table-container) {
+  overflow: hidden;
+}
+
+.schedule-table :deep(.p-datatable-table) {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.schedule-table :deep(.p-datatable-thead > tr > th),
+.schedule-table :deep(.p-datatable-tbody > tr > td) {
+  padding: 0.45rem 0.55rem;
+  font-size: 0.74rem;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
+}
+
+.schedule-table :deep(.p-datatable-tbody > tr > td) {
+  height: 4.15rem;
+}
+
+.schedule-table :deep(.p-column-header-content) {
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+.schedule-table :deep(.p-button) {
+  padding: 0.35rem 0.55rem;
+  font-size: 0.72rem;
+}
+
+.schedule-table :deep(.p-inputtext) {
+  min-width: 0;
+  font-size: 0.74rem;
+  padding: 0.45rem 0.55rem;
+}
+
+.schedule-table--trace :deep(.p-datatable-thead > tr > th),
+.schedule-table--trace :deep(.p-datatable-tbody > tr > td),
+.schedule-table--issues :deep(.p-datatable-thead > tr > th),
+.schedule-table--issues :deep(.p-datatable-tbody > tr > td) {
+  font-size: 0.7rem;
+}
+
 .schedule-table-empty {
   padding: 1rem;
   text-align: center;
@@ -1350,6 +1533,12 @@ onMounted(async () => {
 
 .schedule-subsection h3 {
   margin: 0;
+}
+
+.schedule-trace-note {
+  margin: -0.35rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
 }
 
 @media (max-width: 1120px) {
