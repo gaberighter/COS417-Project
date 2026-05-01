@@ -514,6 +514,21 @@
         </ul>
       </div>
 
+      <div
+        v-if="pendingNewEntities.newCourses.length > 0"
+        class="pref-ned__group"
+      >
+        <span class="pref-ned__label">New Courses</span>
+        <ul class="pref-ned__list">
+          <li
+            v-for="c in pendingNewEntities.newCourses"
+            :key="c.courseId"
+          >
+            {{ c.courseId }} — {{ c.title }}
+          </li>
+        </ul>
+      </div>
+
       <template #footer>
         <Button
           label="Cancel & Edit"
@@ -657,6 +672,7 @@ type NewEntityInfo = {
   newInstructors: string[]
   newBuildings: string[]
   newRooms: string[]
+  newCourses: Array<{ courseId: string; title: string }>
 }
 
 type PendingSave = {
@@ -717,6 +733,7 @@ const pendingNewEntities = ref<NewEntityInfo>({
   newInstructors: [],
   newBuildings: [],
   newRooms: [],
+  newCourses: [],
 })
 const pendingSave = ref<PendingSave | null>(null)
 
@@ -1522,10 +1539,36 @@ function validateRow(
 ): PreferencePayloadCourse | null {
   row.error = ''
   if (!rowHasAnyContent(row)) return null
-  const course = resolveCourse(row)
+  let course = resolveCourse(row)
   if (!course) {
-    row.error = 'Select a valid course subject and name from the catalog.'
-    return null
+    const sk = normalizeSubjectInput(row.subject)
+    const tk = normalizeLookupValue(row.courseName)
+    const skParts = sk.split(/\s+/)
+    const newDept = skParts[0] ?? ''
+    const newNum = skParts.slice(1).join(' ')
+    if (!sk || !tk || !/^[A-Z]{2,8}$/.test(newDept) || !newNum) {
+      row.error =
+        'Select a course from the catalog or enter a new course number (e.g. COS 417) and name.'
+      return null
+    }
+    const existingBySubject = courseBySubject.value.get(sk)
+    if (existingBySubject) {
+      row.error = `"${sk}" already exists as "${existingBySubject.title}". Use that name or choose a different course number.`
+      return null
+    }
+    const existingByTitle = coursesByTitle.value.get(tk)
+    if (existingByTitle && existingByTitle.length > 0) {
+      const existing = existingByTitle[0]!
+      row.error = `"${row.courseName.trim()}" already exists as ${subjectLabel(existing)}. Use that course number or choose a different name.`
+      return null
+    }
+    course = {
+      _id: sk,
+      deptCode: newDept,
+      courseNumber: newNum,
+      title: row.courseName.trim(),
+      creditHours: 0,
+    }
   }
   const section = row.section.trim().toUpperCase()
   if (!SECTION_PATTERN.test(section)) {
@@ -1640,10 +1683,14 @@ function detectNewEntities(courses: PreferencePayloadCourse[]): NewEntityInfo {
     ...roomOptions.value.map((r) => normalizeLookupValue(r._id)),
     ...roomOptions.value.map((r) => normalizeLookupValue(r.abbreviation)),
   ])
+  const knownCourseIds = new Set(
+    courseCatalog.value.map((c) => normalizeLookupValue(c._id)),
+  )
 
   const newInstructors = new Set<string>()
   const newBuildings = new Set<string>()
   const newRooms = new Set<string>()
+  const newCourseMap = new Map<string, string>()
 
   for (const c of courses) {
     if (
@@ -1661,12 +1708,18 @@ function detectNewEntities(courses: PreferencePayloadCourse[]): NewEntityInfo {
       !knownRoomIds.has(normalizeLookupValue(c.preferredRoomId))
     )
       newRooms.add(c.preferredRoomId)
+    if (!knownCourseIds.has(normalizeLookupValue(c.courseId)))
+      newCourseMap.set(c.courseId, c.title)
   }
 
   return {
     newInstructors: [...newInstructors],
     newBuildings: [...newBuildings],
     newRooms: [...newRooms],
+    newCourses: [...newCourseMap.entries()].map(([courseId, title]) => ({
+      courseId,
+      title,
+    })),
   }
 }
 
@@ -1755,7 +1808,8 @@ async function savePreferences(status: PreferenceStatus) {
   if (
     newEntities.newInstructors.length > 0 ||
     newEntities.newBuildings.length > 0 ||
-    newEntities.newRooms.length > 0
+    newEntities.newRooms.length > 0 ||
+    newEntities.newCourses.length > 0
   ) {
     pendingNewEntities.value = newEntities
     pendingSave.value = { status, courses, nt }
