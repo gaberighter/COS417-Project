@@ -211,6 +211,65 @@ button:disabled {
   gap: 20px;
 }
 
+/* Shared schedule DataTable layout used in admin schedule pages */
+.schedule-table {
+  width: 100%;
+  min-width: 0;
+}
+
+.schedule-table .p-datatable-table-container {
+  overflow: hidden;
+}
+
+.schedule-table .p-datatable-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.schedule-table .p-datatable-thead > tr > th,
+.schedule-table .p-datatable-tbody > tr > td {
+  padding: 0.45rem 0.55rem;
+  font-size: 0.74rem;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
+}
+
+.schedule-table .p-datatable-tbody > tr > td {
+  height: 4.15rem;
+}
+
+.schedule-table .p-column-header-content {
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+.schedule-table .p-button {
+  padding: 0.35rem 0.55rem;
+  font-size: 0.72rem;
+}
+
+.schedule-table .p-inputtext {
+  min-width: 0;
+  font-size: 0.74rem;
+  padding: 0.45rem 0.55rem;
+}
+
+.schedule-table--trace .p-datatable-thead > tr > th,
+.schedule-table--trace .p-datatable-tbody > tr > td,
+.schedule-table--issues .p-datatable-thead > tr > th,
+.schedule-table--issues .p-datatable-tbody > tr > td {
+  font-size: 0.7rem;
+}
+
+.schedule-table-empty {
+  padding: 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
 @media (max-width: 640px) {
   .site-top-bar {
     padding: 0.75rem;

@@ -1473,64 +1473,6 @@ onMounted(async () => {
   margin-top: 0.9rem;
 }
 
-.schedule-table {
-  width: 100%;
-  min-width: 0;
-}
-
-.schedule-table :deep(.p-datatable-table-container) {
-  overflow: hidden;
-}
-
-.schedule-table :deep(.p-datatable-table) {
-  width: 100%;
-  table-layout: fixed;
-}
-
-.schedule-table :deep(.p-datatable-thead > tr > th),
-.schedule-table :deep(.p-datatable-tbody > tr > td) {
-  padding: 0.45rem 0.55rem;
-  font-size: 0.74rem;
-  line-height: 1.25;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  vertical-align: top;
-}
-
-.schedule-table :deep(.p-datatable-tbody > tr > td) {
-  height: 4.15rem;
-}
-
-.schedule-table :deep(.p-column-header-content) {
-  align-items: flex-start;
-  gap: 0.3rem;
-}
-
-.schedule-table :deep(.p-button) {
-  padding: 0.35rem 0.55rem;
-  font-size: 0.72rem;
-}
-
-.schedule-table :deep(.p-inputtext) {
-  min-width: 0;
-  font-size: 0.74rem;
-  padding: 0.45rem 0.55rem;
-}
-
-.schedule-table--trace :deep(.p-datatable-thead > tr > th),
-.schedule-table--trace :deep(.p-datatable-tbody > tr > td),
-.schedule-table--issues :deep(.p-datatable-thead > tr > th),
-.schedule-table--issues :deep(.p-datatable-tbody > tr > td) {
-  font-size: 0.7rem;
-}
-
-.schedule-table-empty {
-  padding: 1rem;
-  text-align: center;
-  color: var(--color-text-muted);
-}
-
 .schedule-subsection h3 {
   margin: 0;
 }

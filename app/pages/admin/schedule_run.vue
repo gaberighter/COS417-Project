@@ -1354,51 +1354,6 @@ onMounted(async () => {
   margin: 0;
 }
 
-.schedule-table-empty {
-  padding: 1rem;
-  text-align: center;
-  color: var(--color-text-muted);
-}
-
-.schedule-table {
-  width: 100%;
-  min-width: 0;
-}
-
-.schedule-table :deep(.p-datatable-table-container) {
-  overflow: hidden;
-}
-
-.schedule-table :deep(.p-datatable-table) {
-  width: 100%;
-  table-layout: fixed;
-}
-
-.schedule-table :deep(.p-datatable-thead > tr > th),
-.schedule-table :deep(.p-datatable-tbody > tr > td) {
-  padding: 0.45rem 0.55rem;
-  font-size: 0.74rem;
-  line-height: 1.25;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  vertical-align: top;
-}
-
-.schedule-table :deep(.p-datatable-tbody > tr > td) {
-  height: 4.15rem;
-}
-
-.schedule-table :deep(.p-column-header-content) {
-  align-items: flex-start;
-  gap: 0.3rem;
-}
-
-.schedule-table--issues :deep(.p-datatable-thead > tr > th),
-.schedule-table--issues :deep(.p-datatable-tbody > tr > td) {
-  font-size: 0.7rem;
-}
-
 @media (max-width: 1080px) {
   .schedule-admin-columns {
     grid-template-columns: 1fr;
