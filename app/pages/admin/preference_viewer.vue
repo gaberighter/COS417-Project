@@ -471,8 +471,7 @@ async function loadAvailableTerms() {
 
     const existingTerm = termInput.value.trim()
     availableTerms.value = existingTerm ? [existingTerm] : []
-    errorMessage.value =
-      `${msg} Retry loading terms or enter one manually to continue.`
+    errorMessage.value = `${msg} Retry loading terms or enter one manually to continue.`
 
     if (typeof window !== 'undefined' && !existingTerm) {
       const manualTerm = window.prompt(
@@ -483,8 +482,7 @@ async function loadAvailableTerms() {
       if (normalizedTerm) {
         termInput.value = normalizedTerm
         availableTerms.value = [normalizedTerm]
-        errorMessage.value =
-          `${msg} Using manually entered term "${normalizedTerm}".`
+        errorMessage.value = `${msg} Using manually entered term "${normalizedTerm}".`
       }
     }
   } finally {
