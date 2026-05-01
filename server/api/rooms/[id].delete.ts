@@ -25,11 +25,18 @@ export default defineEventHandler(async (event) => {
   const clientIp = getClientIp(event)
   const roomId = id.trim().toUpperCase()
 
-  // Handle both String _id and legacy ObjectId _id values
-  let deleted = await Room.findOneAndDelete({ _id: roomId }).lean().exec()
+  // Handle abbreviation, String _id, and legacy ObjectId _id values.
+  let deleted = await Room.findOneAndDelete({
+    $or: [{ _id: roomId }, { abbreviation: roomId }],
+  })
+    .lean()
+    .exec()
   if (!deleted && IS_OBJECT_ID.test(roomId)) {
     const raw = await Room.collection.findOneAndDelete({
-      _id: new mongoose.Types.ObjectId(roomId),
+      $or: [
+        { _id: new mongoose.Types.ObjectId(roomId) },
+        { abbreviation: roomId },
+      ],
     })
     deleted = raw as typeof deleted
   }

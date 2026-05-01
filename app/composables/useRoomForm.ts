@@ -14,6 +14,7 @@ interface RoomEquipment {
 }
 
 interface Room {
+  _id?: string
   abbreviation: string
   buildingCode: string
   roomNumber: string
@@ -92,7 +93,10 @@ export const useRoomForm = (onRoomSaved: () => Promise<void>) => {
 
   const openEditRoomModal = (room: Room) => {
     isEditMode.value = true
-    editingRoomId.value = room.abbreviation.trim().toUpperCase()
+    editingRoomId.value =
+      typeof room._id === 'string' && room._id.trim()
+        ? room._id.trim()
+        : room.abbreviation.trim().toUpperCase()
     actionMessage.value = ''
     Object.assign(newRoomForm, {
       buildingCode: room.buildingCode,
