@@ -783,9 +783,24 @@ const instructorOptions = computed(() => {
   const names = professors.value
     .map((p) => p.displayName?.trim())
     .filter((v): v is string => Boolean(v))
+
+  // Map "LAST,FIRSTINITIAL" → authoritative displayName so catalog entries
+  // like "Humphries, Jeffery" resolve to "Jeff Humphries" instead of
+  // appearing as a duplicate.
+  const profKeyMap = new Map<string, string>()
+  for (const name of names) {
+    const key = profNameKey(name)
+    if (key) profKeyMap.set(key, name)
+  }
+
   const catalog = courseCatalog.value
     .map((c) => c.typicalProfessor?.trim())
     .filter((v): v is string => Boolean(v))
+    .map((name) => {
+      const key = profNameKey(name)
+      return (key && profKeyMap.get(key)) ?? name
+    })
+
   return uniqueSortedStrings([...names, ...catalog])
 })
 const roomOptions = computed<RoomOption[]>(() =>
@@ -954,6 +969,23 @@ function uniqueSortedStrings(values: string[], numeric = false): string[] {
 
 function normalizeLookupValue(v: string): string {
   return v.trim().replace(/\s+/g, ' ').toUpperCase()
+}
+
+// Returns a "LAST,FIRSTINITIAL" key for fuzzy-matching names across
+// different formats ("First Last" vs "Last, First" vs nickname variants).
+function profNameKey(name: string): string | null {
+  let first: string, last: string
+  if (name.includes(',')) {
+    const [l, f] = name.split(',').map((s) => s.trim())
+    last = l
+    first = f
+  } else {
+    const parts = name.trim().split(/\s+/)
+    last = parts[parts.length - 1]
+    first = parts.slice(0, -1).join(' ')
+  }
+  if (!last || !first) return null
+  return `${last.toUpperCase()},${first[0].toUpperCase()}`
 }
 
 function normalizeTimeValue(v: string): string {
