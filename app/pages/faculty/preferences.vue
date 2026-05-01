@@ -520,10 +520,7 @@
       >
         <span class="pref-ned__label">New Courses</span>
         <ul class="pref-ned__list">
-          <li
-            v-for="c in pendingNewEntities.newCourses"
-            :key="c.courseId"
-          >
+          <li v-for="c in pendingNewEntities.newCourses" :key="c.courseId">
             {{ c.courseId }} — {{ c.title }}
           </li>
         </ul>
