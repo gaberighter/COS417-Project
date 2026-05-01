@@ -77,16 +77,7 @@ function covenantIdFromEmail(email?: string): string | null {
   return email.substring(0, email.indexOf('@')).toLowerCase()
 }
 
-async function getRoles(_username: string, email?: string): Promise<string[]> {
-  if (!email) return []
-  const roles: string[] = []
-  const covenantId = covenantIdFromEmail(email)
-  if (!covenantId) return roles
-
-  if (REGISTRAR_USERNAMES.includes(covenantId)) {
-    roles.push('Admin')
-  }
-
+async function getRoles(username: string, email?: string): Promise<string[]> {
   const db = mongoose.connection.db
   if (!db) {
     throw createError({
@@ -94,8 +85,28 @@ async function getRoles(_username: string, email?: string): Promise<string[]> {
       statusMessage: 'Database connection not established',
     })
   }
-  const professor = await db.collection('professors').findOne({ covenantId })
 
+  // When the SAML assertion carries only oracleUser (no email), try to recover
+  // the email from a previous Users session entry so role lookup can proceed.
+  let resolvedEmail = email
+  if (!resolvedEmail) {
+    const existingUser = await db.collection('users').findOne({ username })
+    if (existingUser?.email) {
+      resolvedEmail = existingUser.email
+    }
+  }
+
+  if (!resolvedEmail) return []
+
+  const roles: string[] = []
+  const covenantId = covenantIdFromEmail(resolvedEmail)
+  if (!covenantId) return roles
+
+  if (REGISTRAR_USERNAMES.includes(covenantId)) {
+    roles.push('Admin')
+  }
+
+  const professor = await db.collection('professors').findOne({ covenantId })
   if (professor) {
     roles.push('Faculty')
   }
