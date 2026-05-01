@@ -319,6 +319,7 @@
             Available
           </label>
         </div>
+        <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
         <div class="form-actions">
           <button
             type="button"

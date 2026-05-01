@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
   await connectDB()
 
-  const id = getRouterParam(event, 'id')
+  const id = getRouterParam(event, 'id', { decode: true })
   if (!id || !id.trim()) {
     // Missing or empty id is a client error — return 400 instead of a 500.
     throw createError({ statusCode: 400, statusMessage: 'Room id is required' })

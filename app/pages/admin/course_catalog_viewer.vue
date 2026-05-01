@@ -248,6 +248,7 @@
             Active
           </label>
         </div>
+        <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
         <div class="form-actions">
           <button type="button" class="btn-secondary" @click="closeCourseModal">
             Cancel

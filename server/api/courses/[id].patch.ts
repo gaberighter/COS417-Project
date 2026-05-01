@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
   const auth = requireAuth(event, ['Admin'])
   await connectDB()
 
-  const id = getRouterParam(event, 'id')
+  const id = getRouterParam(event, 'id', { decode: true })
   if (!id?.trim()) {
     throw createError({
       statusCode: 400,
