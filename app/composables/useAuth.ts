@@ -2,6 +2,8 @@ export const useAuth = () => {
   const { user, loggedIn, fetch: refreshSession } = useUserSession()
 
   const SSO_LOGIN_URL = '/saml/login'
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
 
   const isAuthenticated = computed(() => loggedIn.value)
 
@@ -17,6 +19,8 @@ export const useAuth = () => {
   return {
     user,
     isAuthenticated,
+    isLoading,
+    error,
     loginWithSso,
     logout,
     refreshSession,
