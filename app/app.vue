@@ -45,7 +45,15 @@
 
 <script setup lang="ts">
 const route = useRoute()
-const auth = useAuth() as Record<string, unknown>
+const { user, loggedIn, fetch: refreshSession } = useUserSession()
+const auth = {
+  isAuthenticated: loggedIn,
+  user: user,
+  logout: async () => {
+    await $fetch('/api/_auth/session', { method: 'DELETE' })
+    await navigateTo('/auth/login')
+  },
+} as Record<string, unknown>
 
 const unwrapMaybeRef = (value: unknown) => {
   if (value && typeof value === 'object' && 'value' in value) {
@@ -115,15 +123,13 @@ const userRole = computed(() => {
 })
 
 const authContextLabel = computed(() => {
-  if (!isLoggedIn.value) {
-    return ''
-  }
-
-  if (userRole.value) {
-    return `Signed in as ${userRole.value}`
-  }
-
-  return 'Signed in'
+  if (!isLoggedIn.value) return ''
+  const name =
+    (userData.value?.preferred as string) ||
+    (userData.value?.firstName as string) ||
+    (userData.value?.username as string) ||
+    ''
+  return name ? `Welcome, ${name}` : 'Signed in'
 })
 
 const dashboardAction = computed(() => {
